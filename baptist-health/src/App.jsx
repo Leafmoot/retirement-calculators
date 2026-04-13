@@ -583,7 +583,7 @@ export default function App() {
 
       <div style={{ position: "relative", zIndex: 1, flexShrink: 0, padding: "10px 20px 8px", borderBottom: `1px solid ${T.border}`, background: T.surfaceAlt, display: "flex", alignItems: "center" }}>
         <h1 style={{ margin: 0, fontSize: isMobile ? "1rem" : "1.1rem", fontWeight: 800, color: T.text, letterSpacing: "-0.03em" }}>
-          Baptist Health Contribution Limit Assistant
+          Baptist Health Contribution Assistant
         </h1>
       </div>
 
