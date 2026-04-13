@@ -1709,7 +1709,7 @@ export default function App() {
             letterSpacing: "-0.03em",
           }}
         >
-          {PLAN_YEAR} Contribution Limit Assistant
+          {PLAN_YEAR} Contribution Assistant
         </h1>
       </div>
 
