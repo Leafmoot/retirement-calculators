@@ -525,8 +525,7 @@ function StatCard({ label, value, sub, subLines, color, small }) {
           style={{
             fontSize: "0.7rem",
             fontWeight: 600,
-            letterSpacing: "0.05em",
-            textTransform: "uppercase",
+            letterSpacing: "0.01em",
             color: "#64748B",
             fontFamily: T.font,
             marginBottom: 12,
@@ -1648,37 +1647,29 @@ export default function App() {
             )}
 
             {/* YTD contributions */}
+            <div style={{ display: "flex", alignItems: "center", gap: 6, margin: "14px 0 10px" }}>
+              <span style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textMuted, fontFamily: T.font, whiteSpace: "nowrap" }}>
+                Year-to-Date Contributions
+              </span>
+              <span style={{ fontSize: "14px", lineHeight: 1 }}><InfoTooltip text="Only needed if you've already made contributions this year. Leave blank to calculate based on full annual limits." /></span>
+              <div style={{ flex: 1, height: 1, background: T.border }} />
+            </div>
             <div style={{ marginBottom: 12 }}>
-              <Label tooltip="Only needed if you've already made contributions this year. Leave blank to calculate based on full annual limits.">
-                {PLAN_YEAR} Year-to-Date Contributions
-              </Label>
               <div
                 style={{
                   display: "grid",
                   gridTemplateColumns: "1fr 1fr",
                   gap: 10,
-                  marginTop: 5,
                 }}
                 className="mobile-stack"
               >
                 <div>
-                  <div
-                    style={{
-                      fontSize: "0.71rem",
-                      fontWeight: 600,
-                      color: T.textSub,
-                      marginBottom: 3,
-                      fontFamily: T.font,
-                    }}
-                  >
+                  <div style={{ fontSize: "0.71rem", fontWeight: 600, color: T.textSub, marginBottom: 3, fontFamily: T.font }}>
                     Pre-Tax (Traditional)
                   </div>
                   <Input
                     value={ytdPre}
-                    onChange={(v) => {
-                      setYtdPre(v);
-                      markDirty();
-                    }}
+                    onChange={(v) => { setYtdPre(v); markDirty(); }}
                     placeholder=""
                     prefix="$"
                     type="number"
@@ -1688,23 +1679,12 @@ export default function App() {
                   <FieldErr msg={errors.ytdPre} />
                 </div>
                 <div>
-                  <div
-                    style={{
-                      fontSize: "0.71rem",
-                      fontWeight: 600,
-                      color: T.textSub,
-                      marginBottom: 3,
-                      fontFamily: T.font,
-                    }}
-                  >
+                  <div style={{ fontSize: "0.71rem", fontWeight: 600, color: T.textSub, marginBottom: 3, fontFamily: T.font }}>
                     Roth (After-Tax)
                   </div>
                   <Input
                     value={ytdRoth}
-                    onChange={(v) => {
-                      setYtdRoth(v);
-                      markDirty();
-                    }}
+                    onChange={(v) => { setYtdRoth(v); markDirty(); }}
                     placeholder=""
                     prefix="$"
                     type="number"
