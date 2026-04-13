@@ -1696,51 +1696,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* Contribution Strategy - Different labels based on age */}
-            {catchUpAge ? (
-              <div style={{ marginBottom: 10 }}>
-                <Label
-                  tooltip={
-                    fica === true
-                      ? "Catch-up must be Roth since your FICA wages exceeded $150,000. Base contributions can still be any mix."
-                      : fica === false
-                      ? "Your FICA wages were $150,000 or less — you have full flexibility for both base and catch-up contributions."
-                      : "If your FICA wages exceeded $150,000, catch-up must be Roth. Base contributions can always be any mix."
-                  }
-                >
-                  How do you want to contribute?
-                </Label>
-                <TogglePair
-                  options={[
-                    { label: "Pre-Tax / Roth Catch-Up", val: "flexible" },
-                    { label: "All Roth", val: "roth-only" },
-                  ]}
-                  value={strategy}
-                  onChange={(v) => {
-                    setStrategy(v);
-                    markDirty();
-                  }}
-                />
-              </div>
-            ) : (
-              <div style={{ marginBottom: 10 }}>
-                <Label tooltip="Pre-Tax reduces taxable income now. Roth contributions are after-tax but grow tax-free.">
-                  How do you want to contribute?
-                </Label>
-                <TogglePair
-                  options={[
-                    { label: "Pre-Tax (Traditional)", val: "flexible" },
-                    { label: "Roth (After-Tax)", val: "roth-only" },
-                  ]}
-                  value={strategy}
-                  onChange={(v) => {
-                    setStrategy(v);
-                    markDirty();
-                  }}
-                />
-              </div>
-            )}
-
             {/* Contribution Goal */}
             <div style={{ display: "flex", alignItems: "center", gap: 6, margin: "14px 0 10px" }}>
               <span style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textMuted, fontFamily: T.font, whiteSpace: "nowrap" }}>
@@ -1797,6 +1752,51 @@ export default function App() {
                 <div style={{ fontSize: "0.67rem", color: T.textMuted, marginTop: 2, fontFamily: T.font, lineHeight: 1.3 }}>
                   Maximum allowed: {fc(LIMITS.standard + getCatchUp(parsedAge))}
                 </div>
+              </div>
+            )}
+
+            {/* Contribution Strategy - Different labels based on age */}
+            {catchUpAge ? (
+              <div style={{ marginBottom: 10 }}>
+                <Label
+                  tooltip={
+                    fica === true
+                      ? "Catch-up must be Roth since your FICA wages exceeded $150,000. Base contributions can still be any mix."
+                      : fica === false
+                      ? "Your FICA wages were $150,000 or less — you have full flexibility for both base and catch-up contributions."
+                      : "If your FICA wages exceeded $150,000, catch-up must be Roth. Base contributions can always be any mix."
+                  }
+                >
+                  How do you want to contribute?
+                </Label>
+                <TogglePair
+                  options={[
+                    { label: "Pre-Tax / Roth Catch-Up", val: "flexible" },
+                    { label: "All Roth", val: "roth-only" },
+                  ]}
+                  value={strategy}
+                  onChange={(v) => {
+                    setStrategy(v);
+                    markDirty();
+                  }}
+                />
+              </div>
+            ) : (
+              <div style={{ marginBottom: 10 }}>
+                <Label tooltip="Pre-Tax reduces taxable income now. Roth contributions are after-tax but grow tax-free.">
+                  How do you want to contribute?
+                </Label>
+                <TogglePair
+                  options={[
+                    { label: "Pre-Tax (Traditional)", val: "flexible" },
+                    { label: "Roth (After-Tax)", val: "roth-only" },
+                  ]}
+                  value={strategy}
+                  onChange={(v) => {
+                    setStrategy(v);
+                    markDirty();
+                  }}
+                />
               </div>
             )}
 
