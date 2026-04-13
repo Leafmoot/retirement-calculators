@@ -186,185 +186,56 @@ const T = {
   fontMono: "'JetBrains Mono', 'Fira Code', monospace",
 };
 
-// Tooltip component with smart positioning
 function InfoTooltip({ text }) {
   const [show, setShow] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [position, setPosition] = useState({ top: true, left: true });
+  const [coords, setCoords] = useState({ top: 0, left: 0 });
   const buttonRef = useRef(null);
-  const tooltipRef = useRef(null);
 
   useEffect(() => {
     setIsMobile(window.innerWidth < 768);
-    const handleResize = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+    const h = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", h);
+    return () => window.removeEventListener("resize", h);
   }, []);
 
-  useEffect(() => {
-    if (show && !isMobile && buttonRef.current && tooltipRef.current) {
-      const buttonRect = buttonRef.current.getBoundingClientRect();
-      const tooltipRect = tooltipRef.current.getBoundingClientRect();
-
-      // Find the scrollable parent container
-      let scrollParent = buttonRef.current.parentElement;
-      while (scrollParent && scrollParent !== document.body) {
-        const overflow = window.getComputedStyle(scrollParent).overflowY;
-        if (overflow === "auto" || overflow === "scroll") {
-          break;
-        }
-        scrollParent = scrollParent.parentElement;
-      }
-
-      // Get container boundaries
-      const containerRect = scrollParent
-        ? scrollParent.getBoundingClientRect()
-        : {
-            left: 0,
-            right: window.innerWidth,
-            top: 0,
-            bottom: window.innerHeight,
-          };
-
-      // Check if tooltip would go off container or screen
-      const wouldOverflowRight =
-        buttonRect.left + tooltipRect.width / 2 > containerRect.right - 10;
-      const wouldOverflowLeft =
-        buttonRect.left - tooltipRect.width / 2 < containerRect.left + 10;
-      const wouldOverflowTop =
-        buttonRect.top - tooltipRect.height - 8 < containerRect.top + 10;
-
-      setPosition({
-        top: !wouldOverflowTop,
-        left: wouldOverflowLeft ? false : wouldOverflowRight ? true : "center",
-      });
+  const handleShow = () => {
+    if (buttonRef.current) {
+      const br = buttonRef.current.getBoundingClientRect();
+      const tooltipWidth = 220;
+      let left = br.left + br.width / 2 - tooltipWidth / 2;
+      if (left < 10) left = 10;
+      if (left + tooltipWidth > window.innerWidth - 10) left = window.innerWidth - tooltipWidth - 10;
+      setCoords({ top: br.bottom + 8, left });
     }
-  }, [show, isMobile]);
-
-  const getTooltipStyle = () => {
-    if (isMobile) {
-      return {
-        left: "50%",
-        top: "50%",
-        transform: "translate(-50%, -50%)",
-      };
-    }
-
-    const baseStyle = {
-      position: "absolute",
-      zIndex: 999,
-    };
-
-    if (position.top) {
-      baseStyle.bottom = "calc(100% + 8px)";
-    } else {
-      baseStyle.top = "calc(100% + 8px)";
-    }
-
-    if (position.left === "center") {
-      baseStyle.left = "50%";
-      baseStyle.transform = "translateX(-50%)";
-    } else if (position.left === false) {
-      baseStyle.left = "0";
-    } else {
-      baseStyle.right = "0";
-    }
-
-    return baseStyle;
-  };
-
-  const getArrowStyle = () => {
-    const baseStyle = {
-      position: "absolute",
-      width: 8,
-      height: 8,
-      background: T.text,
-    };
-
-    if (position.top) {
-      baseStyle.bottom = -4;
-      baseStyle.clipPath = "polygon(50% 100%, 0% 0%, 100% 0%)";
-    } else {
-      baseStyle.top = -4;
-      baseStyle.clipPath = "polygon(50% 0%, 0% 100%, 100% 100%)";
-    }
-
-    if (position.left === "center") {
-      baseStyle.left = "50%";
-      baseStyle.transform = "translateX(-50%)";
-    } else if (position.left === false) {
-      baseStyle.left = "12px";
-    } else {
-      baseStyle.right = "12px";
-    }
-
-    return baseStyle;
+    setShow(true);
   };
 
   return (
-    <div
-      style={{ position: "relative", display: "inline-block", marginLeft: 4 }}
-    >
-      <button
-        ref={buttonRef}
-        type="button"
-        onMouseEnter={() => !isMobile && setShow(true)}
+    <div style={{ position: "relative", display: "inline-block", marginLeft: 4 }}>
+      <button type="button" ref={buttonRef}
+        onMouseEnter={() => !isMobile && handleShow()}
         onMouseLeave={() => !isMobile && setShow(false)}
-        onClick={() => isMobile && setShow(!show)}
-        style={{
-          background: "transparent",
-          border: "none",
-          cursor: "pointer",
-          padding: 0,
-          display: "inline-flex",
-          alignItems: "center",
-          justifyContent: "center",
-          width: 16,
-          height: 16,
-        }}
-      >
+        onClick={() => isMobile && (show ? setShow(false) : handleShow())}
+        style={{ background: "transparent", border: "none", cursor: "pointer", padding: 0, display: "inline-flex", alignItems: "center", width: 16, height: 16 }}>
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
           <circle cx="7" cy="7" r="6" stroke={T.textMuted} strokeWidth="1.2" />
-          <path
-            d="M7 6v3.5M7 4.5v.5"
-            stroke={T.textMuted}
-            strokeWidth="1.3"
-            strokeLinecap="round"
-          />
+          <path d="M7 6v3.5M7 4.5v.5" stroke={T.textMuted} strokeWidth="1.3" strokeLinecap="round" />
         </svg>
       </button>
       {show && (
         <>
-          {isMobile && (
-            <div
-              style={{
-                position: "fixed",
-                inset: 0,
-                zIndex: 998,
-              }}
-              onClick={() => setShow(false)}
-            />
-          )}
-          <div
-            ref={tooltipRef}
-            style={{
-              position: isMobile ? "fixed" : "absolute",
-              zIndex: 999,
-              background: T.text,
-              color: T.surface,
-              padding: "8px 10px",
-              borderRadius: T.radius,
-              fontSize: "0.72rem",
-              fontFamily: T.font,
-              lineHeight: 1.5,
-              width: isMobile ? "calc(100vw - 48px)" : "220px",
-              boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
-              ...getTooltipStyle(),
-            }}
-          >
-            {text}
-            {!isMobile && <div style={getArrowStyle()} />}
-          </div>
+          {isMobile && <div style={{ position: "fixed", inset: 0, zIndex: 998 }} onClick={() => setShow(false)} />}
+          <div style={{
+            position: "fixed", zIndex: 9999,
+            top: isMobile ? "50%" : coords.top,
+            left: isMobile ? "50%" : coords.left,
+            transform: isMobile ? "translate(-50%, -50%)" : "none",
+            background: T.text, color: T.surface, padding: "8px 10px",
+            borderRadius: T.radius, fontSize: "0.72rem", fontFamily: T.font,
+            lineHeight: 1.5, width: isMobile ? "calc(100vw - 48px)" : "220px",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
+          }}>{text}</div>
         </>
       )}
     </div>
@@ -391,7 +262,7 @@ function Label({ children, sub, tooltip }) {
         }}
       >
         {children}
-        {tooltip && <InfoTooltip text={tooltip} />}
+        {tooltip && <span style={{ fontSize: "14px", lineHeight: 1 }}><InfoTooltip text={tooltip} /></span>}
       </span>
       {sub && (
         <span
@@ -1698,26 +1569,6 @@ export default function App() {
         >
           <div
             style={{
-              flexShrink: 0,
-              padding: "10px 16px",
-              borderBottom: `1px solid ${T.border}`,
-              background: T.surfaceAlt,
-            }}
-          >
-            <span
-              style={{
-                fontSize: "0.68rem",
-                fontWeight: 700,
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
-                color: T.textSub,
-              }}
-            >
-              Your Information
-            </span>
-          </div>
-          <div
-            style={{
               flex: 1,
               overflowY: isMobile ? "visible" : "auto",
               padding: "12px 16px",
@@ -1752,7 +1603,7 @@ export default function App() {
                 <FieldErr msg={errors.salary} />
               </div>
               <div>
-                <Label tooltip="Your age as of December 31 of this year. If you're 50 or older, you're eligible for additional catch-up contributions.">
+                <Label tooltip="Your age as of December 31. Ages 50+ are eligible for catch-up contributions.">
                   Age
                 </Label>
                 <Input
@@ -1776,7 +1627,7 @@ export default function App() {
             {/* FICA — 50+ only AND salary high enough to possibly exceed $150k FICA */}
             {catchUpAge && parse(salary) >= FICA_CATCHUP_THRESHOLD && (
               <div style={{ marginBottom: 10 }}>
-                <Label tooltip={`Your prior-year FICA wages determine whether your catch-up contributions must be Roth. Find your ${PLAN_YEAR - 1} FICA wages on your W-2 Box 3 (Social Security wages).`}>
+                <Label tooltip="Your prior-year FICA wages determine whether catch-up contributions must be Roth. Find this on your W-2 Box 3.">
                   Were your {PLAN_YEAR - 1} FICA wages more than {FICA_THRESHOLD_DISPLAY}?
                 </Label>
                 <TogglePair
@@ -1798,7 +1649,7 @@ export default function App() {
 
             {/* YTD contributions */}
             <div style={{ marginBottom: 12 }}>
-              <Label tooltip="How much you've already contributed to your retirement plan this year. Leave blank if you haven't started yet.">
+              <Label tooltip="Only needed if you've already made contributions this year. Leave blank to calculate based on full annual limits.">
                 {PLAN_YEAR} Year-to-Date Contributions
               </Label>
               <div
@@ -1871,10 +1722,10 @@ export default function App() {
                 <Label
                   tooltip={
                     fica === true
-                      ? `Since your FICA wages were more than ${FICA_THRESHOLD_DISPLAY}, your catch-up contributions must be Roth. Your base contributions can still be any mix of pre-tax and Roth.`
+                      ? "Catch-up must be Roth since your FICA wages exceeded $150,000. Base contributions can still be any mix."
                       : fica === false
-                      ? `Choose how you want your remaining contributions allocated. Since your FICA wages were ${FICA_THRESHOLD_DISPLAY} or less, you have full flexibility for both base and catch-up contributions.`
-                      : `Choose how you want your remaining contributions allocated. If your FICA wages were more than ${FICA_THRESHOLD_DISPLAY}, your catch-up contributions must be Roth, but your base contributions can still be any mix.`
+                      ? "Your FICA wages were $150,000 or less — you have full flexibility for both base and catch-up contributions."
+                      : "If your FICA wages exceeded $150,000, catch-up must be Roth. Base contributions can always be any mix."
                   }
                 >
                   How do you want to contribute?
@@ -1893,7 +1744,7 @@ export default function App() {
               </div>
             ) : (
               <div style={{ marginBottom: 10 }}>
-                <Label tooltip="Choose your contribution type. Pre-Tax reduces your taxable income now. Roth contributions are after-tax but grow tax-free.">
+                <Label tooltip="Pre-Tax reduces taxable income now. Roth contributions are after-tax but grow tax-free.">
                   How do you want to contribute?
                 </Label>
                 <TogglePair
@@ -1910,165 +1761,86 @@ export default function App() {
               </div>
             )}
 
-            {/* NEW: Custom Annual Goal */}
-            <div style={{ marginBottom: 10 }}>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  marginBottom: 6,
-                }}
-              >
-                <input
-                  type="checkbox"
-                  id="customLimitCheck"
-                  checked={useCustomLimit}
-                  onChange={(e) => {
-                    setUseCustomLimit(e.target.checked);
-                    if (!e.target.checked) {
-                      // Clear the custom limit value when unchecked
-                      setCustomLimit("");
-                      setErrors((prev) => ({ ...prev, customLimit: "" }));
-                    }
-                    markDirty();
-                  }}
-                  style={{
-                    marginRight: 8,
-                    width: 16,
-                    height: 16,
-                    cursor: "pointer",
-                    accentColor: T.btn,
-                  }}
+            {/* Contribution Goal */}
+            <div style={{ display: "flex", alignItems: "center", gap: 6, margin: "14px 0 10px" }}>
+              <span style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textMuted, fontFamily: T.font, whiteSpace: "nowrap" }}>
+                Contribution Goal
+              </span>
+              <span style={{ fontSize: "14px", lineHeight: 1 }}><InfoTooltip text="Leave blank to calculate to the IRS maximum. Only use this if you want to contribute less than the maximum allowed." /></span>
+              <div style={{ flex: 1, height: 1, background: T.border }} />
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setUseCustomLimit(v => {
+                  if (v) { setCustomLimit(""); setErrors((prev) => ({ ...prev, customLimit: "" })); }
+                  markDirty();
+                  return !v;
+                });
+              }}
+              style={{
+                width: "100%", boxSizing: "border-box", padding: "9px 12px",
+                fontSize: "0.875rem", fontFamily: T.font,
+                color: useCustomLimit ? T.btn : T.text,
+                fontWeight: useCustomLimit ? 600 : 400,
+                background: useCustomLimit ? T.btnLight : T.surface,
+                border: `1.5px solid ${useCustomLimit ? T.btn : T.border}`,
+                borderRadius: T.radius, outline: "none", cursor: "pointer",
+                textAlign: "left", display: "flex", alignItems: "center",
+                justifyContent: "space-between", transition: "all 0.15s",
+                boxShadow: useCustomLimit ? `0 0 0 3px ${T.btnLight}` : "none",
+              }}
+              onMouseEnter={(e) => { if (!useCustomLimit) e.currentTarget.style.background = T.surfaceAlt; }}
+              onMouseLeave={(e) => { if (!useCustomLimit) e.currentTarget.style.background = T.surface; }}
+            >
+              <span>Set a target</span>
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none"
+                style={{ flexShrink: 0, transform: useCustomLimit ? "rotate(180deg)" : "none", transition: "transform 0.15s" }}>
+                <path d="M2 4l4 4 4-4" stroke={useCustomLimit ? T.btn : T.textSub} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+            {useCustomLimit && (
+              <div style={{ marginTop: 8, marginBottom: 4 }}>
+                <Label tooltip="Enter your total annual contribution goal. Cannot exceed the IRS maximum for your age.">
+                  Target annual contribution
+                </Label>
+                <Input
+                  value={customLimit}
+                  onChange={(v) => { setCustomLimit(v); setErrors((prev) => ({ ...prev, customLimit: "" })); markDirty(); }}
+                  placeholder=""
+                  prefix="$"
+                  type="number"
+                  err={errors.customLimit}
+                  inputRef={customLimitRef}
                 />
-                <label
-                  htmlFor="customLimitCheck"
-                  style={{
-                    fontSize: "0.82rem",
-                    fontWeight: 600,
-                    color: T.text,
-                    cursor: "pointer",
-                    fontFamily: T.font,
-                  }}
-                >
-                  Set a custom annual contribution goal
-                  <InfoTooltip text="By default, we calculate to the IRS maximum. Use this if you want to contribute less than the maximum allowed." />
-                </label>
-              </div>
-              {useCustomLimit && (
-                <div>
-                  <Input
-                    value={customLimit}
-                    onChange={(v) => {
-                      setCustomLimit(v);
-                      setErrors((prev) => ({ ...prev, customLimit: "" }));
-                      markDirty();
-                    }}
-                    placeholder=""
-                    prefix="$"
-                    type="number"
-                    err={errors.customLimit}
-                    inputRef={customLimitRef}
-                  />
-                  <FieldErr msg={errors.customLimit} />
-                  <div
-                    style={{
-                      fontSize: "0.67rem",
-                      color: T.textMuted,
-                      marginTop: 2,
-                      fontFamily: T.font,
-                      lineHeight: 1.3,
-                    }}
-                  >
-                    Maximum allowed:{" "}
-                    {fc(LIMITS.standard + getCatchUp(parsedAge))}
-                  </div>
+                <FieldErr msg={errors.customLimit} />
+                <div style={{ fontSize: "0.67rem", color: T.textMuted, marginTop: 2, fontFamily: T.font, lineHeight: 1.3 }}>
+                  Maximum allowed: {fc(LIMITS.standard + getCatchUp(parsedAge))}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
 
-            {/* Actions */}
-            <div style={{ display: "flex", gap: 8 }}>
-              <button
-                onClick={calculate}
-                style={{
-                  flex: 1,
-                  padding: "10px 14px",
-                  background: isDirty ? "#6B7280" : T.btn,
-                  color: "#FFF",
-                  border: "none",
-                  borderRadius: T.radius,
-                  fontSize: "0.85rem",
-                  fontWeight: 700,
-                  fontFamily: T.font,
-                  cursor: "pointer",
-                  letterSpacing: "-0.01em",
-                  transition: "background 0.2s",
-                  boxShadow: T.shadow,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 6,
-                }}
-                onMouseOver={(e) =>
-                  (e.currentTarget.style.background = isDirty
-                    ? "#4B5563"
-                    : T.btnHover)
-                }
-                onMouseOut={(e) =>
-                  (e.currentTarget.style.background = isDirty
-                    ? "#6B7280"
-                    : T.btn)
-                }
-              >
-                {isDirty && (
-                  <svg
-                    width="13"
-                    height="13"
-                    viewBox="0 0 13 13"
-                    fill="none"
-                    style={{ flexShrink: 0 }}
-                  >
-                    <circle
-                      cx="6.5"
-                      cy="6.5"
-                      r="5.5"
-                      stroke="rgba(255,255,255,0.7)"
-                      strokeWidth="1.2"
-                    />
-                    <path
-                      d="M6.5 3.5v3.2l2 1.2"
-                      stroke="rgba(255,255,255,0.7)"
-                      strokeWidth="1.2"
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                )}
-                {isDirty ? "Recalculate" : "Calculate →"}
-              </button>
-              <button
-                onClick={clearAll}
-                style={{
-                  padding: "10px 14px",
-                  background: T.surfaceAlt,
-                  color: T.textSub,
-                  border: `1.5px solid ${T.border}`,
-                  borderRadius: T.radius,
-                  fontSize: "0.8rem",
-                  fontWeight: 600,
-                  fontFamily: T.font,
-                  cursor: "pointer",
-                  transition: "all 0.15s",
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.background = T.border;
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.background = T.surfaceAlt;
-                }}
-              >
-                Clear
-              </button>
-            </div>
+          </div>
+
+          {/* Sticky Actions Footer */}
+          <div style={{ flexShrink: 0, padding: "12px 16px", borderTop: `1px solid ${T.border}`, background: T.surface, display: "flex", gap: 6 }}>
+            <button onClick={calculate} style={{
+              flex: 1, padding: "10px 14px",
+              background: isDirty ? "#6B7280" : T.btn, color: "#FFF",
+              border: "none", borderRadius: T.radius, fontSize: "0.85rem",
+              fontWeight: 700, fontFamily: T.font, cursor: "pointer",
+              transition: "background 0.2s", boxShadow: T.shadow,
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+            }}
+              onMouseOver={(e) => (e.currentTarget.style.background = isDirty ? "#4B5563" : T.btnHover)}
+              onMouseOut={(e) => (e.currentTarget.style.background = isDirty ? "#6B7280" : T.btn)}
+            >
+              {isDirty ? (<><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="6.5" r="5.5" stroke="rgba(255,255,255,0.7)" strokeWidth="1.2" /><path d="M6.5 3.5v3.2l2 1.2" stroke="rgba(255,255,255,0.7)" strokeWidth="1.2" strokeLinecap="round" /></svg> Recalculate</>) : "Calculate →"}
+            </button>
+            <button onClick={clearAll} style={{ padding: "10px 16px", background: T.surfaceAlt, color: T.textSub, border: `1.5px solid ${T.border}`, borderRadius: T.radius, fontSize: "0.8rem", fontWeight: 600, fontFamily: T.font, cursor: "pointer", transition: "all 0.15s" }}
+              onMouseOver={(e) => (e.currentTarget.style.background = T.border)}
+              onMouseOut={(e) => (e.currentTarget.style.background = T.surfaceAlt)}
+            >Clear</button>
           </div>
         </div>
 
@@ -2085,34 +1857,11 @@ export default function App() {
             overflow: "hidden",
           }}
         >
-          <div
-            style={{
-              flexShrink: 0,
-              padding: "10px 16px",
-              borderBottom: `1px solid ${T.border}`,
-              background: T.surfaceAlt,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-            }}
-          >
-            <span
-              style={{
-                fontSize: "0.68rem",
-                fontWeight: 700,
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
-                color: T.textSub,
-              }}
-            >
-              Results
-            </span>
-            {result && result.overContrib && !isDirty && (
-              <Badge color={T.red} bg={T.redLight}>
-                Over-Contribution
-              </Badge>
-            )}
-          </div>
+          {result && result.overContrib && !isDirty && (
+            <div style={{ padding: "8px 16px 0" }}>
+              <Badge color={T.red} bg={T.redLight}>Over-Contribution</Badge>
+            </div>
+          )}
 
           <div
             style={{
@@ -2161,20 +1910,8 @@ export default function App() {
                     }}
                   >
                     <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
-                      <circle
-                        cx="12"
-                        cy="12"
-                        r="9.5"
-                        stroke={T.btn}
-                        strokeWidth="1.5"
-                      />
-                      <path
-                        d="M12 7v5.5l3.2 2"
-                        stroke={T.btn}
-                        strokeWidth="1.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
+                      <path d="M20 11A8 8 0 1 0 4.93 17" stroke={T.btn} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M20 7v4h-4" stroke={T.btn} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                   </div>
                   <div
