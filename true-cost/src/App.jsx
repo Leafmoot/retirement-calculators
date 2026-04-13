@@ -126,185 +126,56 @@ const T = {
   fontMono: "'JetBrains Mono', 'Fira Code', monospace",
 };
 
-// Tooltip component with smart positioning
 function InfoTooltip({ text }) {
   const [show, setShow] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [position, setPosition] = useState({ top: true, left: true });
+  const [coords, setCoords] = useState({ top: 0, left: 0 });
   const buttonRef = useRef(null);
-  const tooltipRef = useRef(null);
 
   useEffect(() => {
     setIsMobile(window.innerWidth < 768);
-    const handleResize = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+    const h = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", h);
+    return () => window.removeEventListener("resize", h);
   }, []);
 
-  useEffect(() => {
-    if (show && !isMobile && buttonRef.current && tooltipRef.current) {
-      const buttonRect = buttonRef.current.getBoundingClientRect();
-      const tooltipRect = tooltipRef.current.getBoundingClientRect();
-
-      // Find the scrollable parent container
-      let scrollParent = buttonRef.current.parentElement;
-      while (scrollParent && scrollParent !== document.body) {
-        const overflow = window.getComputedStyle(scrollParent).overflowY;
-        if (overflow === "auto" || overflow === "scroll") {
-          break;
-        }
-        scrollParent = scrollParent.parentElement;
-      }
-
-      // Get container boundaries
-      const containerRect = scrollParent
-        ? scrollParent.getBoundingClientRect()
-        : {
-            left: 0,
-            right: window.innerWidth,
-            top: 0,
-            bottom: window.innerHeight,
-          };
-
-      // Check if tooltip would go off container or screen
-      const wouldOverflowRight =
-        buttonRect.left + tooltipRect.width / 2 > containerRect.right - 10;
-      const wouldOverflowLeft =
-        buttonRect.left - tooltipRect.width / 2 < containerRect.left + 10;
-      const wouldOverflowTop =
-        buttonRect.top - tooltipRect.height - 8 < containerRect.top + 10;
-
-      setPosition({
-        top: !wouldOverflowTop,
-        left: wouldOverflowLeft ? false : wouldOverflowRight ? true : "center",
-      });
+  const handleShow = () => {
+    if (buttonRef.current) {
+      const br = buttonRef.current.getBoundingClientRect();
+      const tooltipWidth = 220;
+      let left = br.left + br.width / 2 - tooltipWidth / 2;
+      if (left < 10) left = 10;
+      if (left + tooltipWidth > window.innerWidth - 10) left = window.innerWidth - tooltipWidth - 10;
+      setCoords({ top: br.bottom + 8, left });
     }
-  }, [show, isMobile]);
-
-  const getTooltipStyle = () => {
-    if (isMobile) {
-      return {
-        left: "50%",
-        top: "50%",
-        transform: "translate(-50%, -50%)",
-      };
-    }
-
-    const baseStyle = {
-      position: "absolute",
-      zIndex: 999,
-    };
-
-    if (position.top) {
-      baseStyle.bottom = "calc(100% + 8px)";
-    } else {
-      baseStyle.top = "calc(100% + 8px)";
-    }
-
-    if (position.left === "center") {
-      baseStyle.left = "50%";
-      baseStyle.transform = "translateX(-50%)";
-    } else if (position.left === false) {
-      baseStyle.left = "0";
-    } else {
-      baseStyle.right = "0";
-    }
-
-    return baseStyle;
-  };
-
-  const getArrowStyle = () => {
-    const baseStyle = {
-      position: "absolute",
-      width: 8,
-      height: 8,
-      background: T.text,
-    };
-
-    if (position.top) {
-      baseStyle.bottom = -4;
-      baseStyle.clipPath = "polygon(50% 100%, 0% 0%, 100% 0%)";
-    } else {
-      baseStyle.top = -4;
-      baseStyle.clipPath = "polygon(50% 0%, 0% 100%, 100% 100%)";
-    }
-
-    if (position.left === "center") {
-      baseStyle.left = "50%";
-      baseStyle.transform = "translateX(-50%)";
-    } else if (position.left === false) {
-      baseStyle.left = "12px";
-    } else {
-      baseStyle.right = "12px";
-    }
-
-    return baseStyle;
+    setShow(true);
   };
 
   return (
-    <div
-      style={{ position: "relative", display: "inline-block", marginLeft: 4 }}
-    >
-      <button
-        ref={buttonRef}
-        type="button"
-        onMouseEnter={() => !isMobile && setShow(true)}
+    <div style={{ position: "relative", display: "inline-block", marginLeft: 4 }}>
+      <button type="button" ref={buttonRef}
+        onMouseEnter={() => !isMobile && handleShow()}
         onMouseLeave={() => !isMobile && setShow(false)}
-        onClick={() => isMobile && setShow(!show)}
-        style={{
-          background: "transparent",
-          border: "none",
-          cursor: "pointer",
-          padding: 0,
-          display: "inline-flex",
-          alignItems: "center",
-          justifyContent: "center",
-          width: 16,
-          height: 16,
-        }}
-      >
+        onClick={() => isMobile && (show ? setShow(false) : handleShow())}
+        style={{ background: "transparent", border: "none", cursor: "pointer", padding: 0, display: "inline-flex", alignItems: "center", width: 16, height: 16 }}>
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
           <circle cx="7" cy="7" r="6" stroke={T.textMuted} strokeWidth="1.2" />
-          <path
-            d="M7 6v3.5M7 4.5v.5"
-            stroke={T.textMuted}
-            strokeWidth="1.3"
-            strokeLinecap="round"
-          />
+          <path d="M7 6v3.5M7 4.5v.5" stroke={T.textMuted} strokeWidth="1.3" strokeLinecap="round" />
         </svg>
       </button>
       {show && (
         <>
-          {isMobile && (
-            <div
-              style={{
-                position: "fixed",
-                inset: 0,
-                zIndex: 998,
-              }}
-              onClick={() => setShow(false)}
-            />
-          )}
-          <div
-            ref={tooltipRef}
-            style={{
-              position: isMobile ? "fixed" : "absolute",
-              zIndex: 999,
-              background: T.text,
-              color: T.surface,
-              padding: "8px 10px",
-              borderRadius: T.radius,
-              fontSize: "0.8rem",
-              fontFamily: T.font,
-              lineHeight: 1.5,
-              width: isMobile ? "calc(100vw - 48px)" : "220px",
-              boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
-              ...getTooltipStyle(),
-            }}
-          >
-            {text}
-            {!isMobile && <div style={getArrowStyle()} />}
-          </div>
+          {isMobile && <div style={{ position: "fixed", inset: 0, zIndex: 998 }} onClick={() => setShow(false)} />}
+          <div style={{
+            position: "fixed", zIndex: 9999,
+            top: isMobile ? "50%" : coords.top,
+            left: isMobile ? "50%" : coords.left,
+            transform: isMobile ? "translate(-50%, -50%)" : "none",
+            background: T.text, color: T.surface, padding: "8px 10px",
+            borderRadius: T.radius, fontSize: "0.72rem", fontFamily: T.font,
+            lineHeight: 1.5, width: isMobile ? "calc(100vw - 48px)" : "220px",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
+          }}>{text}</div>
         </>
       )}
     </div>
@@ -331,7 +202,7 @@ function Label({ children, sub, tooltip }) {
         }}
       >
         {children}
-        {tooltip && <InfoTooltip text={tooltip} />}
+        {tooltip && <span style={{ fontSize: "14px", lineHeight: 1 }}><InfoTooltip text={tooltip} /></span>}
       </span>
       {sub && (
         <span
@@ -1392,26 +1263,6 @@ export default function App() {
         >
           <div
             style={{
-              flexShrink: 0,
-              padding: "10px 16px",
-              borderBottom: `1px solid ${T.border}`,
-              background: T.surfaceAlt,
-            }}
-          >
-            <span
-              style={{
-                fontSize: "0.8rem",
-                fontWeight: 700,
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
-                color: T.textSub,
-              }}
-            >
-              Your Information
-            </span>
-          </div>
-          <div
-            style={{
               flex: 1,
               overflowY: isMobile ? "visible" : "auto",
               padding: "12px 16px",
@@ -1447,7 +1298,7 @@ export default function App() {
                 <FieldErr msg={errors.salary} />
               </div>
               <div>
-                <Label tooltip="Your tax filing status affects your marginal tax rate and the tax savings you receive from pre-tax contributions.">
+                <Label tooltip="Your filing status determines your marginal tax rate and the tax savings from pre-tax contributions.">
                   Filing Status
                 </Label>
                 <Select
@@ -1489,7 +1340,7 @@ export default function App() {
               className="mobile-stack"
             >
               <div>
-                <Label tooltip="Pre-tax contributions reduce your taxable income now, lowering the amount withheld from your paycheck.">
+                <Label tooltip="Pre-Tax reduces your taxable income now, lowering the amount withheld from your paycheck.">
                   Pre-Tax %
                 </Label>
                 <Input
@@ -1508,7 +1359,7 @@ export default function App() {
                 <FieldErr msg={errors.preTaxPct} />
               </div>
               <div>
-                <Label tooltip="Roth contributions are after-tax, so they don't reduce your current taxable income but grow tax-free.">
+                <Label tooltip="Roth contributions are after-tax and grow tax-free, but don't reduce your current taxable income.">
                   Roth % (After-Tax)
                 </Label>
                 <Input
@@ -1675,8 +1526,8 @@ export default function App() {
                   }}
                 >
                   <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
-                    <circle cx="12" cy="12" r="9.5" stroke={T.btn} strokeWidth="1.5" />
-                    <path d="M12 7v5.5l3.2 2" stroke={T.btn} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M20 11A8 8 0 1 0 4.93 17" stroke={T.btn} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M20 7v4h-4" stroke={T.btn} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 </div>
                 <div style={{ fontSize: "0.9rem", fontWeight: 700, color: T.text, fontFamily: T.font, textAlign: "center" }}>
@@ -1688,27 +1539,6 @@ export default function App() {
               </div>
             </div>
           )}
-
-          <div
-            style={{
-              flexShrink: 0,
-              padding: "10px 16px",
-              borderBottom: `1px solid ${T.border}`,
-              background: T.surfaceAlt,
-            }}
-          >
-            <span
-              style={{
-                fontSize: "0.8rem",
-                fontWeight: 700,
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
-                color: T.textSub,
-              }}
-            >
-              Results
-            </span>
-          </div>
 
           <div
             style={{
