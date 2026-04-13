@@ -601,8 +601,7 @@ function StatCard({ label, value, sub, subLines, color, small }) {
           style={{
             fontSize: "0.8rem",
             fontWeight: 600,
-            letterSpacing: "0.05em",
-            textTransform: "uppercase",
+            letterSpacing: "0.01em",
             color: "#64748B",
             fontFamily: T.font,
             marginBottom: 6,
@@ -1580,8 +1579,7 @@ export default function App() {
                       style={{
                         fontSize: "0.8rem",
                         fontWeight: 600,
-                        letterSpacing: "0.05em",
-                        textTransform: "uppercase",
+                        letterSpacing: "0.01em",
                         color: "#64748B",
                         fontFamily: T.font,
                         marginBottom: 6,
@@ -1713,8 +1711,7 @@ export default function App() {
                       style={{
                         fontSize: "0.8rem",
                         fontWeight: 600,
-                        letterSpacing: "0.05em",
-                        textTransform: "uppercase",
+                        letterSpacing: "0.01em",
                         color: "#64748B",
                         fontFamily: T.font,
                         marginBottom: 6,
@@ -1841,8 +1838,7 @@ export default function App() {
                       style={{
                         fontSize: "0.8rem",
                         fontWeight: 600,
-                        letterSpacing: "0.05em",
-                        textTransform: "uppercase",
+                        letterSpacing: "0.01em",
                         color: "#64748B",
                         fontFamily: T.font,
                         marginBottom: 6,
