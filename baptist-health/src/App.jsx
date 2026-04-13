@@ -124,7 +124,7 @@ function fmtCutoff(date) {
 const EMPTY_ERR = {
   salary: "", age: "",
   ytd403bPre: "", ytd403bRoth: "", ytd403bAfterTax: "",
-  ytd401aAfterTax: "", ytd457b: "",
+  ytd401aAfterTax: "", ytd401aEmployer: "", ytd457b: "",
   targetAmount: "",
 };
 
@@ -388,6 +388,7 @@ export default function App() {
   const [ytd403bRoth, setYtd403bRoth] = useState("");
   const [ytd403bAfterTax, setYtd403bAfterTax] = useState("");
   const [ytd401aAfterTax, setYtd401aAfterTax] = useState("");
+  const [ytd401aEmployer, setYtd401aEmployer] = useState("");
   const [ytd457b, setYtd457b] = useState("");
   const [show403bYtd, setShow403bYtd] = useState(false);
   const [show401aYtd, setShow401aYtd] = useState(false);
@@ -466,15 +467,26 @@ export default function App() {
       const ytd403bElective = ytd403bPreAmt + ytd403bRothAmt;
       const ytd403bAfterTaxAmt = parse(ytd403bAfterTax);
       const ytd401aAfterTaxAmt = parse(ytd401aAfterTax);
+      const ytd401aEmployerAmt = parse(ytd401aEmployer);
       const ytd457bAmt = parse(ytd457b);
 
+      // Full-year employer estimate (used for display and summary)
       const empMatchAmt = compBasis * MATCH_CAP_PCT * MATCH_RATE;
       const empDiscAmt = compBasis * DISCRETIONARY_RATE;
       const totalEmployer401a = empMatchAmt + empDiscAmt;
 
+      // Projected employer for 415(c) calculation:
+      // If user provided YTD employer contributions, use those + what the employer
+      // will contribute for remaining paychecks. This correctly handles mid-year hires.
+      // If no YTD provided, fall back to full-year estimate.
+      const empPerCheck = totalEmployer401a / periodsTotal;
+      const projectedEmployer401a = ytd401aEmployerAmt > 0
+        ? ytd401aEmployerAmt + (empPerCheck * periodsLeft)
+        : totalEmployer401a;
+
       const electiveLimit = LIMIT_402G + catchUp;
       const afterTax403bLimit = Math.max(LIMIT_415C - LIMIT_402G, 0);
-      const afterTax401aLimit = Math.max(LIMIT_415C - totalEmployer401a, 0);
+      const afterTax401aLimit = Math.max(LIMIT_415C - projectedEmployer401a, 0);
 
       const totalYtdEmployee = ytd403bElective + ytd403bAfterTaxAmt + ytd401aAfterTaxAmt + ytd457bAmt;
       const maxEmployee = electiveLimit + afterTax403bLimit + afterTax401aLimit + LIMIT_457B;
@@ -496,8 +508,13 @@ export default function App() {
       const electiveChecks = electiveRem > 0 ? Math.ceil(electiveRem / ((perCheck * electivePct) / 100)) : 0;
       const electiveNotNeeded = usingTarget && electiveAllocated === 0 && electiveRemMax > 0;
 
-      const elective402gOnly = Math.min(ytd403bElective, LIMIT_402G);
-      const afterTax403bRemMax = Math.max(LIMIT_415C - Math.max(elective402gOnly, LIMIT_402G) - ytd403bAfterTaxAmt, 0);
+      // Projected 402(g)-only elective = YTD already contributed + what will be contributed going forward
+      // capped at LIMIT_402G (catch-up is above 415(c) and does not reduce after-tax room)
+      const projectedElective402g = Math.min(
+        ytd403bElective + Math.min(electiveDpc * electiveChecks, electiveRem),
+        LIMIT_402G
+      );
+      const afterTax403bRemMax = Math.max(LIMIT_415C - projectedElective402g - ytd403bAfterTaxAmt, 0);
       const afterTax403bAllocated = Math.min(budget, afterTax403bRemMax);
       budget -= afterTax403bAllocated;
       const afterTax403bRemFinal = afterTax403bAllocated;
@@ -532,7 +549,7 @@ export default function App() {
         afterTax403bRem: afterTax403bRemFinal,
         afterTax403bPct, afterTax403bDpc, afterTax403bChecks, afterTax403bNotNeeded,
         ytd403bAfterTaxAmt,
-        empMatchAmt, empDiscAmt, totalEmployer401a,
+        empMatchAmt, empDiscAmt, totalEmployer401a, projectedEmployer401a, ytd401aEmployerAmt,
         afterTax401aLimit, afterTax401aRem,
         afterTax401aPct, afterTax401aDpc, afterTax401aChecks, afterTax401aNotNeeded,
         ytd401aAfterTaxAmt,
@@ -545,7 +562,7 @@ export default function App() {
   function clearAll() {
     setSalary(""); setAge("");
     setYtd403bPre(""); setYtd403bRoth(""); setYtd403bAfterTax("");
-    setYtd401aAfterTax(""); setYtd457b("");
+    setYtd401aAfterTax(""); setYtd401aEmployer(""); setYtd457b("");
     setShow403bYtd(false); setShow401aYtd(false); setShow457bYtd(false);
     setUseTarget(false); setTargetAmount("");
     setResult(null); setErrors(EMPTY_ERR);
@@ -646,7 +663,7 @@ export default function App() {
               isOpen={show401aYtd}
               onToggle={() => {
                 setShow401aYtd(v => {
-                  if (v) setYtd401aAfterTax("");
+                  if (v) { setYtd401aAfterTax(""); setYtd401aEmployer(""); }
                   markDirty();
                   return !v;
                 });
@@ -654,11 +671,19 @@ export default function App() {
               marginTop={6}
             />
             {show401aYtd && (
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginTop: 8, marginBottom: 4 }} className="mobile-stack">
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 8, marginBottom: 4 }} className="mobile-stack">
                 <div>
                   <div style={{ fontSize: "0.71rem", fontWeight: 600, color: T.textSub, marginBottom: 3, fontFamily: T.font }}>After-Tax (employee)</div>
                   <Input value={ytd401aAfterTax} onChange={(v) => { setYtd401aAfterTax(v); markDirty(); }} prefix="$" type="number" err={errors.ytd401aAfterTax} />
                   <FieldErr msg={errors.ytd401aAfterTax} />
+                </div>
+                <div>
+                  <div style={{ fontSize: "0.71rem", fontWeight: 600, color: T.textSub, marginBottom: 3, fontFamily: T.font }}>
+                    Employer contributions
+                    <span style={{ display: "inline-block", marginLeft: 4 }}><InfoTooltip text="Total employer contributions (match + discretionary) shown on your pay stubs so far this year. Enter this if you joined mid-year — it ensures your 415(c) after-tax room is calculated accurately." /></span>
+                  </div>
+                  <Input value={ytd401aEmployer} onChange={(v) => { setYtd401aEmployer(v); markDirty(); }} prefix="$" type="number" err={errors.ytd401aEmployer} />
+                  <FieldErr msg={errors.ytd401aEmployer} />
                 </div>
               </div>
             )}
@@ -868,7 +893,8 @@ export default function App() {
                         <PlanLine label="415(c) after-tax room" value={fc(result.afterTax401aLimit)} dimmed />
                         <PlanLine label="Employer match (50% × 8%)" value={fc(result.empMatchAmt)} dimmed />
                         <PlanLine label="Employer discretionary (3%)" value={fc(result.empDiscAmt)} dimmed />
-                        <PlanLine label="Total employer contributions" value={fc(result.totalEmployer401a)} dimmed />
+                        <PlanLine label="Employer contributions (projected)" value={fc(result.projectedEmployer401a)} dimmed />
+                        <PlanLine label="Employer contributions (YTD)" value={fc(result.ytd401aEmployerAmt)} dimmed />
                         <PlanLine label="After-tax contributed (YTD)" value={fc(result.ytd401aAfterTaxAmt)} dimmed />
                       </div>
                     </details>
