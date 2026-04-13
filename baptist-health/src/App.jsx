@@ -621,7 +621,7 @@ export default function App() {
               <span style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textMuted, fontFamily: T.font, whiteSpace: "nowrap" }}>
                 Year-to-Date Contributions
               </span>
-              <InfoTooltip text="Optional — only needed if you've already made contributions this year. If left blank, the calculator assumes you're starting fresh and calculates based on the full annual limits." />
+              <InfoTooltip text="Only needed if you've already made contributions this year. Leave blank to calculate based on full annual limits." />
               <div style={{ flex: 1, height: 1, background: T.border }} />
             </div>
 
@@ -678,10 +678,7 @@ export default function App() {
                   <FieldErr msg={errors.ytd401aAfterTax} />
                 </div>
                 <div>
-                  <div style={{ fontSize: "0.71rem", fontWeight: 600, color: T.textSub, marginBottom: 3, fontFamily: T.font }}>
-                    Employer contributions
-                    <span style={{ display: "inline-block", marginLeft: 4 }}><InfoTooltip text="Total employer contributions (match + discretionary) shown on your pay stubs so far this year. Enter this if you joined mid-year — it ensures your 415(c) after-tax room is calculated accurately." /></span>
-                  </div>
+                  <div style={{ fontSize: "0.71rem", fontWeight: 600, color: T.textSub, marginBottom: 3, fontFamily: T.font }}>Employer contributions</div>
                   <Input value={ytd401aEmployer} onChange={(v) => { setYtd401aEmployer(v); markDirty(); }} prefix="$" type="number" err={errors.ytd401aEmployer} />
                   <FieldErr msg={errors.ytd401aEmployer} />
                 </div>
@@ -716,7 +713,7 @@ export default function App() {
               <span style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textMuted, fontFamily: T.font, whiteSpace: "nowrap" }}>
                 Contribution Goal
               </span>
-              <InfoTooltip text="Optional. If left blank, the calculator will automatically determine the maximum you can contribute across all three plans based on your age and salary — you don't need to know the IRS limits. Only use this if you have a specific dollar amount in mind." />
+              <InfoTooltip text="Leave blank to maximize all plans. Only enter a value if the employee has a specific dollar target in mind." />
               <div style={{ flex: 1, height: 1, background: T.border }} />
             </div>
             <ExpandRow
