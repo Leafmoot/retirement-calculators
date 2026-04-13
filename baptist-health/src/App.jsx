@@ -621,7 +621,7 @@ export default function App() {
               <span style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textMuted, fontFamily: T.font, whiteSpace: "nowrap" }}>
                 Year-to-Date Contributions
               </span>
-              <InfoTooltip text="Only needed if you've already made contributions this year. Leave blank to calculate based on full annual limits." />
+              <span style={{ fontSize: "14px", lineHeight: 1 }}><InfoTooltip text="Only needed if you've already made contributions this year. Leave blank to calculate based on full annual limits." /></span>
               <div style={{ flex: 1, height: 1, background: T.border }} />
             </div>
 
@@ -713,7 +713,7 @@ export default function App() {
               <span style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textMuted, fontFamily: T.font, whiteSpace: "nowrap" }}>
                 Contribution Goal
               </span>
-              <InfoTooltip text="Leave blank to maximize all plans. Only enter a value if the employee has a specific dollar target in mind." />
+              <span style={{ fontSize: "14px", lineHeight: 1 }}><InfoTooltip text="Leave blank to maximize all plans. Only enter a value if you have a specific dollar target in mind." /></span>
               <div style={{ flex: 1, height: 1, background: T.border }} />
             </div>
             <ExpandRow
