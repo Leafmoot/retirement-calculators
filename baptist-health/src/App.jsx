@@ -597,9 +597,6 @@ export default function App() {
 
         {/* ── LEFT: Inputs ── */}
         <div style={{ background: T.surface, borderRadius: T.radiusLg, border: `1px solid ${T.border}`, boxShadow: T.shadowMd, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-          <div style={{ flexShrink: 0, padding: "10px 16px", borderBottom: `1px solid ${T.border}`, background: T.surfaceAlt }}>
-            <span style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub }}>Your Information</span>
-          </div>
           <div style={{ overflowY: isMobile ? "visible" : "auto", padding: "12px 16px" }}>
 
             {/* Salary + Age */}
@@ -780,10 +777,6 @@ export default function App() {
               </div>
             </div>
           )}
-
-          <div style={{ flexShrink: 0, padding: "10px 16px", borderBottom: `1px solid ${T.border}`, background: T.surfaceAlt }}>
-            <span style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub }}>Results</span>
-          </div>
 
           <div style={{ overflowY: (isMobile || !result) ? "hidden" : "auto", padding: "14px 16px" }}>
 
