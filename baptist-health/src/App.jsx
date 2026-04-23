@@ -394,6 +394,8 @@ export default function App() {
   const [show401aYtd, setShow401aYtd] = useState(false);
   const [show457bYtd, setShow457bYtd] = useState(false);
   const [useTarget, setUseTarget] = useState(false);
+  const [include401a, setInclude401a] = useState(true);
+  const [include457b, setInclude457b] = useState(true);
   const [targetAmount, setTargetAmount] = useState("");
   const [result, setResult] = useState(null);
   const [errors, setErrors] = useState(EMPTY_ERR);
@@ -491,22 +493,44 @@ export default function App() {
       const totalYtdEmployee = ytd403bElective + ytd403bAfterTaxAmt + ytd401aAfterTaxAmt + ytd457bAmt;
       const maxEmployee = electiveLimit + afterTax403bLimit + afterTax401aLimit + LIMIT_457B;
 
+      // Employee contributions cannot exceed annual salary (IRS compensation limit)
+      const salaryCapLimit = Math.min(maxEmployee, w);
+
+      // Edge case: YTD contributions already meet or exceed the salary cap
+      if (totalYtdEmployee >= salaryCapLimit) {
+        setIsCalculating(false);
+        setResult({
+          salaryCapped: true,
+          salary: w,
+          totalYtdEmployee,
+          salaryCapLimit,
+          periodsLeft,
+          periodsTotal,
+        });
+        return;
+      }
+
       let budget, usingTarget = false;
       if (useTarget && parse(targetAmount) > 0) {
-        budget = Math.max(parse(targetAmount) - totalYtdEmployee, 0);
+        budget = Math.max(Math.min(parse(targetAmount), salaryCapLimit) - totalYtdEmployee, 0);
         usingTarget = true;
       } else {
-        budget = maxEmployee - totalYtdEmployee;
+        budget = salaryCapLimit - totalYtdEmployee;
       }
 
       const electiveRemMax = Math.max(electiveLimit - ytd403bElective, 0);
       const electiveAllocated = Math.min(budget, electiveRemMax);
       budget -= electiveAllocated;
       const electiveRem = electiveAllocated;
-      const electivePct = electiveRem > 0 ? ceilPct(electiveRem / periodsLeft / perCheck) : 0;
+      // Cap at 100% of paycheck
+      const electivePctRaw = electiveRem > 0 ? ceilPct(electiveRem / periodsLeft / perCheck) : 0;
+      const electivePct = Math.min(electivePctRaw, 100);
       const electiveDpc = (perCheck * electivePct) / 100;
-      const electiveChecks = electiveRem > 0 ? Math.ceil(electiveRem / ((perCheck * electivePct) / 100)) : 0;
+      const electiveChecks = electiveRem > 0 ? Math.ceil(electiveRem / electiveDpc) : 0;
       const electiveNotNeeded = usingTarget && electiveAllocated === 0 && electiveRemMax > 0;
+
+      // Track used paycheck % so subsequent plans don't exceed 100% combined
+      let usedPct = electivePct;
 
       // Projected 402(g)-only elective = YTD already contributed + what will be contributed going forward
       // capped at LIMIT_402G (catch-up is above 415(c) and does not reduce after-tax room)
@@ -518,24 +542,33 @@ export default function App() {
       const afterTax403bAllocated = Math.min(budget, afterTax403bRemMax);
       budget -= afterTax403bAllocated;
       const afterTax403bRemFinal = afterTax403bAllocated;
-      const afterTax403bPct = afterTax403bRemFinal > 0 ? ceilPct(afterTax403bRemFinal / periodsLeft / perCheck) : 0;
-      const afterTax403bDpc = (perCheck * afterTax403bPct) / 100;
-      const afterTax403bChecks = afterTax403bRemFinal > 0 ? Math.ceil(afterTax403bRemFinal / ((perCheck * afterTax403bPct) / 100)) : 0;
+      // Cap after-tax 403b at remaining paycheck % after elective
+      const afterTax403bPctRaw = afterTax403bRemFinal > 0 ? ceilPct(afterTax403bRemFinal / periodsLeft / perCheck) : 0;
+      const afterTax403bPct = Math.min(afterTax403bPctRaw, Math.max(100 - usedPct, 0));
+      const afterTax403bDpc = afterTax403bPct > 0 ? (perCheck * afterTax403bPct) / 100 : 0;
+      const afterTax403bChecks = afterTax403bRemFinal > 0 && afterTax403bDpc > 0 ? Math.ceil(afterTax403bRemFinal / afterTax403bDpc) : 0;
       const afterTax403bNotNeeded = usingTarget && afterTax403bAllocated === 0 && afterTax403bRemMax > 0;
+      usedPct += afterTax403bPct;
 
-      const afterTax401aRemMax = Math.max(afterTax401aLimit - ytd401aAfterTaxAmt, 0);
+      const afterTax401aRemMax = include401a ? Math.max(afterTax401aLimit - ytd401aAfterTaxAmt, 0) : 0;
       const afterTax401aAllocated = Math.min(budget, afterTax401aRemMax);
       budget -= afterTax401aAllocated;
       const afterTax401aRem = afterTax401aAllocated;
-      const afterTax401aPct = afterTax401aRem > 0 ? ceilPct(afterTax401aRem / periodsLeft / perCheck) : 0;
-      const afterTax401aDpc = (perCheck * afterTax401aPct) / 100;
-      const afterTax401aChecks = afterTax401aRem > 0 ? Math.ceil(afterTax401aRem / ((perCheck * afterTax401aPct) / 100)) : 0;
+      // Cap 401a at remaining paycheck % after 403b plans
+      const afterTax401aPctRaw = afterTax401aRem > 0 ? ceilPct(afterTax401aRem / periodsLeft / perCheck) : 0;
+      const afterTax401aPct = Math.min(afterTax401aPctRaw, Math.max(100 - usedPct, 0));
+      const afterTax401aDpc = afterTax401aPct > 0 ? (perCheck * afterTax401aPct) / 100 : 0;
+      const afterTax401aChecks = afterTax401aRem > 0 && afterTax401aDpc > 0 ? Math.ceil(afterTax401aRem / afterTax401aDpc) : 0;
       const afterTax401aNotNeeded = usingTarget && afterTax401aAllocated === 0 && afterTax401aRemMax > 0;
+      usedPct += afterTax401aPct;
 
-      const rem457bMax = Math.max(LIMIT_457B - ytd457bAmt, 0);
+      const rem457bMax = include457b ? Math.max(LIMIT_457B - ytd457bAmt, 0) : 0;
       const allocated457b = Math.min(budget, rem457bMax);
       const rem457b = allocated457b;
-      const dpc457b = periodsLeft > 0 && rem457b > 0 ? Math.ceil((rem457b / periodsLeft) * 100) / 100 : 0;
+      // 457b is a dollar amount — cap the per-paycheck dollar at remaining paycheck after other plans
+      const remaining457bDpc = Math.max((perCheck * (100 - usedPct)) / 100, 0);
+      const dpc457bRaw = periodsLeft > 0 && rem457b > 0 ? Math.ceil((rem457b / periodsLeft) * 100) / 100 : 0;
+      const dpc457b = Math.min(dpc457bRaw, remaining457bDpc);
       const checks457b = dpc457b > 0 ? Math.ceil(rem457b / dpc457b) : 0;
       const notNeeded457b = usingTarget && allocated457b === 0 && rem457bMax > 0;
 
@@ -554,7 +587,15 @@ export default function App() {
         afterTax401aPct, afterTax401aDpc, afterTax401aChecks, afterTax401aNotNeeded,
         ytd401aAfterTaxAmt,
         rem457b, dpc457b, checks457b, notNeeded457b, ytd457bAmt,
-        totalAnnualEmployee: maxEmployee,
+        include401a, include457b,
+        // Salary is the binding constraint only when no target is set (or target exceeds salary cap)
+        salaryCapping: w < maxEmployee && (!usingTarget || parse(targetAmount) > w),
+        // Per-plan salary cap flags: true when plan is capped by salary, not IRS limit or user target
+        electiveSalaryCapped: w < maxEmployee && (!usingTarget || parse(targetAmount) > w) && electiveAllocated < electiveRemMax,
+        afterTax403bSalaryCapped: w < maxEmployee && (!usingTarget || parse(targetAmount) > w) && afterTax403bAllocated < afterTax403bRemMax,
+        afterTax401aSalaryCapped: w < maxEmployee && (!usingTarget || parse(targetAmount) > w) && afterTax401aAllocated < afterTax401aRemMax,
+        salary457bCapped: w < maxEmployee && (!usingTarget || parse(targetAmount) > w) && allocated457b < rem457bMax,
+        totalAnnualEmployee: salaryCapLimit,
       });
     }, 650);
   }
@@ -565,6 +606,7 @@ export default function App() {
     setYtd401aAfterTax(""); setYtd401aEmployer(""); setYtd457b("");
     setShow403bYtd(false); setShow401aYtd(false); setShow457bYtd(false);
     setUseTarget(false); setTargetAmount("");
+    setInclude401a(true); setInclude457b(true);
     setResult(null); setErrors(EMPTY_ERR);
     setCalculated(false); setIsDirty(false); setIsCalculating(false);
   }
@@ -705,6 +747,53 @@ export default function App() {
               </div>
             )}
 
+            {/* Plan Options */}
+            <div style={{ display: "flex", alignItems: "center", gap: 6, margin: "14px 0 10px" }}>
+              <span style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textMuted, fontFamily: T.font, whiteSpace: "nowrap" }}>
+                Plan Options
+              </span>
+              <span style={{ fontSize: "14px", lineHeight: 1 }}><InfoTooltip text="By default the calculator maximizes all three plans. Turn off any plans you do not want to contribute to." /></span>
+              <div style={{ flex: 1, height: 1, background: T.border }} />
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <button type="button" onClick={() => { setInclude401a(v => !v); markDirty(); }} style={{
+                width: "100%", boxSizing: "border-box", padding: "9px 12px",
+                fontSize: "0.875rem", fontFamily: T.font,
+                color: include401a ? T.btn : T.textMuted,
+                fontWeight: include401a ? 600 : 400,
+                background: include401a ? T.btnLight : T.surfaceAlt,
+                border: `1.5px solid ${include401a ? T.btn : T.border}`,
+                borderRadius: T.radius, outline: "none", cursor: "pointer",
+                textAlign: "left", display: "flex", alignItems: "center",
+                justifyContent: "space-between", transition: "all 0.15s",
+                opacity: include401a ? 1 : 0.55,
+              }}
+              >
+                <span>401(a) after-tax</span>
+                <span style={{ fontSize: "0.72rem", fontWeight: 600, color: include401a ? T.btn : T.textMuted }}>
+                  {include401a ? "Included ✓" : "Excluded"}
+                </span>
+              </button>
+              <button type="button" onClick={() => { setInclude457b(v => !v); markDirty(); }} style={{
+                width: "100%", boxSizing: "border-box", padding: "9px 12px",
+                fontSize: "0.875rem", fontFamily: T.font,
+                color: include457b ? T.btn : T.textMuted,
+                fontWeight: include457b ? 600 : 400,
+                background: include457b ? T.btnLight : T.surfaceAlt,
+                border: `1.5px solid ${include457b ? T.btn : T.border}`,
+                borderRadius: T.radius, outline: "none", cursor: "pointer",
+                textAlign: "left", display: "flex", alignItems: "center",
+                justifyContent: "space-between", transition: "all 0.15s",
+                opacity: include457b ? 1 : 0.55,
+              }}
+              >
+                <span>457(b)</span>
+                <span style={{ fontSize: "0.72rem", fontWeight: 600, color: include457b ? T.btn : T.textMuted }}>
+                  {include457b ? "Included ✓" : "Excluded"}
+                </span>
+              </button>
+            </div>
+
             {/* Contribution Goal */}
             <div style={{ display: "flex", alignItems: "center", gap: 6, margin: "14px 0 10px" }}>
               <span style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textMuted, fontFamily: T.font, whiteSpace: "nowrap" }}>
@@ -796,6 +885,19 @@ export default function App() {
 
             {!result || isCalculating ? (
               <EmptyResults isCalculating={isCalculating} />
+            ) : result.salaryCapped ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <NoteBox color={T.btn} bg={T.greenLight} border={T.btnBorder}>
+                  <strong>Contributions limited by salary:</strong> Your year-to-date contributions of {fc(result.totalYtdEmployee)} have reached the maximum allowed based on your annual salary of {fc(result.salary)}. No further contributions are available for {PLAN_YEAR}.
+                </NoteBox>
+                <div style={{ marginTop: 4 }}>
+                  <Divider label="Summary" />
+                  <SummaryLine label="Annual salary" value={fc(result.salary)} />
+                  <SummaryLine label="Maximum employee contributions" value={fc(result.salaryCapLimit)} dimmed />
+                  <SummaryLine label="Contributed (YTD)" value={fc(result.totalYtdEmployee)} bold color={T.btn} />
+                  <SummaryLine label="Remaining" value={fc(0)} bold />
+                </div>
+              </div>
             ) : (
               <div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 14 }}>
@@ -811,11 +913,17 @@ export default function App() {
                         <div style={{ fontSize: "0.72rem", fontWeight: 600, color: T.textSub, fontFamily: T.font, marginBottom: 4 }}>Elective (Pre-Tax/Roth)</div>
                         {result.electiveNotNeeded
                           ? <div style={{ fontSize: "0.82rem", fontWeight: 600, color: T.textMuted, fontFamily: T.font, lineHeight: 1.4 }}>Not needed — goal met by other plans</div>
-                          : result.electiveRem <= 0
+                          : result.electiveRem <= 0 && !result.electiveSalaryCapped
                           ? <div style={{ fontSize: "1.1rem", fontWeight: 700, color: T.green, fontFamily: T.font }}>Limit reached ✓</div>
                           : <>
                               <div style={{ fontSize: "1.6rem", fontWeight: 700, color: T.btn, fontFamily: T.font, letterSpacing: "-0.02em", lineHeight: 1 }}>{result.electivePct}%</div>
                               <div style={{ fontSize: "0.78rem", color: T.textSub, fontFamily: T.font, marginTop: 3 }}>{fc(ceilDollar(result.electiveDpc))} per paycheck</div>
+                              {result.electiveSalaryCapped && (
+                                <div style={{ fontSize: "0.7rem", color: T.amber, fontFamily: T.font, marginTop: 4, display: "flex", alignItems: "center", gap: 3 }}>
+                                  Contributions limited by salary
+                                  <InfoTooltip text={`Your annual salary of ${fc(result.salary)} limits total employee contributions across all plans. IRS limits would otherwise allow more.`} />
+                                </div>
+                              )}
                             </>
                         }
                       </div>
@@ -823,11 +931,17 @@ export default function App() {
                         <div style={{ fontSize: "0.72rem", fontWeight: 600, color: T.textSub, fontFamily: T.font, marginBottom: 4 }}>After-Tax (Mega Roth)</div>
                         {result.afterTax403bNotNeeded
                           ? <div style={{ fontSize: "0.82rem", fontWeight: 600, color: T.textMuted, fontFamily: T.font, lineHeight: 1.4 }}>Not needed — goal met</div>
-                          : result.afterTax403bRem <= 0
+                          : result.afterTax403bRem <= 0 && !result.afterTax403bSalaryCapped
                           ? <div style={{ fontSize: "1.1rem", fontWeight: 700, color: T.green, fontFamily: T.font }}>Limit reached ✓</div>
                           : <>
                               <div style={{ fontSize: "1.6rem", fontWeight: 700, color: T.btn, fontFamily: T.font, letterSpacing: "-0.02em", lineHeight: 1 }}>{result.afterTax403bPct}%</div>
                               <div style={{ fontSize: "0.78rem", color: T.textSub, fontFamily: T.font, marginTop: 3 }}>{fc(ceilDollar(result.afterTax403bDpc))} per paycheck</div>
+                              {result.afterTax403bSalaryCapped && (
+                                <div style={{ fontSize: "0.7rem", color: T.amber, fontFamily: T.font, marginTop: 4, display: "flex", alignItems: "center", gap: 3 }}>
+                                  Contributions limited by salary
+                                  <InfoTooltip text={`Your annual salary of ${fc(result.salary)} limits total employee contributions across all plans. IRS limits would otherwise allow more.`} />
+                                </div>
+                              )}
                             </>
                         }
                       </div>
@@ -860,13 +974,21 @@ export default function App() {
                     </div>
                     <div style={{ padding: "0 14px 10px" }}>
                       <div style={{ fontSize: "0.72rem", fontWeight: 600, color: T.textSub, fontFamily: T.font, marginBottom: 4 }}>After-Tax Employee (Mega Roth)</div>
-                      {result.afterTax401aNotNeeded
+                      {!result.include401a
+                        ? <div style={{ fontSize: "0.82rem", fontWeight: 600, color: T.textMuted, fontFamily: T.font, lineHeight: 1.4 }}>Excluded from contributions</div>
+                        : result.afterTax401aNotNeeded
                         ? <div style={{ fontSize: "0.82rem", fontWeight: 600, color: T.textMuted, fontFamily: T.font, lineHeight: 1.4 }}>Not needed — goal met by 403(b)</div>
-                        : result.afterTax401aRem <= 0
+                        : result.afterTax401aRem <= 0 && !result.afterTax401aSalaryCapped
                         ? <div style={{ fontSize: "1.1rem", fontWeight: 700, color: T.green, fontFamily: T.font }}>Limit reached ✓</div>
                         : <>
                             <div style={{ fontSize: "1.6rem", fontWeight: 700, color: T.blue, fontFamily: T.font, letterSpacing: "-0.02em", lineHeight: 1 }}>{result.afterTax401aPct}%</div>
                             <div style={{ fontSize: "0.78rem", color: T.textSub, fontFamily: T.font, marginTop: 3 }}>{fc(ceilDollar(result.afterTax401aDpc))} per paycheck</div>
+                            {result.afterTax401aSalaryCapped && (
+                              <div style={{ fontSize: "0.7rem", color: T.amber, fontFamily: T.font, marginTop: 4, display: "flex", alignItems: "center", gap: 3 }}>
+                                Contributions limited by salary
+                                <InfoTooltip text={`Your annual salary of ${fc(result.salary)} limits total employee contributions across all plans. IRS limits would otherwise allow more.`} />
+                              </div>
+                            )}
                           </>
                       }
                     </div>
@@ -898,13 +1020,21 @@ export default function App() {
                     </div>
                     <div style={{ padding: "0 14px 10px" }}>
                       <div style={{ fontSize: "0.72rem", fontWeight: 600, color: T.textSub, fontFamily: T.font, marginBottom: 4 }}>Pre-Tax — Dollar Amount Election</div>
-                      {result.notNeeded457b
+                      {!result.include457b
+                        ? <div style={{ fontSize: "0.82rem", fontWeight: 600, color: T.textMuted, fontFamily: T.font, lineHeight: 1.4 }}>Excluded from contributions</div>
+                        : result.notNeeded457b
                         ? <div style={{ fontSize: "0.82rem", fontWeight: 600, color: T.textMuted, fontFamily: T.font, lineHeight: 1.4 }}>Not needed — goal met by higher-priority plans</div>
-                        : result.rem457b <= 0
+                        : result.rem457b <= 0 && !result.salary457bCapped
                         ? <div style={{ fontSize: "1.1rem", fontWeight: 700, color: T.green, fontFamily: T.font }}>Limit reached ✓</div>
                         : <>
                             <div style={{ fontSize: "1.6rem", fontWeight: 700, color: T.preTax, fontFamily: T.font, letterSpacing: "-0.02em", lineHeight: 1 }}>{fc(result.dpc457b, 2)}</div>
                             <div style={{ fontSize: "0.78rem", color: T.textSub, fontFamily: T.font, marginTop: 3 }}>per paycheck</div>
+                            {result.salary457bCapped && (
+                              <div style={{ fontSize: "0.7rem", color: T.amber, fontFamily: T.font, marginTop: 4, display: "flex", alignItems: "center", gap: 3 }}>
+                                Contributions limited by salary
+                                <InfoTooltip text={`Your annual salary of ${fc(result.salary)} limits total employee contributions across all plans. IRS limits would otherwise allow more.`} />
+                              </div>
+                            )}
                           </>
                       }
                     </div>
@@ -936,8 +1066,8 @@ export default function App() {
                 {(() => {
                   const proj403bElective = result.ytd403bElective + Math.min(result.electiveRem > 0 ? result.electiveDpc * result.electiveChecks : 0, result.electiveRem);
                   const proj403bAfterTax = result.ytd403bAfterTaxAmt + Math.min(result.afterTax403bRem > 0 ? result.afterTax403bDpc * result.afterTax403bChecks : 0, result.afterTax403bRem);
-                  const proj401aAfterTax = result.ytd401aAfterTaxAmt + Math.min(result.afterTax401aRem > 0 ? result.afterTax401aDpc * result.afterTax401aChecks : 0, result.afterTax401aRem);
-                  const proj457b = result.ytd457bAmt + Math.min(result.rem457b > 0 ? result.dpc457b * result.checks457b : 0, result.rem457b);
+                  const proj401aAfterTax = result.include401a ? result.ytd401aAfterTaxAmt + Math.min(result.afterTax401aRem > 0 ? result.afterTax401aDpc * result.afterTax401aChecks : 0, result.afterTax401aRem) : 0;
+                  const proj457b = result.include457b ? result.ytd457bAmt + Math.min(result.rem457b > 0 ? result.dpc457b * result.checks457b : 0, result.rem457b) : 0;
                   const totalEmployee = proj403bElective + proj403bAfterTax + proj401aAfterTax + proj457b;
                   const totalAll = totalEmployee + result.totalEmployer401a;
 
