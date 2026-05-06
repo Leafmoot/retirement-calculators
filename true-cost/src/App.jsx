@@ -1076,6 +1076,9 @@ export default function App() {
       const annualTrueCost = totalTrueCost * pp;
       const annualTaxSavings = totalTaxSavings * pp;
 
+      const selectedPpOpt = ppOpts.find((o) => o.value === payPeriods);
+      const payPeriodLabel = selectedPpOpt ? selectedPpOpt.label.split(" — ")[0] : "";
+
       setResult({
         perPaycheck,
         totalContribution,
@@ -1091,6 +1094,7 @@ export default function App() {
         annualTaxSavings,
         marginalRate,
         payPeriods: pp,
+        payPeriodLabel,
       });
     }, 650);
   }
@@ -1552,393 +1556,111 @@ export default function App() {
               <div
                 style={{ display: "flex", flexDirection: "column", gap: 16 }}
               >
-                {/* Three Stat Cards with Breakdowns */}
+                {/* Per Paycheck Summary Label */}
+                <div style={{ fontSize: "0.8rem", fontWeight: 600, color: T.textSub, fontFamily: T.font, paddingLeft: 2 }}>
+                  Per paycheck summary
+                </div>
+
+                {/* Unified Summary Bar */}
                 <div
                   style={{
+                    background: "#FFFFFF",
+                    borderRadius: "8px",
+                    border: "1px solid #E5E7EB",
+                    boxShadow: "0 1px 3px 0 rgba(0,0,0,0.1), 0 1px 2px -1px rgba(0,0,0,0.1)",
                     display: "grid",
-                    gridTemplateColumns: "repeat(3, 1fr)",
-                    gap: 12,
+                    gridTemplateColumns: "1fr 1px 1fr 1px 1fr",
+                    overflow: "hidden",
+                    marginTop: -4,
                   }}
-                  className="mobile-stack"
+                  className="mobile-stack print-break-avoid"
                 >
-                  {/* Total Contribution Card */}
-                  <div
-                    style={{
-                      background: "#FFFFFF",
-                      borderRadius: "8px",
-                      border: "1px solid #E5E7EB",
-                      padding: "14px 16px",
-                      display: "flex",
-                      flexDirection: "column",
-                      boxShadow:
-                        "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1)",
-                    }}
-                    className="mobile-padding-sm print-break-avoid"
-                  >
-                    <div
-                      style={{
-                        fontSize: "0.8rem",
-                        fontWeight: 600,
-                        letterSpacing: "0.01em",
-                        color: "#64748B",
-                        fontFamily: T.font,
-                        marginBottom: 6,
-                        textAlign: "center",
-                      }}
-                    >
-                      {result.preTaxContribution > 0 &&
-                      result.rothContribution > 0
+                  {/* Column 1 — Total Contribution */}
+                  <div style={{ padding: "14px 16px", textAlign: "center" }}>
+                    <div style={{ fontSize: "0.78rem", fontWeight: 600, color: "#64748B", fontFamily: T.font, marginBottom: 8, letterSpacing: "0.01em" }}>
+                      {result.preTaxContribution > 0 && result.rothContribution > 0
                         ? "Total Contribution"
                         : result.preTaxContribution > 0
                         ? "Pre-Tax Contribution"
                         : "Roth Contribution"}
                     </div>
-                    <div
-                      style={{ display: "flex", alignItems: "center", gap: 12 }}
-                    >
-                      <div style={{ flex: 1, textAlign: "center" }}>
-                        <div
-                          style={{
-                            fontSize: "2rem",
-                            fontWeight: 600,
-                            color: "#1E293B",
-                            lineHeight: 1,
-                            fontFamily: T.font,
-                            letterSpacing: "-0.03em",
-                            fontVariantNumeric: "tabular-nums",
-                            marginBottom: 4,
-                          }}
-                          className="mobile-text-sm"
-                        >
-                          {fc(result.totalContribution)}
+                    <div style={{ fontSize: "1.9rem", fontWeight: 600, color: "#1E293B", lineHeight: 1, fontFamily: T.font, letterSpacing: "-0.03em", fontVariantNumeric: "tabular-nums", marginBottom: 4 }} className="mobile-text-sm">
+                      {fc(result.totalContribution)}
+                    </div>
+                    <div style={{ fontSize: "0.75rem", color: "#94A3B8", fontFamily: T.font, marginBottom: 2 }}>
+                      {result.payPeriodLabel} · per paycheck
+                    </div>
+                    {result.preTaxContribution > 0 && result.rothContribution > 0 && (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 3, borderTop: `1px solid ${T.border}`, paddingTop: 8, marginTop: 10 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.76rem", fontFamily: T.font }}>
+                          <span style={{ color: T.textMuted }}>Pre-Tax</span>
+                          <span style={{ fontWeight: 600, fontVariantNumeric: "tabular-nums", color: T.text }}>{fc(result.preTaxContribution)}</span>
                         </div>
-                        <div
-                          style={{
-                            fontSize: "0.8rem",
-                            color: "#64748B",
-                            fontFamily: T.font,
-                            lineHeight: 1.5,
-                          }}
-                        >
-                          per paycheck
+                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.76rem", fontFamily: T.font }}>
+                          <span style={{ color: T.textMuted }}>Roth</span>
+                          <span style={{ fontWeight: 600, fontVariantNumeric: "tabular-nums", color: T.text }}>{fc(result.rothContribution)}</span>
                         </div>
                       </div>
-                      {/* Breakdown - Right Side on Desktop */}
-                      {result.preTaxContribution > 0 &&
-                        result.rothContribution > 0 && (
-                          <div
-                            style={{
-                              minWidth: 80,
-                              paddingLeft: 10,
-                              borderLeft: `1px solid ${T.border}`,
-                              display: "flex",
-                              flexDirection: "column",
-                              gap: 6,
-                            }}
-                          >
-                            <div
-                              style={{
-                                display: "flex",
-                                justifyContent: "space-between",
-                                fontSize: "0.8rem",
-                                color: T.textSub,
-                                fontFamily: T.font,
-                              }}
-                            >
-                              <span
-                                style={{
-                                  color: T.textMuted,
-                                  whiteSpace: "nowrap",
-                                }}
-                              >
-                                Pre-Tax
-                              </span>
-                              <span
-                                style={{
-                                  fontWeight: 600,
-                                  fontVariantNumeric: "tabular-nums",
-                                }}
-                              >
-                                {fc(result.preTaxContribution)}
-                              </span>
-                            </div>
-                            <div
-                              style={{
-                                display: "flex",
-                                justifyContent: "space-between",
-                                fontSize: "0.8rem",
-                                color: T.textSub,
-                                fontFamily: T.font,
-                              }}
-                            >
-                              <span
-                                style={{
-                                  color: T.textMuted,
-                                  whiteSpace: "nowrap",
-                                }}
-                              >
-                                Roth
-                              </span>
-                              <span
-                                style={{
-                                  fontWeight: 600,
-                                  fontVariantNumeric: "tabular-nums",
-                                }}
-                              >
-                                {fc(result.rothContribution)}
-                              </span>
-                            </div>
-                          </div>
-                        )}
-                    </div>
+                    )}
                   </div>
 
-                  {/* True Cost Card */}
-                  <div
-                    style={{
-                      background: "#FFFFFF",
-                      borderRadius: "8px",
-                      border: "1px solid #E5E7EB",
-                      padding: "14px 16px",
-                      display: "flex",
-                      flexDirection: "column",
-                      boxShadow:
-                        "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1)",
-                    }}
-                    className="mobile-padding-sm print-break-avoid"
-                  >
-                    <div
-                      style={{
-                        fontSize: "0.8rem",
-                        fontWeight: 600,
-                        letterSpacing: "0.01em",
-                        color: "#64748B",
-                        fontFamily: T.font,
-                        marginBottom: 6,
-                        textAlign: "center",
-                      }}
-                    >
+                  {/* Vertical Divider */}
+                  <div style={{ background: "#E5E7EB" }} />
+
+                  {/* Column 2 — True Cost */}
+                  <div style={{ padding: "14px 16px", textAlign: "center" }}>
+                    <div style={{ fontSize: "0.78rem", fontWeight: 600, color: "#64748B", fontFamily: T.font, marginBottom: 8, letterSpacing: "0.01em" }}>
                       True Cost
                     </div>
-                    <div
-                      style={{ display: "flex", alignItems: "center", gap: 12 }}
-                    >
-                      <div style={{ flex: 1, textAlign: "center" }}>
-                        <div
-                          style={{
-                            fontSize: "2rem",
-                            fontWeight: 600,
-                            color: "#1E293B",
-                            lineHeight: 1,
-                            fontFamily: T.font,
-                            letterSpacing: "-0.03em",
-                            fontVariantNumeric: "tabular-nums",
-                            marginBottom: 4,
-                          }}
-                          className="mobile-text-sm"
-                        >
-                          {fc(result.totalTrueCost)}
+                    <div style={{ fontSize: "1.9rem", fontWeight: 600, color: "#1E293B", lineHeight: 1, fontFamily: T.font, letterSpacing: "-0.03em", fontVariantNumeric: "tabular-nums", marginBottom: 4 }} className="mobile-text-sm">
+                      {fc(result.totalTrueCost)}
+                    </div>
+                    <div style={{ fontSize: "0.75rem", color: "#94A3B8", fontFamily: T.font, marginBottom: 2 }}>
+                      {result.payPeriodLabel} · per paycheck
+                    </div>
+                    {result.preTaxContribution > 0 && result.rothContribution > 0 && (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 3, borderTop: `1px solid ${T.border}`, paddingTop: 8, marginTop: 10 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.76rem", fontFamily: T.font }}>
+                          <span style={{ color: T.textMuted }}>Pre-Tax</span>
+                          <span style={{ fontWeight: 600, fontVariantNumeric: "tabular-nums", color: T.text }}>{fc(result.preTaxTrueCost)}</span>
                         </div>
-                        <div
-                          style={{
-                            fontSize: "0.8rem",
-                            color: "#64748B",
-                            fontFamily: T.font,
-                            lineHeight: 1.5,
-                          }}
-                        >
-                          per paycheck
+                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.76rem", fontFamily: T.font }}>
+                          <span style={{ color: T.textMuted }}>Roth</span>
+                          <span style={{ fontWeight: 600, fontVariantNumeric: "tabular-nums", color: T.text }}>{fc(result.rothTrueCost)}</span>
                         </div>
                       </div>
-                      {/* Breakdown - Right Side on Desktop */}
-                      {result.preTaxContribution > 0 &&
-                        result.rothContribution > 0 && (
-                          <div
-                            style={{
-                              minWidth: 80,
-                              paddingLeft: 10,
-                              borderLeft: `1px solid ${T.border}`,
-                              display: "flex",
-                              flexDirection: "column",
-                              gap: 6,
-                            }}
-                          >
-                            <div
-                              style={{
-                                display: "flex",
-                                justifyContent: "space-between",
-                                fontSize: "0.8rem",
-                                color: T.textSub,
-                                fontFamily: T.font,
-                              }}
-                            >
-                              <span
-                                style={{
-                                  color: T.textMuted,
-                                  whiteSpace: "nowrap",
-                                }}
-                              >
-                                Pre-Tax
-                              </span>
-                              <span
-                                style={{
-                                  fontWeight: 600,
-                                  fontVariantNumeric: "tabular-nums",
-                                }}
-                              >
-                                {fc(result.preTaxTrueCost)}
-                              </span>
-                            </div>
-                            <div
-                              style={{
-                                display: "flex",
-                                justifyContent: "space-between",
-                                fontSize: "0.8rem",
-                                color: T.textSub,
-                                fontFamily: T.font,
-                              }}
-                            >
-                              <span
-                                style={{
-                                  color: T.textMuted,
-                                  whiteSpace: "nowrap",
-                                }}
-                              >
-                                Roth
-                              </span>
-                              <span
-                                style={{
-                                  fontWeight: 600,
-                                  fontVariantNumeric: "tabular-nums",
-                                }}
-                              >
-                                {fc(result.rothTrueCost)}
-                              </span>
-                            </div>
-                          </div>
-                        )}
-                    </div>
+                    )}
                   </div>
 
-                  {/* Tax Savings Card */}
-                  <div
-                    style={{
-                      background: "#FFFFFF",
-                      borderRadius: "8px",
-                      border: "1px solid #E5E7EB",
-                      padding: "14px 16px",
-                      display: "flex",
-                      flexDirection: "column",
-                      boxShadow:
-                        "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1)",
-                    }}
-                    className="mobile-padding-sm print-break-avoid"
-                  >
-                    <div
-                      style={{
-                        fontSize: "0.8rem",
-                        fontWeight: 600,
-                        letterSpacing: "0.01em",
-                        color: "#64748B",
-                        fontFamily: T.font,
-                        marginBottom: 6,
-                        textAlign: "center",
-                      }}
-                    >
+                  {/* Vertical Divider */}
+                  <div style={{ background: "#E5E7EB" }} />
+
+                  {/* Column 3 — Tax Savings */}
+                  <div style={{ padding: "14px 16px", textAlign: "center" }}>
+                    <div style={{ fontSize: "0.78rem", fontWeight: 600, color: "#64748B", fontFamily: T.font, marginBottom: 8, letterSpacing: "0.01em", display: "flex", alignItems: "center", justifyContent: "center", gap: 2 }}>
                       Tax Savings
+                      {result.rothContribution > 0 && (
+                        <InfoTooltip text="Pre-tax contributions reduce your taxable income now, generating immediate tax savings. Roth contributions are made after tax, so there is no immediate tax reduction — the benefit comes at retirement, when qualified withdrawals are tax-free." />
+                      )}
                     </div>
-                    <div
-                      style={{ display: "flex", alignItems: "center", gap: 12 }}
-                    >
-                      <div style={{ flex: 1, textAlign: "center" }}>
-                        <div
-                          style={{
-                            fontSize: "2rem",
-                            fontWeight: 600,
-                            color: T.green,
-                            lineHeight: 1,
-                            fontFamily: T.font,
-                            letterSpacing: "-0.03em",
-                            fontVariantNumeric: "tabular-nums",
-                            marginBottom: 4,
-                          }}
-                          className="mobile-text-sm"
-                        >
-                          {fc(result.totalTaxSavings)}
+                    <div style={{ fontSize: "1.9rem", fontWeight: 600, color: T.green, lineHeight: 1, fontFamily: T.font, letterSpacing: "-0.03em", fontVariantNumeric: "tabular-nums", marginBottom: 4 }} className="mobile-text-sm">
+                      {fc(result.totalTaxSavings)}
+                    </div>
+                    <div style={{ fontSize: "0.75rem", color: "#94A3B8", fontFamily: T.font, marginBottom: 2 }}>
+                      {result.payPeriodLabel} · per paycheck
+                    </div>
+                    {result.preTaxContribution > 0 && result.rothContribution > 0 && (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 3, borderTop: `1px solid ${T.border}`, paddingTop: 8, marginTop: 10 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.76rem", fontFamily: T.font }}>
+                          <span style={{ color: T.textMuted }}>Pre-Tax</span>
+                          <span style={{ fontWeight: 600, fontVariantNumeric: "tabular-nums", color: T.green }}>{fc(result.preTaxTaxSavings)}</span>
                         </div>
-                        <div
-                          style={{
-                            fontSize: "0.8rem",
-                            color: "#64748B",
-                            fontFamily: T.font,
-                            lineHeight: 1.5,
-                          }}
-                        >
-                          per paycheck
+                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.76rem", fontFamily: T.font }}>
+                          <span style={{ color: T.textMuted }}>Roth</span>
+                          <span style={{ fontWeight: 600, fontVariantNumeric: "tabular-nums", color: T.textSub }}>$0</span>
                         </div>
                       </div>
-                      {/* Breakdown - Right Side on Desktop */}
-                      {result.preTaxContribution > 0 &&
-                        result.rothContribution > 0 && (
-                          <div
-                            style={{
-                              minWidth: 80,
-                              paddingLeft: 10,
-                              borderLeft: `1px solid ${T.border}`,
-                              display: "flex",
-                              flexDirection: "column",
-                              gap: 6,
-                            }}
-                          >
-                            <div
-                              style={{
-                                display: "flex",
-                                justifyContent: "space-between",
-                                fontSize: "0.8rem",
-                                color: T.textSub,
-                                fontFamily: T.font,
-                              }}
-                            >
-                              <span
-                                style={{
-                                  color: T.textMuted,
-                                  whiteSpace: "nowrap",
-                                }}
-                              >
-                                Pre-Tax
-                              </span>
-                              <span
-                                style={{
-                                  fontWeight: 600,
-                                  fontVariantNumeric: "tabular-nums",
-                                  color: T.green,
-                                }}
-                              >
-                                {fc(result.preTaxTaxSavings)}
-                              </span>
-                            </div>
-                            <div
-                              style={{
-                                display: "flex",
-                                justifyContent: "space-between",
-                                fontSize: "0.8rem",
-                                color: T.textMuted,
-                                fontFamily: T.font,
-                              }}
-                            >
-                              <span>Roth</span>
-                              <span
-                                style={{
-                                  fontWeight: 600,
-                                  fontVariantNumeric: "tabular-nums",
-                                }}
-                              >
-                                $0.00
-                              </span>
-                            </div>
-                          </div>
-                        )}
-                    </div>
+                    )}
                   </div>
                 </div>
 
@@ -1991,17 +1713,15 @@ export default function App() {
                       <>
                         <div
                           style={{
-                            fontSize: "0.8rem",
-                            fontWeight: 700,
-                            letterSpacing: "0.05em",
-                            textTransform: "uppercase",
-                            color: T.textMuted,
+                            fontSize: "0.78rem",
+                            fontWeight: 600,
+                            color: T.textSub,
                             fontFamily: T.font,
                             marginTop: 8,
                             marginBottom: 4,
                           }}
                         >
-                          Pre-Tax
+                          Pre-tax
                         </div>
                         <SummaryLine
                           label={`Contribution (${result.payPeriods} paychecks)`}
@@ -2012,7 +1732,6 @@ export default function App() {
                         <SummaryLine
                           label="True Cost"
                           value={fc(result.preTaxTrueCost * result.payPeriods)}
-                          color={T.total}
                         />
                         <SummaryLine
                           label="Tax Savings"
@@ -2028,11 +1747,9 @@ export default function App() {
                       <>
                         <div
                           style={{
-                            fontSize: "0.8rem",
-                            fontWeight: 700,
-                            letterSpacing: "0.05em",
-                            textTransform: "uppercase",
-                            color: T.textMuted,
+                            fontSize: "0.78rem",
+                            fontWeight: 600,
+                            color: T.textSub,
                             fontFamily: T.font,
                             marginTop: 12,
                             marginBottom: 4,
@@ -2049,11 +1766,10 @@ export default function App() {
                         <SummaryLine
                           label="True Cost"
                           value={fc(result.rothTrueCost * result.payPeriods)}
-                          color={T.total}
                         />
                         <SummaryLine
                           label="Tax Savings"
-                          value="$0.00"
+                          value="$0"
                           color={T.textMuted}
                           dimmed
                         />
@@ -2062,11 +1778,9 @@ export default function App() {
 
                     <div
                       style={{
-                        fontSize: "0.8rem",
-                        fontWeight: 700,
-                        letterSpacing: "0.05em",
-                        textTransform: "uppercase",
-                        color: T.textMuted,
+                        fontSize: "0.78rem",
+                        fontWeight: 600,
+                        color: T.textSub,
                         fontFamily: T.font,
                         marginTop: 12,
                         marginBottom: 4,
@@ -2082,7 +1796,6 @@ export default function App() {
                     <SummaryLine
                       label="True Annual Cost"
                       value={fc(result.annualTrueCost)}
-                      color={T.total}
                       bold
                     />
                     <SummaryLine
