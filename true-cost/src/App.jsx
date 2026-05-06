@@ -1557,8 +1557,8 @@ export default function App() {
                 style={{ display: "flex", flexDirection: "column", gap: 16 }}
               >
                 {/* Per Paycheck Summary Label */}
-                <div style={{ fontSize: "0.8rem", fontWeight: 600, color: T.textSub, fontFamily: T.font, paddingLeft: 2 }}>
-                  Per paycheck summary
+                <div style={{ fontSize: "0.8rem", fontWeight: 700, color: T.text, fontFamily: T.font, paddingLeft: 2 }}>
+                  Per Paycheck Summary
                 </div>
 
                 {/* Unified Summary Bar */}
@@ -1587,11 +1587,8 @@ export default function App() {
                     <div style={{ fontSize: "1.9rem", fontWeight: 600, color: "#1E293B", lineHeight: 1, fontFamily: T.font, letterSpacing: "-0.03em", fontVariantNumeric: "tabular-nums", marginBottom: 4 }} className="mobile-text-sm">
                       {fc(result.totalContribution)}
                     </div>
-                    <div style={{ fontSize: "0.75rem", color: "#94A3B8", fontFamily: T.font, marginBottom: 2 }}>
-                      {result.payPeriodLabel} · per paycheck
-                    </div>
                     {result.preTaxContribution > 0 && result.rothContribution > 0 && (
-                      <div style={{ display: "flex", flexDirection: "column", gap: 3, borderTop: `1px solid ${T.border}`, paddingTop: 8, marginTop: 10 }}>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 3, borderTop: `1px solid ${T.border}`, paddingTop: 8, marginTop: 8 }}>
                         <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.76rem", fontFamily: T.font }}>
                           <span style={{ color: T.textMuted }}>Pre-Tax</span>
                           <span style={{ fontWeight: 600, fontVariantNumeric: "tabular-nums", color: T.text }}>{fc(result.preTaxContribution)}</span>
@@ -1615,11 +1612,8 @@ export default function App() {
                     <div style={{ fontSize: "1.9rem", fontWeight: 600, color: "#1E293B", lineHeight: 1, fontFamily: T.font, letterSpacing: "-0.03em", fontVariantNumeric: "tabular-nums", marginBottom: 4 }} className="mobile-text-sm">
                       {fc(result.totalTrueCost)}
                     </div>
-                    <div style={{ fontSize: "0.75rem", color: "#94A3B8", fontFamily: T.font, marginBottom: 2 }}>
-                      {result.payPeriodLabel} · per paycheck
-                    </div>
                     {result.preTaxContribution > 0 && result.rothContribution > 0 && (
-                      <div style={{ display: "flex", flexDirection: "column", gap: 3, borderTop: `1px solid ${T.border}`, paddingTop: 8, marginTop: 10 }}>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 3, borderTop: `1px solid ${T.border}`, paddingTop: 8, marginTop: 8 }}>
                         <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.76rem", fontFamily: T.font }}>
                           <span style={{ color: T.textMuted }}>Pre-Tax</span>
                           <span style={{ fontWeight: 600, fontVariantNumeric: "tabular-nums", color: T.text }}>{fc(result.preTaxTrueCost)}</span>
@@ -1646,11 +1640,8 @@ export default function App() {
                     <div style={{ fontSize: "1.9rem", fontWeight: 600, color: T.green, lineHeight: 1, fontFamily: T.font, letterSpacing: "-0.03em", fontVariantNumeric: "tabular-nums", marginBottom: 4 }} className="mobile-text-sm">
                       {fc(result.totalTaxSavings)}
                     </div>
-                    <div style={{ fontSize: "0.75rem", color: "#94A3B8", fontFamily: T.font, marginBottom: 2 }}>
-                      {result.payPeriodLabel} · per paycheck
-                    </div>
                     {result.preTaxContribution > 0 && result.rothContribution > 0 && (
-                      <div style={{ display: "flex", flexDirection: "column", gap: 3, borderTop: `1px solid ${T.border}`, paddingTop: 8, marginTop: 10 }}>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 3, borderTop: `1px solid ${T.border}`, paddingTop: 8, marginTop: 8 }}>
                         <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.76rem", fontFamily: T.font }}>
                           <span style={{ color: T.textMuted }}>Pre-Tax</span>
                           <span style={{ fontWeight: 600, fontVariantNumeric: "tabular-nums", color: T.green }}>{fc(result.preTaxTaxSavings)}</span>
@@ -1791,18 +1782,15 @@ export default function App() {
                     <SummaryLine
                       label={`Total Contribution (${result.payPeriods} paychecks)`}
                       value={fc(result.annualTotalContribution)}
-                      bold
                     />
                     <SummaryLine
                       label="True Annual Cost"
                       value={fc(result.annualTrueCost)}
-                      bold
                     />
                     <SummaryLine
                       label="Annual Tax Savings"
                       value={fc(result.annualTaxSavings)}
                       color={T.green}
-                      bold
                     />
                   </div>
                 </details>
