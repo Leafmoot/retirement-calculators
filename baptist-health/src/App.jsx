@@ -271,7 +271,7 @@ function SummaryLine({ label, value, color, bold, indent, dimmed }) {
   return (
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", padding: "4px 0", borderBottom: `1px solid ${T.border}` }}>
       <span style={{ fontSize: "0.78rem", fontFamily: T.font, color: dimmed ? T.textMuted : T.textSub, paddingLeft: indent ? 12 : 0, fontWeight: bold ? 600 : 400 }}>
-        {indent ? "↳ " : ""}{label}
+        {label}
       </span>
       <span style={{ fontSize: bold ? "0.84rem" : "0.8rem", fontFamily: T.font, fontWeight: bold ? 600 : 400, color: color || T.text, fontVariantNumeric: "tabular-nums" }}>
         {value}
@@ -280,10 +280,10 @@ function SummaryLine({ label, value, color, bold, indent, dimmed }) {
   );
 }
 
-function PlanLine({ label, value, bold, highlight, dimmed }) {
+function PlanLine({ label, value, bold, highlight, indent }) {
   return (
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", padding: "3px 0", borderBottom: `1px solid rgba(0,0,0,0.06)` }}>
-      <span style={{ fontSize: "0.75rem", color: dimmed ? T.textMuted : T.textSub, fontFamily: T.font, fontWeight: bold ? 600 : 400 }}>{label}</span>
+      <span style={{ fontSize: "0.75rem", color: T.textSub, fontFamily: T.font, fontWeight: bold ? 600 : 400, paddingLeft: indent ? 12 : 0 }}>{label}</span>
       <span style={{ fontSize: bold ? "0.84rem" : "0.78rem", fontFamily: T.font, fontWeight: bold ? 700 : 400, color: highlight || T.text, fontVariantNumeric: "tabular-nums" }}>{value}</span>
     </div>
   );
@@ -582,7 +582,7 @@ export default function App() {
         afterTax403bRem: afterTax403bRemFinal,
         afterTax403bPct, afterTax403bDpc, afterTax403bChecks, afterTax403bNotNeeded,
         ytd403bAfterTaxAmt,
-        empMatchAmt, empDiscAmt, totalEmployer401a, projectedEmployer401a, ytd401aEmployerAmt,
+        empMatchAmt, empDiscAmt, totalEmployer401a, ytd401aEmployerAmt,
         afterTax401aLimit, afterTax401aRem,
         afterTax401aPct, afterTax401aDpc, afterTax401aChecks, afterTax401aNotNeeded,
         ytd401aAfterTaxAmt,
@@ -759,37 +759,35 @@ export default function App() {
               <button type="button" onClick={() => { setInclude401a(v => !v); markDirty(); }} style={{
                 width: "100%", boxSizing: "border-box", padding: "9px 12px",
                 fontSize: "0.875rem", fontFamily: T.font,
-                color: include401a ? T.btn : T.textMuted,
-                fontWeight: include401a ? 600 : 400,
-                background: include401a ? T.btnLight : T.surfaceAlt,
-                border: `1.5px solid ${include401a ? T.btn : T.border}`,
+                color: include401a ? T.btn : T.red,
+                fontWeight: 600,
+                background: include401a ? T.btnLight : T.redLight,
+                border: `1.5px solid ${include401a ? T.btn : T.red}`,
                 borderRadius: T.radius, outline: "none", cursor: "pointer",
                 textAlign: "left", display: "flex", alignItems: "center",
                 justifyContent: "space-between", transition: "all 0.15s",
-                opacity: include401a ? 1 : 0.55,
               }}
               >
                 <span>401(a) after-tax</span>
-                <span style={{ fontSize: "0.72rem", fontWeight: 600, color: include401a ? T.btn : T.textMuted }}>
-                  {include401a ? "Included ✓" : "Excluded"}
+                <span style={{ fontSize: "0.72rem", fontWeight: 600, color: include401a ? T.btn : T.red }}>
+                  {include401a ? "Included ✓" : "Excluded ✕"}
                 </span>
               </button>
               <button type="button" onClick={() => { setInclude457b(v => !v); markDirty(); }} style={{
                 width: "100%", boxSizing: "border-box", padding: "9px 12px",
                 fontSize: "0.875rem", fontFamily: T.font,
-                color: include457b ? T.btn : T.textMuted,
-                fontWeight: include457b ? 600 : 400,
-                background: include457b ? T.btnLight : T.surfaceAlt,
-                border: `1.5px solid ${include457b ? T.btn : T.border}`,
+                color: include457b ? T.btn : T.red,
+                fontWeight: 600,
+                background: include457b ? T.btnLight : T.redLight,
+                border: `1.5px solid ${include457b ? T.btn : T.red}`,
                 borderRadius: T.radius, outline: "none", cursor: "pointer",
                 textAlign: "left", display: "flex", alignItems: "center",
                 justifyContent: "space-between", transition: "all 0.15s",
-                opacity: include457b ? 1 : 0.55,
               }}
               >
                 <span>457(b)</span>
-                <span style={{ fontSize: "0.72rem", fontWeight: 600, color: include457b ? T.btn : T.textMuted }}>
-                  {include457b ? "Included ✓" : "Excluded"}
+                <span style={{ fontSize: "0.72rem", fontWeight: 600, color: include457b ? T.btn : T.red }}>
+                  {include457b ? "Included ✓" : "Excluded ✕"}
                 </span>
               </button>
             </div>
@@ -869,18 +867,47 @@ export default function App() {
 
           <div style={{ overflowY: (isMobile || !result) ? "hidden" : "auto", padding: "14px 16px" }}>
 
-            <div style={{ marginBottom: 14 }}>
-              <Divider label="Pay Schedule" />
-              <SummaryLine label="Paychecks remaining" value={`${periodsLeft} of ${periodsTotal}`} bold />
-              {nextPayday && (
-                <SummaryLine
-                  label="Next payday"
-                  value={cutoffPassed ? <>{fmtPayday(nextPayday)} <span style={{ fontWeight: 400, color: T.textMuted }}>— deadline passed</span></> : fmtPayday(nextPayday)}
-                  color={cutoffPassed ? T.textMuted : undefined}
-                />
-              )}
-              {cutoffPassed && firstEligiblePayday && <SummaryLine label="Next available payday" value={fmtPayday(firstEligiblePayday)} bold />}
-              {(cutoffPassed ? firstEligibleCutoff : cutoffDate) && <SummaryLine label="Change deadline" value={fmtCutoff(cutoffPassed ? firstEligibleCutoff : cutoffDate)} />}
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: "0.8rem", fontWeight: 700, color: T.text, fontFamily: T.font, paddingLeft: 2, marginBottom: 8 }}>
+                Pay Schedule
+              </div>
+              <div style={{
+                background: T.surface,
+                borderRadius: T.radius,
+                border: `1px solid ${T.border}`,
+                boxShadow: T.shadow,
+                padding: "12px 16px",
+                display: "flex",
+                flexDirection: "column",
+                gap: 6,
+              }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontFamily: T.font }}>
+                  <span style={{ fontSize: "0.78rem", color: T.textSub }}>Paychecks remaining</span>
+                  <span style={{ fontSize: "0.78rem", fontWeight: 700, color: T.text }}>{periodsLeft} of {periodsTotal}</span>
+                </div>
+                {nextPayday && (
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontFamily: T.font }}>
+                    <span style={{ fontSize: "0.78rem", color: T.textSub }}>Next payday</span>
+                    <span style={{ fontSize: "0.78rem", fontWeight: cutoffPassed ? 400 : 600, color: cutoffPassed ? T.textMuted : T.text }}>
+                      {cutoffPassed
+                        ? <>{fmtPayday(nextPayday)} <span style={{ fontWeight: 400, color: T.textMuted }}>— deadline passed</span></>
+                        : fmtPayday(nextPayday)}
+                    </span>
+                  </div>
+                )}
+                {cutoffPassed && firstEligiblePayday && (
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontFamily: T.font }}>
+                    <span style={{ fontSize: "0.78rem", color: T.textSub }}>Next available payday</span>
+                    <span style={{ fontSize: "0.78rem", fontWeight: 700, color: T.text }}>{fmtPayday(firstEligiblePayday)}</span>
+                  </div>
+                )}
+                {(cutoffPassed ? firstEligibleCutoff : cutoffDate) && (
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontFamily: T.font }}>
+                    <span style={{ fontSize: "0.78rem", color: T.textSub }}>Change deadline</span>
+                    <span style={{ fontSize: "0.78rem", fontWeight: 600, color: T.text }}>{fmtCutoff(cutoffPassed ? firstEligibleCutoff : cutoffDate)}</span>
+                  </div>
+                )}
+              </div>
             </div>
 
             {!result || isCalculating ? (
@@ -891,7 +918,7 @@ export default function App() {
                   <strong>Contributions limited by salary:</strong> Your year-to-date contributions of {fc(result.totalYtdEmployee)} have reached the maximum allowed based on your annual salary of {fc(result.salary)}. No further contributions are available for {PLAN_YEAR}.
                 </NoteBox>
                 <div style={{ marginTop: 4 }}>
-                  <Divider label="Summary" />
+                  <Divider label="Limit Summary" />
                   <SummaryLine label="Annual salary" value={fc(result.salary)} />
                   <SummaryLine label="Maximum employee contributions" value={fc(result.salaryCapLimit)} dimmed />
                   <SummaryLine label="Contributed (YTD)" value={fc(result.totalYtdEmployee)} bold color={T.btn} />
@@ -899,49 +926,59 @@ export default function App() {
                 </div>
               </div>
             ) : (
-              <div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 14 }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
 
                   {/* 403(b) Card */}
                   <div style={{ background: T.greenLight, border: `1px solid ${T.btnBorder}`, borderRadius: T.radius, overflow: "hidden" }}>
                     <div style={{ padding: "10px 14px 6px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <span style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.btn, fontFamily: T.font }}>403(b)</span>
+                      <span style={{ fontSize: "0.82rem", fontWeight: 700, color: T.btn, fontFamily: T.font }}>403(b)</span>
                       {result.usingTarget && <span style={{ fontSize: "0.65rem", color: T.textMuted, fontFamily: T.font }}>Priority 1 &amp; 2</span>}
                     </div>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1, background: T.btnBorder }}>
-                      <div style={{ background: T.greenLight, padding: "10px 14px" }}>
-                        <div style={{ fontSize: "0.72rem", fontWeight: 600, color: T.textSub, fontFamily: T.font, marginBottom: 4 }}>Elective (Pre-Tax/Roth)</div>
+                      <div style={{ background: T.greenLight, padding: "8px 14px" }}>
+                        <div style={{ fontSize: "0.72rem", fontWeight: 600, color: T.textSub, fontFamily: T.font, marginBottom: 3 }}>Elective (pre-tax / Roth)</div>
                         {result.electiveNotNeeded
                           ? <div style={{ fontSize: "0.82rem", fontWeight: 600, color: T.textMuted, fontFamily: T.font, lineHeight: 1.4 }}>Not needed — goal met by other plans</div>
                           : result.electiveRem <= 0 && !result.electiveSalaryCapped
                           ? <div style={{ fontSize: "1.1rem", fontWeight: 700, color: T.green, fontFamily: T.font }}>Limit reached ✓</div>
                           : <>
                               <div style={{ fontSize: "1.6rem", fontWeight: 700, color: T.btn, fontFamily: T.font, letterSpacing: "-0.02em", lineHeight: 1 }}>{result.electivePct}%</div>
-                              <div style={{ fontSize: "0.78rem", color: T.textSub, fontFamily: T.font, marginTop: 3 }}>{fc(ceilDollar(result.electiveDpc))} per paycheck</div>
-                              {result.electiveSalaryCapped && (
-                                <div style={{ fontSize: "0.7rem", color: T.amber, fontFamily: T.font, marginTop: 4, display: "flex", alignItems: "center", gap: 3 }}>
-                                  Contributions limited by salary
-                                  <InfoTooltip text={`Your annual salary of ${fc(result.salary)} limits total employee contributions across all plans. IRS limits would otherwise allow more.`} />
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginTop: 3 }}>
+                                <div>
+                                  {result.electiveDpc > 0 && <div style={{ fontSize: "0.78rem", color: T.textSub, fontFamily: T.font }}>{fc(ceilDollar(result.electiveDpc))} per paycheck</div>}
+                                  {result.electiveChecks > 0 && <div style={{ fontSize: "0.78rem", color: T.textSub, fontFamily: T.font, marginTop: 1 }}>{result.electiveChecks} paychecks to limit</div>}
                                 </div>
-                              )}
+                                {result.electiveSalaryCapped && (
+                                  <div style={{ fontSize: "0.7rem", color: T.amber, fontFamily: T.font, display: "flex", alignItems: "center", gap: 3, flexShrink: 0, marginLeft: 8 }}>
+                                    Limited by salary
+                                    <InfoTooltip text={`Your annual salary of ${fc(result.salary)} limits total employee contributions across all plans. IRS limits would otherwise allow more.`} />
+                                  </div>
+                                )}
+                              </div>
                             </>
                         }
                       </div>
-                      <div style={{ background: T.greenLight, padding: "10px 14px" }}>
-                        <div style={{ fontSize: "0.72rem", fontWeight: 600, color: T.textSub, fontFamily: T.font, marginBottom: 4 }}>After-Tax (Mega Roth)</div>
+                      <div style={{ background: T.greenLight, padding: "8px 14px" }}>
+                        <div style={{ fontSize: "0.72rem", fontWeight: 600, color: T.textSub, fontFamily: T.font, marginBottom: 3 }}>After-tax (Mega Roth)</div>
                         {result.afterTax403bNotNeeded
                           ? <div style={{ fontSize: "0.82rem", fontWeight: 600, color: T.textMuted, fontFamily: T.font, lineHeight: 1.4 }}>Not needed — goal met</div>
                           : result.afterTax403bRem <= 0 && !result.afterTax403bSalaryCapped
                           ? <div style={{ fontSize: "1.1rem", fontWeight: 700, color: T.green, fontFamily: T.font }}>Limit reached ✓</div>
                           : <>
                               <div style={{ fontSize: "1.6rem", fontWeight: 700, color: T.btn, fontFamily: T.font, letterSpacing: "-0.02em", lineHeight: 1 }}>{result.afterTax403bPct}%</div>
-                              <div style={{ fontSize: "0.78rem", color: T.textSub, fontFamily: T.font, marginTop: 3 }}>{fc(ceilDollar(result.afterTax403bDpc))} per paycheck</div>
-                              {result.afterTax403bSalaryCapped && (
-                                <div style={{ fontSize: "0.7rem", color: T.amber, fontFamily: T.font, marginTop: 4, display: "flex", alignItems: "center", gap: 3 }}>
-                                  Contributions limited by salary
-                                  <InfoTooltip text={`Your annual salary of ${fc(result.salary)} limits total employee contributions across all plans. IRS limits would otherwise allow more.`} />
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginTop: 3 }}>
+                                <div>
+                                  {result.afterTax403bDpc > 0 && <div style={{ fontSize: "0.78rem", color: T.textSub, fontFamily: T.font }}>{fc(ceilDollar(result.afterTax403bDpc))} per paycheck</div>}
+                                  {result.afterTax403bChecks > 0 && <div style={{ fontSize: "0.78rem", color: T.textSub, fontFamily: T.font, marginTop: 1 }}>{result.afterTax403bChecks} paychecks to limit</div>}
                                 </div>
-                              )}
+                                {result.afterTax403bSalaryCapped && (
+                                  <div style={{ fontSize: "0.7rem", color: T.amber, fontFamily: T.font, display: "flex", alignItems: "center", gap: 3, flexShrink: 0, marginLeft: 8 }}>
+                                    Limited by salary
+                                    <InfoTooltip text={`Your annual salary of ${fc(result.salary)} limits total employee contributions across all plans. IRS limits would otherwise allow more.`} />
+                                  </div>
+                                )}
+                              </div>
                             </>
                         }
                       </div>
@@ -954,14 +991,14 @@ export default function App() {
                         </svg>
                       </summary>
                       <div style={{ padding: "4px 14px 12px" }}>
-                        <PlanLine label="Elective allocated toward goal" value={fc(result.electiveRem)} />
-                        <PlanLine label="Paychecks to elective limit" value={result.electiveNotNeeded ? "—" : `${result.electiveChecks}`} />
-                        <PlanLine label={`Elective limit (402(g)${result.catchUp > 0 ? ` + catch-up` : ""})`} value={fc(result.electiveLimit)} dimmed />
-                        <PlanLine label="After-tax allocated toward goal" value={fc(result.afterTax403bRem)} />
-                        <PlanLine label="Paychecks to after-tax limit" value={result.afterTax403bNotNeeded ? "—" : `${result.afterTax403bChecks}`} />
-                        <PlanLine label="415(c) after-tax room" value={fc(result.afterTax403bLimit)} dimmed />
-                        <PlanLine label="Elective contributed (YTD)" value={fc(result.ytd403bElective)} dimmed />
-                        <PlanLine label="After-tax contributed (YTD)" value={fc(result.ytd403bAfterTaxAmt)} dimmed />
+                        <PlanLine label={`415(c) limit${result.catchUp > 0 ? ` + catch-up` : ""}`} value={fc(LIMIT_415C + result.catchUp)} />
+                        <PlanLine label={`Elective limit (402(g)${result.catchUp > 0 ? ` + catch-up` : ""})`} value={fc(result.electiveLimit)} indent />
+                        {result.ytd403bElective > 0 && <PlanLine label="Contributed (YTD)" value={fc(result.ytd403bElective)} indent />}
+                        <PlanLine label="Annual contribution" value={fc(result.electiveRem)} bold />
+                        <Divider />
+                        <PlanLine label="415(c) after-tax room" value={fc(result.afterTax403bLimit)} />
+                        {result.ytd403bAfterTaxAmt > 0 && <PlanLine label="Contributed after-tax (YTD)" value={fc(result.ytd403bAfterTaxAmt)} indent />}
+                        <PlanLine label="Annual contribution" value={fc(result.afterTax403bRem)} bold />
                       </div>
                     </details>
                   </div>
@@ -969,29 +1006,37 @@ export default function App() {
                   {/* 401(a) Card */}
                   <div style={{ background: T.blueLight, border: `1px solid #BFDBFE`, borderRadius: T.radius, overflow: "hidden" }}>
                     <div style={{ padding: "10px 14px 6px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <span style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.blue, fontFamily: T.font }}>401(a)</span>
-                      {result.usingTarget && <span style={{ fontSize: "0.65rem", color: T.textMuted, fontFamily: T.font }}>Priority 3</span>}
+                      <span style={{ fontSize: "0.82rem", fontWeight: 700, color: T.blue, fontFamily: T.font }}>401(a)</span>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        {!result.include401a && <span style={{ fontSize: "0.72rem", fontWeight: 600, color: T.textMuted, fontFamily: T.font }}>Excluded from contributions</span>}
+                        {result.usingTarget && result.include401a && <span style={{ fontSize: "0.65rem", color: T.textMuted, fontFamily: T.font }}>Priority 3</span>}
+                      </div>
                     </div>
-                    <div style={{ padding: "0 14px 10px" }}>
-                      <div style={{ fontSize: "0.72rem", fontWeight: 600, color: T.textSub, fontFamily: T.font, marginBottom: 4 }}>After-Tax Employee (Mega Roth)</div>
-                      {!result.include401a
-                        ? <div style={{ fontSize: "0.82rem", fontWeight: 600, color: T.textMuted, fontFamily: T.font, lineHeight: 1.4 }}>Excluded from contributions</div>
-                        : result.afterTax401aNotNeeded
-                        ? <div style={{ fontSize: "0.82rem", fontWeight: 600, color: T.textMuted, fontFamily: T.font, lineHeight: 1.4 }}>Not needed — goal met by 403(b)</div>
-                        : result.afterTax401aRem <= 0 && !result.afterTax401aSalaryCapped
-                        ? <div style={{ fontSize: "1.1rem", fontWeight: 700, color: T.green, fontFamily: T.font }}>Limit reached ✓</div>
-                        : <>
-                            <div style={{ fontSize: "1.6rem", fontWeight: 700, color: T.blue, fontFamily: T.font, letterSpacing: "-0.02em", lineHeight: 1 }}>{result.afterTax401aPct}%</div>
-                            <div style={{ fontSize: "0.78rem", color: T.textSub, fontFamily: T.font, marginTop: 3 }}>{fc(ceilDollar(result.afterTax401aDpc))} per paycheck</div>
-                            {result.afterTax401aSalaryCapped && (
-                              <div style={{ fontSize: "0.7rem", color: T.amber, fontFamily: T.font, marginTop: 4, display: "flex", alignItems: "center", gap: 3 }}>
-                                Contributions limited by salary
-                                <InfoTooltip text={`Your annual salary of ${fc(result.salary)} limits total employee contributions across all plans. IRS limits would otherwise allow more.`} />
+                    {result.include401a && (
+                      <div style={{ padding: "0 14px 8px" }}>
+                        <div style={{ fontSize: "0.72rem", fontWeight: 600, color: T.textSub, fontFamily: T.font, marginBottom: 3 }}>After-tax employee (Mega Roth)</div>
+                        {result.afterTax401aNotNeeded
+                          ? <div style={{ fontSize: "0.82rem", fontWeight: 600, color: T.textMuted, fontFamily: T.font, lineHeight: 1.4 }}>Not needed — goal met by 403(b)</div>
+                          : result.afterTax401aRem <= 0 && !result.afterTax401aSalaryCapped
+                          ? <div style={{ fontSize: "1.1rem", fontWeight: 700, color: T.green, fontFamily: T.font }}>Limit reached ✓</div>
+                          : <>
+                              <div style={{ fontSize: "1.6rem", fontWeight: 700, color: T.blue, fontFamily: T.font, letterSpacing: "-0.02em", lineHeight: 1 }}>{result.afterTax401aPct}%</div>
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginTop: 3 }}>
+                                <div>
+                                  {result.afterTax401aDpc > 0 && <div style={{ fontSize: "0.78rem", color: T.textSub, fontFamily: T.font }}>{fc(ceilDollar(result.afterTax401aDpc))} per paycheck</div>}
+                                  {result.afterTax401aChecks > 0 && <div style={{ fontSize: "0.78rem", color: T.textSub, fontFamily: T.font, marginTop: 1 }}>{result.afterTax401aChecks} paychecks to limit</div>}
+                                </div>
+                                {result.afterTax401aSalaryCapped && (
+                                  <div style={{ fontSize: "0.7rem", color: T.amber, fontFamily: T.font, display: "flex", alignItems: "center", gap: 3, flexShrink: 0, marginLeft: 8 }}>
+                                    Limited by salary
+                                    <InfoTooltip text={`Your annual salary of ${fc(result.salary)} limits total employee contributions across all plans. IRS limits would otherwise allow more.`} />
+                                  </div>
+                                )}
                               </div>
-                            )}
-                          </>
-                      }
-                    </div>
+                            </>
+                        }
+                      </div>
+                    )}
                     <details style={{ borderTop: `1px solid #BFDBFE` }}>
                       <summary style={{ cursor: "pointer", padding: "8px 14px", fontSize: "0.75rem", fontWeight: 600, color: T.blue, fontFamily: T.font, userSelect: "none", listStyle: "none", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                         <span>View details</span>
@@ -1000,14 +1045,13 @@ export default function App() {
                         </svg>
                       </summary>
                       <div style={{ padding: "4px 14px 12px" }}>
-                        <PlanLine label="After-tax allocated toward goal" value={fc(result.afterTax401aRem)} />
-                        <PlanLine label="Paychecks to limit" value={result.afterTax401aNotNeeded ? "—" : `${result.afterTax401aChecks}`} />
-                        <PlanLine label="415(c) after-tax room" value={fc(result.afterTax401aLimit)} dimmed />
-                        <PlanLine label="Employer match (50% × 8%)" value={fc(result.empMatchAmt)} dimmed />
-                        <PlanLine label="Employer discretionary (3%)" value={fc(result.empDiscAmt)} dimmed />
-                        <PlanLine label="Employer contributions (projected)" value={fc(result.projectedEmployer401a)} dimmed />
-                        <PlanLine label="Employer contributions (YTD)" value={fc(result.ytd401aEmployerAmt)} dimmed />
-                        <PlanLine label="After-tax contributed (YTD)" value={fc(result.ytd401aAfterTaxAmt)} dimmed />
+                        <PlanLine label="415(c) limit" value={fc(LIMIT_415C)} />
+                        <PlanLine label="Employer match (projected)" value={fc(result.empMatchAmt)} indent />
+                        <PlanLine label="Employer discretionary (projected)" value={fc(result.empDiscAmt)} indent />
+                        <PlanLine label="After-tax room for employee" value={fc(result.afterTax401aLimit)} bold />
+                        {result.ytd401aAfterTaxAmt > 0 && <PlanLine label="After-tax contributed (YTD)" value={fc(result.ytd401aAfterTaxAmt)} indent />}
+                        <PlanLine label="Annual contribution" value={fc(result.afterTax401aRem)} bold />
+                        {result.ytd401aEmployerAmt > 0 && <PlanLine label="Employer contributions (YTD)" value={fc(result.ytd401aEmployerAmt)} indent />}
                       </div>
                     </details>
                   </div>
@@ -1015,29 +1059,37 @@ export default function App() {
                   {/* 457(b) Card */}
                   <div style={{ background: T.preTaxLight, border: `1px solid ${T.preTaxBorder}`, borderRadius: T.radius, overflow: "hidden" }}>
                     <div style={{ padding: "10px 14px 6px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <span style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.preTax, fontFamily: T.font }}>457(b)</span>
-                      {result.usingTarget && <span style={{ fontSize: "0.65rem", color: T.textMuted, fontFamily: T.font }}>Priority 4</span>}
+                      <span style={{ fontSize: "0.82rem", fontWeight: 700, color: T.preTax, fontFamily: T.font }}>457(b)</span>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        {!result.include457b && <span style={{ fontSize: "0.72rem", fontWeight: 600, color: T.textMuted, fontFamily: T.font }}>Excluded from contributions</span>}
+                        {result.usingTarget && result.include457b && <span style={{ fontSize: "0.65rem", color: T.textMuted, fontFamily: T.font }}>Priority 4</span>}
+                      </div>
                     </div>
-                    <div style={{ padding: "0 14px 10px" }}>
-                      <div style={{ fontSize: "0.72rem", fontWeight: 600, color: T.textSub, fontFamily: T.font, marginBottom: 4 }}>Pre-Tax — Dollar Amount Election</div>
-                      {!result.include457b
-                        ? <div style={{ fontSize: "0.82rem", fontWeight: 600, color: T.textMuted, fontFamily: T.font, lineHeight: 1.4 }}>Excluded from contributions</div>
-                        : result.notNeeded457b
-                        ? <div style={{ fontSize: "0.82rem", fontWeight: 600, color: T.textMuted, fontFamily: T.font, lineHeight: 1.4 }}>Not needed — goal met by higher-priority plans</div>
-                        : result.rem457b <= 0 && !result.salary457bCapped
-                        ? <div style={{ fontSize: "1.1rem", fontWeight: 700, color: T.green, fontFamily: T.font }}>Limit reached ✓</div>
-                        : <>
-                            <div style={{ fontSize: "1.6rem", fontWeight: 700, color: T.preTax, fontFamily: T.font, letterSpacing: "-0.02em", lineHeight: 1 }}>{fc(result.dpc457b, 2)}</div>
-                            <div style={{ fontSize: "0.78rem", color: T.textSub, fontFamily: T.font, marginTop: 3 }}>per paycheck</div>
-                            {result.salary457bCapped && (
-                              <div style={{ fontSize: "0.7rem", color: T.amber, fontFamily: T.font, marginTop: 4, display: "flex", alignItems: "center", gap: 3 }}>
-                                Contributions limited by salary
-                                <InfoTooltip text={`Your annual salary of ${fc(result.salary)} limits total employee contributions across all plans. IRS limits would otherwise allow more.`} />
+                    {result.include457b && (
+                      <div style={{ padding: "0 14px 8px" }}>
+                        <div style={{ fontSize: "0.72rem", fontWeight: 600, color: T.textSub, fontFamily: T.font, marginBottom: 3 }}>Pre-tax — dollar amount election</div>
+                        {result.notNeeded457b
+                          ? <div style={{ fontSize: "0.82rem", fontWeight: 600, color: T.textMuted, fontFamily: T.font, lineHeight: 1.4 }}>Not needed — goal met by higher-priority plans</div>
+                          : result.rem457b <= 0 && !result.salary457bCapped
+                          ? <div style={{ fontSize: "1.1rem", fontWeight: 700, color: T.green, fontFamily: T.font }}>Limit reached ✓</div>
+                          : <>
+                              <div style={{ fontSize: "1.6rem", fontWeight: 700, color: T.preTax, fontFamily: T.font, letterSpacing: "-0.02em", lineHeight: 1 }}>{result.dpc457b === 0 ? "$0" : fc(result.dpc457b, 2)}</div>
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginTop: 3 }}>
+                                <div>
+                                  {result.dpc457b > 0 && <div style={{ fontSize: "0.78rem", color: T.textSub, fontFamily: T.font }}>per paycheck</div>}
+                                  {result.checks457b > 0 && <div style={{ fontSize: "0.78rem", color: T.textSub, fontFamily: T.font, marginTop: 1 }}>{result.checks457b} paychecks to limit</div>}
+                                </div>
+                                {result.salary457bCapped && (
+                                  <div style={{ fontSize: "0.7rem", color: T.amber, fontFamily: T.font, display: "flex", alignItems: "center", gap: 3, flexShrink: 0, marginLeft: 8 }}>
+                                    Limited by salary
+                                    <InfoTooltip text={`Your annual salary of ${fc(result.salary)} limits total employee contributions across all plans. IRS limits would otherwise allow more.`} />
+                                  </div>
+                                )}
                               </div>
-                            )}
-                          </>
-                      }
-                    </div>
+                            </>
+                        }
+                      </div>
+                    )}
                     <details style={{ borderTop: `1px solid ${T.preTaxBorder}` }}>
                       <summary style={{ cursor: "pointer", padding: "8px 14px", fontSize: "0.75rem", fontWeight: 600, color: T.preTax, fontFamily: T.font, userSelect: "none", listStyle: "none", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                         <span>View details</span>
@@ -1046,22 +1098,13 @@ export default function App() {
                         </svg>
                       </summary>
                       <div style={{ padding: "4px 14px 12px" }}>
-                        <PlanLine label="Allocated toward goal" value={fc(result.rem457b)} />
-                        <PlanLine label="Paychecks to limit" value={result.notNeeded457b ? "—" : `${result.checks457b}`} />
-                        <PlanLine label="457(b) annual limit" value={fc(LIMIT_457B)} dimmed />
-                        <PlanLine label="Contributed (YTD)" value={fc(result.ytd457bAmt)} dimmed />
+                        <PlanLine label="457(b) annual limit" value={fc(LIMIT_457B)} />
+                        {result.ytd457bAmt > 0 && <PlanLine label="Contributed (YTD)" value={fc(result.ytd457bAmt)} indent />}
+                        <PlanLine label="Annual contribution" value={fc(result.rem457b)} bold />
                       </div>
                     </details>
                   </div>
                 </div>
-
-                {result.catchUp > 0 && (
-                  <NoteBox color={result.is6063 ? "#5B21B6" : T.btn} bg={result.is6063 ? "#FAF5FF" : T.greenLight} border={result.is6063 ? "#E9D5FF" : T.btnBorder}>
-                    <strong>{result.is6063 ? "Enhanced catch-up (ages 60–63):" : "Catch-up eligible (age 50+):"}</strong>{" "}
-                    Your {fc(result.catchUp)} catch-up is added above the 415(c) limit in the 403(b) elective bucket.
-                    {result.is6063 && ` This enhanced window closes the year you turn 64, at which point catch-up reverts to ${fc(LIMIT_CATCHUP_50)}.`}
-                  </NoteBox>
-                )}
 
                 {(() => {
                   const proj403bElective = result.ytd403bElective + Math.min(result.electiveRem > 0 ? result.electiveDpc * result.electiveChecks : 0, result.electiveRem);
@@ -1072,23 +1115,23 @@ export default function App() {
                   const totalAll = totalEmployee + result.totalEmployer401a;
 
                   return (
-                    <details style={{ background: "#F9FAFB", border: "1px solid #E5E7EB", borderRadius: "8px", padding: "12px", marginTop: 12 }}>
-                      <summary style={{ cursor: "pointer", fontSize: "0.78rem", fontWeight: 600, color: "#1F2937", padding: "8px 0", userSelect: "none", listStyle: "none", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                        <span>Projected Full Year Summary</span>
-                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ flexShrink: 0, transition: "transform 0.2s" }} className="details-arrow">
-                          <path d="M3 4.5l3 3 3-3" stroke={T.textSub} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    <details style={{ background: T.surfaceAlt, border: `1px solid ${T.border}`, borderRadius: "8px", overflow: "hidden" }}>
+                      <summary style={{ cursor: "pointer", fontSize: "0.8rem", fontWeight: 700, color: T.text, fontFamily: T.font, padding: "14px 16px", userSelect: "none", listStyle: "none", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                        <span>Calculation Breakdown</span>
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ transition: "transform 0.2s" }} className="details-arrow">
+                          <path d="M3 5l4 4 4-4" stroke={T.textSub} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
                       </summary>
-                      <div style={{ paddingTop: 8, marginTop: 8 }}>
-                        <Divider label="Employee Contributions" />
-                        <SummaryLine label="403(b) elective (pre-tax / Roth)" value={fc(proj403bElective)} />
-                        <SummaryLine label="403(b) after-tax (Mega Roth)" value={fc(proj403bAfterTax)} />
-                        <SummaryLine label="401(a) after-tax (Mega Roth)" value={fc(proj401aAfterTax)} />
-                        <SummaryLine label="457(b) pre-tax" value={fc(proj457b)} />
+                      <div style={{ padding: "0 14px 14px" }}>
+                        <div style={{ fontSize: "0.78rem", fontWeight: 600, color: T.textSub, fontFamily: T.font, marginTop: 8, marginBottom: 4 }}>Employee contributions</div>
+                        {proj403bElective > 0 && <SummaryLine label="403(b) elective (pre-tax / Roth)" value={fc(proj403bElective)} />}
+                        {proj403bAfterTax > 0 && <SummaryLine label="403(b) after-tax (Mega Roth)" value={fc(proj403bAfterTax)} />}
+                        {proj401aAfterTax > 0 && <SummaryLine label="401(a) after-tax (Mega Roth)" value={fc(proj401aAfterTax)} />}
+                        {proj457b > 0 && <SummaryLine label="457(b) pre-tax" value={fc(proj457b)} />}
                         <SummaryLine label="Total employee" value={fc(totalEmployee)} bold />
-                        <Divider label="Employer Contributions" />
-                        <SummaryLine label={`Match — 50% × 8% of ${fc(result.compBasis)}`} value={fc(result.empMatchAmt)} dimmed indent />
-                        <SummaryLine label={`Discretionary — 3% of ${fc(result.compBasis)}`} value={fc(result.empDiscAmt)} dimmed indent />
+                        <div style={{ fontSize: "0.78rem", fontWeight: 600, color: T.textSub, fontFamily: T.font, marginTop: 12, marginBottom: 4 }}>Employer contributions</div>
+                        <SummaryLine label={`Match — 50% × 8% of ${fc(result.compBasis)}`} value={fc(result.empMatchAmt)} dimmed />
+                        <SummaryLine label={`Discretionary — 3% of ${fc(result.compBasis)}`} value={fc(result.empDiscAmt)} dimmed />
                         <SummaryLine label="Total employer" value={fc(result.totalEmployer401a)} bold />
                         <Divider />
                         <SummaryLine label="Total retirement compensation" value={fc(totalAll)} bold color={T.total} />
@@ -1096,6 +1139,14 @@ export default function App() {
                     </details>
                   );
                 })()}
+
+                {result.catchUp > 0 && (
+                  <NoteBox color={result.is6063 ? "#5B21B6" : T.btn} bg={result.is6063 ? "#FAF5FF" : T.greenLight} border={result.is6063 ? "#E9D5FF" : T.btnBorder}>
+                    <strong>{result.is6063 ? "Enhanced catch-up (ages 60–63):" : "Catch-up eligible (age 50+):"}</strong>{" "}
+                    Your {fc(result.catchUp)} catch-up is added above the 415(c) limit in the 403(b) elective bucket.
+                    {result.is6063 && ` This enhanced window closes the year you turn 64, at which point catch-up reverts to ${fc(LIMIT_CATCHUP_50)}.`}
+                  </NoteBox>
+                )}
               </div>
             )}
           </div>
