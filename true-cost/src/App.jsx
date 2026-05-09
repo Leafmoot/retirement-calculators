@@ -1343,7 +1343,7 @@ export default function App() {
               className="mobile-stack"
             >
               <div>
-                <Label tooltip="Pre-Tax reduces your taxable income now, lowering the amount withheld from your paycheck.">
+                <Label tooltip="Contributions are made before taxes, reducing your taxable income and lowering what's taken out of your paycheck. The money is taxed when you withdraw it in retirement, at whatever tax rate applies to you at that time.">
                   Pre-Tax %
                 </Label>
                 <Input
@@ -1362,7 +1362,7 @@ export default function App() {
                 <FieldErr msg={errors.preTaxPct} />
               </div>
               <div>
-                <Label tooltip="Roth contributions are after-tax and grow tax-free, but don't reduce your current taxable income.">
+                <Label tooltip="Contributions are made after taxes, so the full contribution amount is taken out of your paycheck with no tax offset. To withdraw earnings tax-free, you must have a qualifying distribution event, be at least 59½, and your original Roth contribution must have been made at least five years prior.">
                   Roth % (After-Tax)
                 </Label>
                 <Input
@@ -1577,12 +1577,13 @@ export default function App() {
                 >
                   {/* Column 1 — Total Contribution */}
                   <div style={{ padding: "14px 16px", textAlign: "center" }}>
-                    <div style={{ fontSize: "0.78rem", fontWeight: 600, color: "#64748B", fontFamily: T.font, marginBottom: 8, letterSpacing: "0.01em" }}>
+                    <div style={{ fontSize: "0.78rem", fontWeight: 600, color: "#64748B", fontFamily: T.font, marginBottom: 8, letterSpacing: "0.01em", display: "flex", alignItems: "center", justifyContent: "center", gap: 2 }}>
                       {result.preTaxContribution > 0 && result.rothContribution > 0
                         ? "Total Contribution"
                         : result.preTaxContribution > 0
                         ? "Pre-Tax Contribution"
                         : "Roth Contribution"}
+                      <InfoTooltip text="The amount going into your retirement account each paycheck." />
                     </div>
                     <div style={{ fontSize: "1.9rem", fontWeight: 600, color: "#1E293B", lineHeight: 1, fontFamily: T.font, letterSpacing: "-0.03em", fontVariantNumeric: "tabular-nums", marginBottom: 4 }} className="mobile-text-sm">
                       {fc(result.totalContribution)}
@@ -1604,38 +1605,11 @@ export default function App() {
                   {/* Vertical Divider */}
                   <div style={{ background: "#E5E7EB" }} />
 
-                  {/* Column 2 — True Cost */}
-                  <div style={{ padding: "14px 16px", textAlign: "center" }}>
-                    <div style={{ fontSize: "0.78rem", fontWeight: 600, color: "#64748B", fontFamily: T.font, marginBottom: 8, letterSpacing: "0.01em" }}>
-                      True Cost
-                    </div>
-                    <div style={{ fontSize: "1.9rem", fontWeight: 600, color: "#1E293B", lineHeight: 1, fontFamily: T.font, letterSpacing: "-0.03em", fontVariantNumeric: "tabular-nums", marginBottom: 4 }} className="mobile-text-sm">
-                      {fc(result.totalTrueCost)}
-                    </div>
-                    {result.preTaxContribution > 0 && result.rothContribution > 0 && (
-                      <div style={{ display: "flex", flexDirection: "column", gap: 3, borderTop: `1px solid ${T.border}`, paddingTop: 8, marginTop: 8 }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.76rem", fontFamily: T.font }}>
-                          <span style={{ color: T.textMuted }}>Pre-Tax</span>
-                          <span style={{ fontWeight: 600, fontVariantNumeric: "tabular-nums", color: T.text }}>{fc(result.preTaxTrueCost)}</span>
-                        </div>
-                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.76rem", fontFamily: T.font }}>
-                          <span style={{ color: T.textMuted }}>Roth</span>
-                          <span style={{ fontWeight: 600, fontVariantNumeric: "tabular-nums", color: T.text }}>{fc(result.rothTrueCost)}</span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Vertical Divider */}
-                  <div style={{ background: "#E5E7EB" }} />
-
-                  {/* Column 3 — Tax Savings */}
+                  {/* Column 2 — Tax Savings */}
                   <div style={{ padding: "14px 16px", textAlign: "center" }}>
                     <div style={{ fontSize: "0.78rem", fontWeight: 600, color: "#64748B", fontFamily: T.font, marginBottom: 8, letterSpacing: "0.01em", display: "flex", alignItems: "center", justifyContent: "center", gap: 2 }}>
                       Tax Savings
-                      {result.rothContribution > 0 && (
-                        <InfoTooltip text="Pre-tax contributions reduce your taxable income now, generating immediate tax savings. Roth contributions are made after tax, so there is no immediate tax reduction — the benefit comes at retirement, when qualified withdrawals are tax-free." />
-                      )}
+                      <InfoTooltip text="When you contribute pre-tax, your taxable income goes down — which means less taken out for federal taxes. This is how much you save." />
                     </div>
                     <div style={{ fontSize: "1.9rem", fontWeight: 600, color: T.green, lineHeight: 1, fontFamily: T.font, letterSpacing: "-0.03em", fontVariantNumeric: "tabular-nums", marginBottom: 4 }} className="mobile-text-sm">
                       {fc(result.totalTaxSavings)}
@@ -1649,6 +1623,32 @@ export default function App() {
                         <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.76rem", fontFamily: T.font }}>
                           <span style={{ color: T.textMuted }}>Roth</span>
                           <span style={{ fontWeight: 600, fontVariantNumeric: "tabular-nums", color: T.textSub }}>$0</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Vertical Divider */}
+                  <div style={{ background: "#E5E7EB" }} />
+
+                  {/* Column 3 — True Cost */}
+                  <div style={{ padding: "14px 16px", textAlign: "center" }}>
+                    <div style={{ fontSize: "0.78rem", fontWeight: 600, color: "#64748B", fontFamily: T.font, marginBottom: 8, letterSpacing: "0.01em", display: "flex", alignItems: "center", justifyContent: "center", gap: 2 }}>
+                      True Cost
+                      <InfoTooltip text="What contributing actually costs you out of pocket. It is lower than your total contribution because the tax savings offset part of it." />
+                    </div>
+                    <div style={{ fontSize: "1.9rem", fontWeight: 600, color: "#1E293B", lineHeight: 1, fontFamily: T.font, letterSpacing: "-0.03em", fontVariantNumeric: "tabular-nums", marginBottom: 4 }} className="mobile-text-sm">
+                      {fc(result.totalTrueCost)}
+                    </div>
+                    {result.preTaxContribution > 0 && result.rothContribution > 0 && (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 3, borderTop: `1px solid ${T.border}`, paddingTop: 8, marginTop: 8 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.76rem", fontFamily: T.font }}>
+                          <span style={{ color: T.textMuted }}>Pre-Tax</span>
+                          <span style={{ fontWeight: 600, fontVariantNumeric: "tabular-nums", color: T.text }}>{fc(result.preTaxTrueCost)}</span>
+                        </div>
+                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.76rem", fontFamily: T.font }}>
+                          <span style={{ color: T.textMuted }}>Roth</span>
+                          <span style={{ fontWeight: 600, fontVariantNumeric: "tabular-nums", color: T.text }}>{fc(result.rothTrueCost)}</span>
                         </div>
                       </div>
                     )}
@@ -1681,7 +1681,7 @@ export default function App() {
                       userSelect: "none",
                     }}
                   >
-                    <span>Annual Totals</span>
+                    <span>Calculation Breakdown</span>
                     <svg
                       width="14"
                       height="14"

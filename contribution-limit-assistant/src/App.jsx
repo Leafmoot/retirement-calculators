@@ -548,7 +548,6 @@ function SummaryLine({ label, value, color, bold, indent, dimmed }) {
           fontWeight: bold ? 600 : 400,
         }}
       >
-        {indent ? "↳ " : ""}
         {label}
       </span>
       <span
@@ -589,7 +588,7 @@ function StatCard({ label, value, sub, subLines, color, small }) {
       <div style={{ width: "100%", textAlign: "center" }}>
         <div
           style={{
-            fontSize: "0.7rem",
+            fontSize: "0.78rem",
             fontWeight: 600,
             letterSpacing: "0.01em",
             color: "#64748B",
@@ -2270,20 +2269,21 @@ export default function App() {
                 {/* Collapsible Details */}
                 <details
                   style={{
-                    background: "#F9FAFB",
-                    border: "1px solid #E5E7EB",
+                    background: T.surfaceAlt,
+                    border: `1px solid ${T.border}`,
                     borderRadius: "8px",
-                    padding: "12px",
+                    overflow: "hidden",
                     marginTop: 12,
                   }}
                 >
                   <summary
                     style={{
                       cursor: "pointer",
-                      fontSize: "0.78rem",
-                      fontWeight: 600,
-                      color: "#1F2937",
-                      padding: "8px 0",
+                      fontSize: "0.8rem",
+                      fontWeight: 700,
+                      color: T.text,
+                      fontFamily: T.font,
+                      padding: "14px 16px",
                       userSelect: "none",
                       listStyle: "none",
                       display: "flex",
@@ -2291,17 +2291,17 @@ export default function App() {
                       justifyContent: "space-between",
                     }}
                   >
-                    <span>View Calculation Details</span>
+                    <span>Calculation Breakdown</span>
                     <svg
-                      width="12"
-                      height="12"
-                      viewBox="0 0 12 12"
+                      width="14"
+                      height="14"
+                      viewBox="0 0 14 14"
                       fill="none"
-                      style={{ flexShrink: 0, transition: "transform 0.2s" }}
+                      style={{ transition: "transform 0.2s" }}
                       className="details-arrow"
                     >
                       <path
-                        d="M3 4.5l3 3 3-3"
+                        d="M3 5l4 4 4-4"
                         stroke={T.textSub}
                         strokeWidth="1.5"
                         strokeLinecap="round"
@@ -2309,12 +2309,7 @@ export default function App() {
                       />
                     </svg>
                   </summary>
-                  <div
-                    style={{
-                      paddingTop: 8,
-                      marginTop: 8,
-                    }}
-                  >
+                  <div style={{ padding: "0 14px 14px" }}>
                     {result.usingCustomLimit && (
                       <SummaryLine
                         label="IRS Maximum for Your Age"
@@ -2373,21 +2368,11 @@ export default function App() {
                         ? fc(ceilDollar(result.preDpc))
                         : `${result.prePct}%`
                     }
-                    subLines={
-                      result.contribMode === "dollar"
-                        ? [
-                            `${fc(ceilDollar(result.preDpc))} per paycheck`,
-                            `${result.preChecks} paychecks to ${
-                              result.usingCustomLimit ? "goal" : "limit"
-                            }`,
-                          ]
-                        : [
-                            `${fc(ceilDollar(result.preDpc))} per paycheck`,
-                            `${result.preChecks} paychecks to ${
-                              result.usingCustomLimit ? "goal" : "limit"
-                            }`,
-                          ]
-                    }
+                    subLines={[
+                      `${result.preChecks} paychecks to ${
+                        result.usingCustomLimit ? "goal" : "limit"
+                      }`,
+                    ]}
                   />
                   <StatCard
                     label="Roth Catch-Up (After-Tax)"
@@ -2396,21 +2381,11 @@ export default function App() {
                         ? fc(ceilDollar(result.rDpc))
                         : `${result.rPct}%`
                     }
-                    subLines={
-                      result.contribMode === "dollar"
-                        ? [
-                            `${fc(ceilDollar(result.rDpc))} per paycheck`,
-                            `${result.rChecks} paychecks to ${
-                              result.usingCustomLimit ? "goal" : "limit"
-                            }`,
-                          ]
-                        : [
-                            `${fc(ceilDollar(result.rDpc))} per paycheck`,
-                            `${result.rChecks} paychecks to ${
-                              result.usingCustomLimit ? "goal" : "limit"
-                            }`,
-                          ]
-                    }
+                    subLines={[
+                      `${result.rChecks} paychecks to ${
+                        result.usingCustomLimit ? "goal" : "limit"
+                      }`,
+                    ]}
                   />
                 </div>
                 <div
@@ -2451,20 +2426,21 @@ export default function App() {
                 {/* Collapsible Details */}
                 <details
                   style={{
-                    background: "#F9FAFB",
-                    border: "1px solid #E5E7EB",
+                    background: T.surfaceAlt,
+                    border: `1px solid ${T.border}`,
                     borderRadius: "8px",
-                    padding: "12px",
+                    overflow: "hidden",
                     marginTop: 12,
                   }}
                 >
                   <summary
                     style={{
                       cursor: "pointer",
-                      fontSize: "0.78rem",
-                      fontWeight: 600,
-                      color: "#1F2937",
-                      padding: "8px 0",
+                      fontSize: "0.8rem",
+                      fontWeight: 700,
+                      color: T.text,
+                      fontFamily: T.font,
+                      padding: "14px 16px",
                       userSelect: "none",
                       listStyle: "none",
                       display: "flex",
@@ -2472,17 +2448,17 @@ export default function App() {
                       justifyContent: "space-between",
                     }}
                   >
-                    <span>View Calculation Details</span>
+                    <span>Calculation Breakdown</span>
                     <svg
-                      width="12"
-                      height="12"
-                      viewBox="0 0 12 12"
+                      width="14"
+                      height="14"
+                      viewBox="0 0 14 14"
                       fill="none"
-                      style={{ flexShrink: 0, transition: "transform 0.2s" }}
+                      style={{ transition: "transform 0.2s" }}
                       className="details-arrow"
                     >
                       <path
-                        d="M3 4.5l3 3 3-3"
+                        d="M3 5l4 4 4-4"
                         stroke={T.textSub}
                         strokeWidth="1.5"
                         strokeLinecap="round"
@@ -2490,12 +2466,21 @@ export default function App() {
                       />
                     </svg>
                   </summary>
-                  <div
-                    style={{
-                      paddingTop: 8,
-                      marginTop: 8,
-                    }}
-                  >
+                  <div style={{ padding: "0 14px 14px" }}>
+                    <div style={{ fontSize: "0.78rem", fontWeight: 600, color: T.textSub, fontFamily: T.font, marginTop: 8, marginBottom: 4 }}>Per Paycheck</div>
+                    <SummaryLine
+                      label="Pre-Tax"
+                      value={fc(ceilDollar(result.preDpc))}
+                    />
+                    <SummaryLine
+                      label="Roth Catch-Up"
+                      value={fc(ceilDollar(result.rDpc))}
+                    />
+                    <SummaryLine
+                      label="Total Per Paycheck"
+                      value={fc(ceilDollar(result.preDpc) + ceilDollar(result.rDpc))}
+                      bold
+                    />
                     <SummaryLine
                       label={
                         result.usingCustomLimit
@@ -2511,7 +2496,6 @@ export default function App() {
                       value={fc(result.totRem)}
                       bold
                     />
-                    <Divider />
                     {result.usingCustomLimit && (
                       <SummaryLine
                         label="IRS Maximum for Your Age"
@@ -2536,6 +2520,7 @@ export default function App() {
                         />
                       </>
                     )}
+                    <Divider />
                     <SummaryLine
                       label="Pre-Tax Contributed (YTD)"
                       value={fc(result.yPre)}
@@ -2586,17 +2571,7 @@ export default function App() {
                         ? fc(ceilDollar(result.dpc))
                         : `${result.pct}%`
                     }
-                    subLines={
-                      result.contribMode === "dollar"
-                        ? [
-                            `${fc(ceilDollar(result.dpc))} per paycheck`,
-                            `${result.checks} paychecks remaining`,
-                          ]
-                        : [
-                            `${fc(ceilDollar(result.dpc))} per paycheck`,
-                            `${result.checks} paychecks remaining`,
-                          ]
-                    }
+                    subLines={[`${result.checks} paychecks remaining`]}
                   />
                 </div>
                 <div
@@ -2658,20 +2633,21 @@ export default function App() {
                 {/* Collapsible Details */}
                 <details
                   style={{
-                    background: "#F9FAFB",
-                    border: "1px solid #E5E7EB",
+                    background: T.surfaceAlt,
+                    border: `1px solid ${T.border}`,
                     borderRadius: "8px",
-                    padding: "12px",
+                    overflow: "hidden",
                     marginTop: 12,
                   }}
                 >
                   <summary
                     style={{
                       cursor: "pointer",
-                      fontSize: "0.78rem",
-                      fontWeight: 600,
-                      color: "#1F2937",
-                      padding: "8px 0",
+                      fontSize: "0.8rem",
+                      fontWeight: 700,
+                      color: T.text,
+                      fontFamily: T.font,
+                      padding: "14px 16px",
                       userSelect: "none",
                       listStyle: "none",
                       display: "flex",
@@ -2679,17 +2655,17 @@ export default function App() {
                       justifyContent: "space-between",
                     }}
                   >
-                    <span>View Calculation Details</span>
+                    <span>Calculation Breakdown</span>
                     <svg
-                      width="12"
-                      height="12"
-                      viewBox="0 0 12 12"
+                      width="14"
+                      height="14"
+                      viewBox="0 0 14 14"
                       fill="none"
-                      style={{ flexShrink: 0, transition: "transform 0.2s" }}
+                      style={{ transition: "transform 0.2s" }}
                       className="details-arrow"
                     >
                       <path
-                        d="M3 4.5l3 3 3-3"
+                        d="M3 5l4 4 4-4"
                         stroke={T.textSub}
                         strokeWidth="1.5"
                         strokeLinecap="round"
@@ -2697,12 +2673,17 @@ export default function App() {
                       />
                     </svg>
                   </summary>
-                  <div
-                    style={{
-                      paddingTop: 8,
-                      marginTop: 8,
-                    }}
-                  >
+                  <div style={{ padding: "0 14px 14px" }}>
+                    <div style={{ fontSize: "0.78rem", fontWeight: 600, color: T.textSub, fontFamily: T.font, marginTop: 8, marginBottom: 4 }}>Per Paycheck</div>
+                    <SummaryLine
+                      label={
+                        result.rothOnlyMode
+                          ? "Roth Contribution"
+                          : "Pre-Tax Contribution"
+                      }
+                      value={fc(ceilDollar(result.dpc))}
+                      bold
+                    />
                     <SummaryLine
                       label={
                         result.usingCustomLimit
@@ -2718,7 +2699,6 @@ export default function App() {
                       value={fc(result.rem)}
                       bold
                     />
-                    <Divider />
                     {result.usingCustomLimit && (
                       <SummaryLine
                         label="IRS Maximum for Your Age"
@@ -2745,6 +2725,7 @@ export default function App() {
                         )}
                       </>
                     )}
+                    <Divider />
                     <SummaryLine
                       label="Pre-Tax Contributed (YTD)"
                       value={fc(result.yPre)}
