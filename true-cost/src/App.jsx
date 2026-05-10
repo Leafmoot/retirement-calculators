@@ -1,8 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 
 // ── 2026 Federal Tax Brackets ──
-const TAX_YEAR = 2026;
-
 const FEDERAL_BRACKETS = {
   single: [
     { limit: 11925, rate: 0.1 },
@@ -687,28 +685,6 @@ function NoteBox({ color, bg, border, children }) {
   );
 }
 
-function Badge({ children, color, bg }) {
-  return (
-    <span
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        padding: "2px 8px",
-        borderRadius: 99,
-        fontSize: "0.8rem",
-        fontWeight: 700,
-        letterSpacing: "0.06em",
-        textTransform: "uppercase",
-        background: bg,
-        color,
-        fontFamily: T.font,
-      }}
-    >
-      {children}
-    </span>
-  );
-}
-
 function EmptyResults({ isCalculating }) {
   return (
     <div
@@ -836,9 +812,7 @@ function EmptyResults({ isCalculating }) {
               lineHeight: 1.55,
             }}
           >
-            Enter your salary and contribution rates to discover how much your
-            retirement savings actually reduces your paycheck—it's less than you
-            think.
+            Enter your salary and contribution rates to see the per-paycheck cost of your retirement contributions — including how much pre-tax saving reduces your take-home pay.
           </div>
         )}
       </div>
@@ -846,114 +820,6 @@ function EmptyResults({ isCalculating }) {
   );
 }
 
-// ── All result notices — grouped, rendered below limit summary ────────────────
-function ResultNotices({ result }) {
-  const notes = [];
-
-  // Ages 60–63 enhanced catch-up (REMOVED "SECURE 2.0" JARGON)
-  if (result.is6063) {
-    notes.push(
-      <NoteBox key="6063" color="#5B21B6" bg="#FAF5FF" border="#E9D5FF">
-        <strong>Enhanced catch-up (ages 60–63):</strong> Because you're between
-        ages 60 and 63, your catch-up limit is {fc(LIMITS.catchUp6063)} — higher
-        than the standard {fc(LIMITS.catchUp50)} that applies at other catch-up
-        eligible ages. This enhanced window closes the year you turn 64, at
-        which point your catch-up reverts to {fc(LIMITS.catchUp50)}.{" "}
-        <em>
-          Note: not all plans have adopted this provision — confirm with your
-          plan administrator before relying on the higher limit.
-        </em>
-      </NoteBox>
-    );
-  }
-
-  // Age 50–59 standard catch-up notice
-  if (
-    result.catchUpAmt === LIMITS.catchUp50 &&
-    !result.is6063 &&
-    !result.ageOver63
-  ) {
-    notes.push(
-      <NoteBox key="50plus" color="#166534" bg="#F0FDF4" border="#BBF7D0">
-        <strong>Catch-up eligible (Age 50+):</strong> Your limit includes an
-        additional {fc(LIMITS.catchUp50)} catch-up on top of the{" "}
-        {fc(LIMITS.standard)} base.
-      </NoteBox>
-    );
-  }
-
-  // Age 64+ — back to standard catch-up after enhanced window closes
-  if (result.ageOver63 && result.catchUpAmt === LIMITS.catchUp50) {
-    notes.push(
-      <NoteBox key="over63" color="#0F766E" bg="#F0FDFA" border="#99F6E4">
-        <strong>Standard catch-up (Age 64+):</strong> Your limit includes the
-        standard {fc(LIMITS.catchUp50)} catch-up. The enhanced{" "}
-        {fc(LIMITS.catchUp6063)} limit available between ages 60–63 no longer
-        applies — you've returned to the standard catch-up amount that continues
-        from age 64 onward.
-      </NoteBox>
-    );
-  }
-
-  // Split path: base limit flexibility
-  if (result.split) {
-    notes.push(
-      <NoteBox key="splitflex" color="#1E40AF" bg="#F0F9FF" border="#BFDBFE">
-        <strong>Base limit flexibility:</strong> Your {fc(LIMITS.standard)} base
-        can be any mix of pre-tax and Roth — only the {fc(result.catchUpAmt)}{" "}
-        catch-up portion must be Roth.
-      </NoteBox>
-    );
-  }
-
-  // Single path: deferral type flexibility
-  if (!result.split) {
-    if (result.catchUpAmt > 0 && result.fica === false) {
-      notes.push(
-        <NoteBox key="fullflex" color="#1E40AF" bg="#F0F9FF" border="#BFDBFE">
-          <strong>Full flexibility:</strong> Since your FICA wages were $150,000
-          or less, your entire {fc(result.annualLimit)} — including the{" "}
-          {fc(result.catchUpAmt)} catch-up — may be pre-tax, Roth, or any
-          combination.
-        </NoteBox>
-      );
-    } else if (result.catchUpAmt === 0) {
-      // Only show this for people under 50 (no catch-up scenario)
-      notes.push(
-        <NoteBox key="flex" color="#1E40AF" bg="#F0F9FF" border="#BFDBFE">
-          <strong>Deferral flexibility:</strong> Your {fc(result.annualLimit)}{" "}
-          limit may be contributed as pre-tax (traditional), Roth, or any mix —
-          whichever best suits your tax strategy.
-        </NoteBox>
-      );
-    }
-    // Don't show flexibility notice when FICA > 150k but using Roth-only strategy
-    // (that scenario requires catch-up to be Roth, even though we're showing single card)
-  }
-
-  // Action step — always show at the bottom
-  notes.push(
-    <NoteBox key="action" color="#166534" bg="#F0FDF4" border="#BBF7D0">
-      <strong>Next step:</strong> To update your contribution election, log into
-      your benefits portal or contact your HR department. Changes typically take
-      effect on the next available pay period.
-    </NoteBox>
-  );
-
-  if (notes.length === 0) return null;
-  return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: 12,
-        marginTop: 14,
-      }}
-    >
-      {notes}
-    </div>
-  );
-}
 // ── Main App ──
 export default function App() {
   const [salary, setSalary] = useState("");
@@ -1241,7 +1107,7 @@ export default function App() {
           flexDirection: isMobile ? "column" : undefined,
           gridTemplateColumns: isMobile
             ? undefined
-            : "minmax(0, 420px) minmax(0, 1fr)",
+            : "minmax(0, 420px) minmax(632px, 680px)",
           gap: 12,
           padding: "12px 16px",
           maxWidth: 1140,
@@ -1556,11 +1422,6 @@ export default function App() {
               <div
                 style={{ display: "flex", flexDirection: "column", gap: 16 }}
               >
-                {/* Per Paycheck Summary Label */}
-                <div style={{ fontSize: "0.8rem", fontWeight: 700, color: T.text, fontFamily: T.font, paddingLeft: 2 }}>
-                  Per Paycheck Summary
-                </div>
-
                 {/* Unified Summary Bar */}
                 <div
                   style={{
@@ -1568,16 +1429,33 @@ export default function App() {
                     borderRadius: "8px",
                     border: "1px solid #E5E7EB",
                     boxShadow: "0 1px 3px 0 rgba(0,0,0,0.1), 0 1px 2px -1px rgba(0,0,0,0.1)",
-                    display: "grid",
-                    gridTemplateColumns: "1fr 1px 1fr 1px 1fr",
                     overflow: "hidden",
-                    marginTop: -4,
                   }}
-                  className="mobile-stack print-break-avoid"
+                  className="print-break-avoid"
                 >
+                  {/* Header strip */}
+                  <div style={{
+                    padding: "14px 16px",
+                    borderBottom: `1px solid ${T.border}`,
+                    background: T.surfaceAlt,
+                    fontSize: "0.8rem",
+                    fontWeight: 700,
+                    color: T.text,
+                    fontFamily: T.font,
+                    display: "flex",
+                    alignItems: "center",
+                  }}>
+                    Per Paycheck Summary
+                  </div>
+                  <div style={{
+                    display: "grid",
+                    gridTemplateColumns: "minmax(210px, 1fr) 1px minmax(210px, 1fr) 1px minmax(210px, 1fr)",
+                  }}
+                  className="mobile-stack"
+                  >
                   {/* Column 1 — Total Contribution */}
-                  <div style={{ padding: "14px 16px", textAlign: "center" }}>
-                    <div style={{ fontSize: "0.78rem", fontWeight: 600, color: "#64748B", fontFamily: T.font, marginBottom: 8, letterSpacing: "0.01em", display: "flex", alignItems: "center", justifyContent: "center", gap: 2 }}>
+                  <div style={{ padding: "12px 12px", textAlign: "center" }}>
+                    <div style={{ fontSize: "0.78rem", fontWeight: 600, color: "#64748B", fontFamily: T.font, marginBottom: 4, letterSpacing: "0.01em", display: "flex", alignItems: "center", justifyContent: "center", gap: 2 }}>
                       {result.preTaxContribution > 0 && result.rothContribution > 0
                         ? "Total Contribution"
                         : result.preTaxContribution > 0
@@ -1589,14 +1467,15 @@ export default function App() {
                       {fc(result.totalContribution)}
                     </div>
                     {result.preTaxContribution > 0 && result.rothContribution > 0 && (
-                      <div style={{ display: "flex", flexDirection: "column", gap: 3, borderTop: `1px solid ${T.border}`, paddingTop: 8, marginTop: 8 }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.76rem", fontFamily: T.font }}>
-                          <span style={{ color: T.textMuted }}>Pre-Tax</span>
-                          <span style={{ fontWeight: 600, fontVariantNumeric: "tabular-nums", color: T.text }}>{fc(result.preTaxContribution)}</span>
+                      <div style={{ display: "flex", gap: 12, borderTop: `1px solid ${T.border}`, paddingTop: 8, marginTop: 8, justifyContent: "center" }}>
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
+                          <span style={{ fontSize: "0.7rem", color: T.textMuted, fontFamily: T.font }}>Pre-Tax</span>
+                          <span style={{ fontSize: "0.78rem", fontWeight: 600, fontVariantNumeric: "tabular-nums", color: T.text, fontFamily: T.font }}>{fc(result.preTaxContribution)}</span>
                         </div>
-                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.76rem", fontFamily: T.font }}>
-                          <span style={{ color: T.textMuted }}>Roth</span>
-                          <span style={{ fontWeight: 600, fontVariantNumeric: "tabular-nums", color: T.text }}>{fc(result.rothContribution)}</span>
+                        <div style={{ width: 1, background: T.border, alignSelf: "stretch" }} />
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
+                          <span style={{ fontSize: "0.7rem", color: T.textMuted, fontFamily: T.font }}>Roth</span>
+                          <span style={{ fontSize: "0.78rem", fontWeight: 600, fontVariantNumeric: "tabular-nums", color: T.text, fontFamily: T.font }}>{fc(result.rothContribution)}</span>
                         </div>
                       </div>
                     )}
@@ -1606,8 +1485,8 @@ export default function App() {
                   <div style={{ background: "#E5E7EB" }} />
 
                   {/* Column 2 — Tax Savings */}
-                  <div style={{ padding: "14px 16px", textAlign: "center" }}>
-                    <div style={{ fontSize: "0.78rem", fontWeight: 600, color: "#64748B", fontFamily: T.font, marginBottom: 8, letterSpacing: "0.01em", display: "flex", alignItems: "center", justifyContent: "center", gap: 2 }}>
+                  <div style={{ padding: "12px 12px", textAlign: "center" }}>
+                    <div style={{ fontSize: "0.78rem", fontWeight: 600, color: "#64748B", fontFamily: T.font, marginBottom: 4, letterSpacing: "0.01em", display: "flex", alignItems: "center", justifyContent: "center", gap: 2 }}>
                       Tax Savings
                       <InfoTooltip text="When you contribute pre-tax, your taxable income goes down — which means less taken out for federal taxes. This is how much you save." />
                     </div>
@@ -1615,14 +1494,15 @@ export default function App() {
                       {fc(result.totalTaxSavings)}
                     </div>
                     {result.preTaxContribution > 0 && result.rothContribution > 0 && (
-                      <div style={{ display: "flex", flexDirection: "column", gap: 3, borderTop: `1px solid ${T.border}`, paddingTop: 8, marginTop: 8 }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.76rem", fontFamily: T.font }}>
-                          <span style={{ color: T.textMuted }}>Pre-Tax</span>
-                          <span style={{ fontWeight: 600, fontVariantNumeric: "tabular-nums", color: T.green }}>{fc(result.preTaxTaxSavings)}</span>
+                      <div style={{ display: "flex", gap: 12, borderTop: `1px solid ${T.border}`, paddingTop: 8, marginTop: 8, justifyContent: "center" }}>
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
+                          <span style={{ fontSize: "0.7rem", color: T.textMuted, fontFamily: T.font }}>Pre-Tax</span>
+                          <span style={{ fontSize: "0.78rem", fontWeight: 600, fontVariantNumeric: "tabular-nums", color: T.green, fontFamily: T.font }}>{fc(result.preTaxTaxSavings)}</span>
                         </div>
-                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.76rem", fontFamily: T.font }}>
-                          <span style={{ color: T.textMuted }}>Roth</span>
-                          <span style={{ fontWeight: 600, fontVariantNumeric: "tabular-nums", color: T.textSub }}>$0</span>
+                        <div style={{ width: 1, background: T.border, alignSelf: "stretch" }} />
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
+                          <span style={{ fontSize: "0.7rem", color: T.textMuted, fontFamily: T.font }}>Roth</span>
+                          <span style={{ fontSize: "0.78rem", fontWeight: 600, fontVariantNumeric: "tabular-nums", color: T.textSub, fontFamily: T.font }}>$0</span>
                         </div>
                       </div>
                     )}
@@ -1632,8 +1512,8 @@ export default function App() {
                   <div style={{ background: "#E5E7EB" }} />
 
                   {/* Column 3 — True Cost */}
-                  <div style={{ padding: "14px 16px", textAlign: "center" }}>
-                    <div style={{ fontSize: "0.78rem", fontWeight: 600, color: "#64748B", fontFamily: T.font, marginBottom: 8, letterSpacing: "0.01em", display: "flex", alignItems: "center", justifyContent: "center", gap: 2 }}>
+                  <div style={{ padding: "12px 12px", textAlign: "center" }}>
+                    <div style={{ fontSize: "0.78rem", fontWeight: 600, color: "#64748B", fontFamily: T.font, marginBottom: 4, letterSpacing: "0.01em", display: "flex", alignItems: "center", justifyContent: "center", gap: 2 }}>
                       True Cost
                       <InfoTooltip text="What contributing actually costs you out of pocket. It is lower than your total contribution because the tax savings offset part of it." />
                     </div>
@@ -1641,17 +1521,19 @@ export default function App() {
                       {fc(result.totalTrueCost)}
                     </div>
                     {result.preTaxContribution > 0 && result.rothContribution > 0 && (
-                      <div style={{ display: "flex", flexDirection: "column", gap: 3, borderTop: `1px solid ${T.border}`, paddingTop: 8, marginTop: 8 }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.76rem", fontFamily: T.font }}>
-                          <span style={{ color: T.textMuted }}>Pre-Tax</span>
-                          <span style={{ fontWeight: 600, fontVariantNumeric: "tabular-nums", color: T.text }}>{fc(result.preTaxTrueCost)}</span>
+                      <div style={{ display: "flex", gap: 12, borderTop: `1px solid ${T.border}`, paddingTop: 8, marginTop: 8, justifyContent: "center" }}>
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
+                          <span style={{ fontSize: "0.7rem", color: T.textMuted, fontFamily: T.font }}>Pre-Tax</span>
+                          <span style={{ fontSize: "0.78rem", fontWeight: 600, fontVariantNumeric: "tabular-nums", color: T.text, fontFamily: T.font }}>{fc(result.preTaxTrueCost)}</span>
                         </div>
-                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.76rem", fontFamily: T.font }}>
-                          <span style={{ color: T.textMuted }}>Roth</span>
-                          <span style={{ fontWeight: 600, fontVariantNumeric: "tabular-nums", color: T.text }}>{fc(result.rothTrueCost)}</span>
+                        <div style={{ width: 1, background: T.border, alignSelf: "stretch" }} />
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
+                          <span style={{ fontSize: "0.7rem", color: T.textMuted, fontFamily: T.font }}>Roth</span>
+                          <span style={{ fontSize: "0.78rem", fontWeight: 600, fontVariantNumeric: "tabular-nums", color: T.text, fontFamily: T.font }}>{fc(result.rothTrueCost)}</span>
                         </div>
                       </div>
                     )}
+                  </div>
                   </div>
                 </div>
 
@@ -1712,10 +1594,10 @@ export default function App() {
                             marginBottom: 4,
                           }}
                         >
-                          Pre-tax
+                          Pre-Tax — Annual
                         </div>
                         <SummaryLine
-                          label={`Contribution (${result.payPeriods} paychecks)`}
+                          label="Contribution"
                           value={fc(
                             result.preTaxContribution * result.payPeriods
                           )}
@@ -1746,10 +1628,10 @@ export default function App() {
                             marginBottom: 4,
                           }}
                         >
-                          Roth
+                          Roth — Annual
                         </div>
                         <SummaryLine
-                          label={`Contribution (${result.payPeriods} paychecks)`}
+                          label="Contribution"
                           value={fc(
                             result.rothContribution * result.payPeriods
                           )}
@@ -1767,31 +1649,35 @@ export default function App() {
                       </>
                     )}
 
-                    <div
-                      style={{
-                        fontSize: "0.78rem",
-                        fontWeight: 600,
-                        color: T.textSub,
-                        fontFamily: T.font,
-                        marginTop: 12,
-                        marginBottom: 4,
-                      }}
-                    >
-                      Combined
-                    </div>
-                    <SummaryLine
-                      label={`Total Contribution (${result.payPeriods} paychecks)`}
-                      value={fc(result.annualTotalContribution)}
-                    />
-                    <SummaryLine
-                      label="True Annual Cost"
-                      value={fc(result.annualTrueCost)}
-                    />
-                    <SummaryLine
-                      label="Annual Tax Savings"
-                      value={fc(result.annualTaxSavings)}
-                      color={T.green}
-                    />
+                    {result.preTaxContribution > 0 && result.rothContribution > 0 && (
+                      <>
+                        <div
+                          style={{
+                            fontSize: "0.78rem",
+                            fontWeight: 600,
+                            color: T.textSub,
+                            fontFamily: T.font,
+                            marginTop: 12,
+                            marginBottom: 4,
+                          }}
+                        >
+                          Combined — Annual
+                        </div>
+                        <SummaryLine
+                          label="Contribution"
+                          value={fc(result.annualTotalContribution)}
+                        />
+                        <SummaryLine
+                          label="True Cost"
+                          value={fc(result.annualTrueCost)}
+                        />
+                        <SummaryLine
+                          label="Tax Savings"
+                          value={fc(result.annualTaxSavings)}
+                          color={T.green}
+                        />
+                      </>
+                    )}
                   </div>
                 </details>
 
