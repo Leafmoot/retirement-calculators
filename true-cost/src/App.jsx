@@ -1467,15 +1467,15 @@ export default function App() {
                       {fc(result.totalContribution)}
                     </div>
                     {result.preTaxContribution > 0 && result.rothContribution > 0 && (
-                      <div style={{ display: "flex", gap: 12, borderTop: `1px solid ${T.border}`, paddingTop: 8, marginTop: 8, justifyContent: "center" }}>
-                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
-                          <span style={{ fontSize: "0.7rem", color: T.textMuted, fontFamily: T.font }}>Pre-Tax</span>
-                          <span style={{ fontSize: "0.78rem", fontWeight: 600, fontVariantNumeric: "tabular-nums", color: T.text, fontFamily: T.font }}>{fc(result.preTaxContribution)}</span>
+                      <div style={{ display: "flex", gap: 20, borderTop: `1px solid ${T.border}`, paddingTop: 10, marginTop: 10, justifyContent: "center" }}>
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
+                          <span style={{ fontSize: "0.75rem", color: T.textMuted, fontFamily: T.font }}>Pre-Tax</span>
+                          <span style={{ fontSize: "0.82rem", fontWeight: 600, fontVariantNumeric: "tabular-nums", color: T.text, fontFamily: T.font }}>{fc(result.preTaxContribution)}</span>
                         </div>
                         <div style={{ width: 1, background: T.border, alignSelf: "stretch" }} />
-                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
-                          <span style={{ fontSize: "0.7rem", color: T.textMuted, fontFamily: T.font }}>Roth</span>
-                          <span style={{ fontSize: "0.78rem", fontWeight: 600, fontVariantNumeric: "tabular-nums", color: T.text, fontFamily: T.font }}>{fc(result.rothContribution)}</span>
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
+                          <span style={{ fontSize: "0.75rem", color: T.textMuted, fontFamily: T.font }}>Roth</span>
+                          <span style={{ fontSize: "0.82rem", fontWeight: 600, fontVariantNumeric: "tabular-nums", color: T.text, fontFamily: T.font }}>{fc(result.rothContribution)}</span>
                         </div>
                       </div>
                     )}
@@ -1494,15 +1494,15 @@ export default function App() {
                       {fc(result.totalTaxSavings)}
                     </div>
                     {result.preTaxContribution > 0 && result.rothContribution > 0 && (
-                      <div style={{ display: "flex", gap: 12, borderTop: `1px solid ${T.border}`, paddingTop: 8, marginTop: 8, justifyContent: "center" }}>
-                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
-                          <span style={{ fontSize: "0.7rem", color: T.textMuted, fontFamily: T.font }}>Pre-Tax</span>
-                          <span style={{ fontSize: "0.78rem", fontWeight: 600, fontVariantNumeric: "tabular-nums", color: T.green, fontFamily: T.font }}>{fc(result.preTaxTaxSavings)}</span>
+                      <div style={{ display: "flex", gap: 20, borderTop: `1px solid ${T.border}`, paddingTop: 10, marginTop: 10, justifyContent: "center" }}>
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
+                          <span style={{ fontSize: "0.75rem", color: T.textMuted, fontFamily: T.font }}>Pre-Tax</span>
+                          <span style={{ fontSize: "0.82rem", fontWeight: 600, fontVariantNumeric: "tabular-nums", color: T.green, fontFamily: T.font }}>{fc(result.preTaxTaxSavings)}</span>
                         </div>
                         <div style={{ width: 1, background: T.border, alignSelf: "stretch" }} />
-                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
-                          <span style={{ fontSize: "0.7rem", color: T.textMuted, fontFamily: T.font }}>Roth</span>
-                          <span style={{ fontSize: "0.78rem", fontWeight: 600, fontVariantNumeric: "tabular-nums", color: T.textSub, fontFamily: T.font }}>$0</span>
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
+                          <span style={{ fontSize: "0.75rem", color: T.textMuted, fontFamily: T.font }}>Roth</span>
+                          <span style={{ fontSize: "0.82rem", fontWeight: 600, fontVariantNumeric: "tabular-nums", color: T.textSub, fontFamily: T.font }}>$0</span>
                         </div>
                       </div>
                     )}
@@ -1521,15 +1521,15 @@ export default function App() {
                       {fc(result.totalTrueCost)}
                     </div>
                     {result.preTaxContribution > 0 && result.rothContribution > 0 && (
-                      <div style={{ display: "flex", gap: 12, borderTop: `1px solid ${T.border}`, paddingTop: 8, marginTop: 8, justifyContent: "center" }}>
-                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
-                          <span style={{ fontSize: "0.7rem", color: T.textMuted, fontFamily: T.font }}>Pre-Tax</span>
-                          <span style={{ fontSize: "0.78rem", fontWeight: 600, fontVariantNumeric: "tabular-nums", color: T.text, fontFamily: T.font }}>{fc(result.preTaxTrueCost)}</span>
+                      <div style={{ display: "flex", gap: 20, borderTop: `1px solid ${T.border}`, paddingTop: 10, marginTop: 10, justifyContent: "center" }}>
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
+                          <span style={{ fontSize: "0.75rem", color: T.textMuted, fontFamily: T.font }}>Pre-Tax</span>
+                          <span style={{ fontSize: "0.82rem", fontWeight: 600, fontVariantNumeric: "tabular-nums", color: T.text, fontFamily: T.font }}>{fc(result.preTaxTrueCost)}</span>
                         </div>
                         <div style={{ width: 1, background: T.border, alignSelf: "stretch" }} />
-                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
-                          <span style={{ fontSize: "0.7rem", color: T.textMuted, fontFamily: T.font }}>Roth</span>
-                          <span style={{ fontSize: "0.78rem", fontWeight: 600, fontVariantNumeric: "tabular-nums", color: T.text, fontFamily: T.font }}>{fc(result.rothTrueCost)}</span>
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
+                          <span style={{ fontSize: "0.75rem", color: T.textMuted, fontFamily: T.font }}>Roth</span>
+                          <span style={{ fontSize: "0.82rem", fontWeight: 600, fontVariantNumeric: "tabular-nums", color: T.text, fontFamily: T.font }}>{fc(result.rothTrueCost)}</span>
                         </div>
                       </div>
                     )}
