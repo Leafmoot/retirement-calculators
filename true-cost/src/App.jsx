@@ -1454,7 +1454,7 @@ export default function App() {
                   className="mobile-stack"
                   >
                   {/* Column 1 — Total Contribution */}
-                  <div style={{ padding: "12px 12px", textAlign: "center" }}>
+                  <div style={{ padding: "12px 8px", textAlign: "center" }}>
                     <div style={{ fontSize: "0.78rem", fontWeight: 600, color: "#64748B", fontFamily: T.font, marginBottom: 4, letterSpacing: "0.01em", display: "flex", alignItems: "center", justifyContent: "center", gap: 2 }}>
                       {result.preTaxContribution > 0 && result.rothContribution > 0
                         ? "Total Contribution"
@@ -1485,7 +1485,7 @@ export default function App() {
                   <div style={{ background: "#E5E7EB" }} />
 
                   {/* Column 2 — Tax Savings */}
-                  <div style={{ padding: "12px 12px", textAlign: "center" }}>
+                  <div style={{ padding: "12px 8px", textAlign: "center" }}>
                     <div style={{ fontSize: "0.78rem", fontWeight: 600, color: "#64748B", fontFamily: T.font, marginBottom: 4, letterSpacing: "0.01em", display: "flex", alignItems: "center", justifyContent: "center", gap: 2 }}>
                       Tax Savings
                       <InfoTooltip text="When you contribute pre-tax, your taxable income goes down — which means less taken out for federal taxes. This is how much you save." />
@@ -1512,7 +1512,7 @@ export default function App() {
                   <div style={{ background: "#E5E7EB" }} />
 
                   {/* Column 3 — True Cost */}
-                  <div style={{ padding: "12px 12px", textAlign: "center" }}>
+                  <div style={{ padding: "12px 8px", textAlign: "center" }}>
                     <div style={{ fontSize: "0.78rem", fontWeight: 600, color: "#64748B", fontFamily: T.font, marginBottom: 4, letterSpacing: "0.01em", display: "flex", alignItems: "center", justifyContent: "center", gap: 2 }}>
                       True Cost
                       <InfoTooltip text="What contributing actually costs you out of pocket. It is lower than your total contribution because the tax savings offset part of it." />
