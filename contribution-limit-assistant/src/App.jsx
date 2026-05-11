@@ -572,7 +572,7 @@ function StatCard({ label, value, sub, subLines, color, small }) {
         background: "#FFFFFF",
         borderRadius: "8px",
         border: "1px solid #E5E7EB",
-        padding: small ? "16px 18px" : "20px 24px",
+        padding: small ? "10px 12px" : "12px 12px",
         flex: 1,
         minWidth: 0,
         overflow: "hidden",
@@ -593,7 +593,7 @@ function StatCard({ label, value, sub, subLines, color, small }) {
             letterSpacing: "0.01em",
             color: "#64748B",
             fontFamily: T.font,
-            marginBottom: 12,
+            marginBottom: 6,
           }}
         >
           {label}
@@ -607,7 +607,7 @@ function StatCard({ label, value, sub, subLines, color, small }) {
             fontFamily: T.font,
             letterSpacing: "-0.03em",
             fontVariantNumeric: "tabular-nums",
-            marginBottom: 8,
+            marginBottom: 4,
           }}
           className="mobile-text-sm"
         >
@@ -899,7 +899,7 @@ function ResultNotices({ result }) {
       notes.push(
         <NoteBox key="fullflex" color="#1E40AF" bg="#F0F9FF" border="#BFDBFE">
           <strong>Full flexibility:</strong> Since your FICA wages were{" "}
-          {FICA_THRESHOLD_DISPLAY}
+          {FICA_THRESHOLD_DISPLAY}{" "}
           or less, your entire {fc(result.annualLimit)} — including the{" "}
           {fc(result.catchUpAmt)} catch-up — may be pre-tax, Roth, or any
           combination.
@@ -925,8 +925,8 @@ function ResultNotices({ result }) {
       style={{
         display: "flex",
         flexDirection: "column",
-        gap: 12,
-        marginTop: 14,
+        gap: 8,
+        marginTop: 8,
       }}
     >
       {notes}
@@ -2147,7 +2147,7 @@ export default function App() {
                     color: "#7c2d12",
                     lineHeight: 1.6,
                     fontFamily: T.font,
-                    marginTop: 12,
+                    marginTop: 8,
                   }}
                 >
                   <strong>Action required:</strong> Over-contributions must be
@@ -2273,7 +2273,7 @@ export default function App() {
                     border: `1px solid ${T.border}`,
                     borderRadius: "8px",
                     overflow: "hidden",
-                    marginTop: 12,
+                    marginTop: 8,
                   }}
                 >
                   <summary
@@ -2310,44 +2310,36 @@ export default function App() {
                     </svg>
                   </summary>
                   <div style={{ padding: "0 14px 14px" }}>
-                    {result.usingCustomLimit && (
-                      <SummaryLine
-                        label="IRS Maximum for Your Age"
-                        value={fc(result.maxAllowed)}
-                        indent
-                        dimmed
-                      />
-                    )}
-                    {!result.usingCustomLimit && (
+                    {/* Section: Annual Limit */}
+                    <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>Annual Limit</div>
+                    {result.usingCustomLimit ? (
+                      <SummaryLine label="IRS Maximum for Your Age" value={fc(result.maxAllowed)} indent dimmed />
+                    ) : (
                       <>
-                        <SummaryLine
-                          label="Base Limit"
-                          value={fc(LIMITS.standard)}
-                          indent
-                          dimmed
-                        />
+                        <SummaryLine label="Base Limit" value={fc(LIMITS.standard)} indent dimmed />
                         {result.catchUpAmt > 0 && (
-                          <SummaryLine
-                            label={`Catch-Up — ${result.catchUpType}`}
-                            value={fc(result.catchUpAmt)}
-                            indent
-                            dimmed
-                          />
+                          <SummaryLine label={`Catch-Up — ${result.catchUpType}`} value={fc(result.catchUpAmt)} indent dimmed />
                         )}
                       </>
                     )}
                     <SummaryLine
-                      label="Pre-Tax (YTD)"
-                      value={fc(result.yPre)}
-                      indent
-                      dimmed
+                      label={result.usingCustomLimit ? "Your Goal" : "Total Limit"}
+                      value={fc(result.annualLimit)}
+                      indent bold color={T.total}
                     />
-                    <SummaryLine
-                      label="Roth (YTD)"
-                      value={fc(result.yRoth)}
-                      indent
-                      dimmed
-                    />
+
+                    {/* Section: Contributed So Far */}
+                    <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>Contributed So Far</div>
+                    <SummaryLine label="Pre-Tax (Traditional) — YTD" value={fc(result.yPre)} indent dimmed={result.yPre === 0} />
+                    <SummaryLine label="Roth (After-Tax) — YTD" value={fc(result.yRoth)} indent dimmed={result.yRoth === 0} />
+                    <SummaryLine label="Total Contributed" value={fc(result.yPre + result.yRoth)} indent bold />
+
+                    {/* Section: Remaining Capacity */}
+                    <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>Remaining Capacity</div>
+                    <SummaryLine label="Total Remaining" value={fc(0)} indent bold />
+                    <div style={{ fontSize: "0.72rem", color: T.textSub, fontFamily: T.font, lineHeight: 1.5, marginTop: 8, paddingLeft: 12 }}>
+                      You have reached your {result.usingCustomLimit ? "goal" : "limit"} of {fc(result.annualLimit)} for the year. No further contributions are needed.
+                    </div>
                   </div>
                 </details>
               </div>
@@ -2357,7 +2349,7 @@ export default function App() {
                   style={{
                     display: "flex",
                     gap: 10,
-                    marginBottom: 12,
+                    marginBottom: 8,
                     flexWrap: isMobile ? "wrap" : "nowrap",
                   }}
                 >
@@ -2388,41 +2380,43 @@ export default function App() {
                     ]}
                   />
                 </div>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 12,
-                    marginBottom: 12,
-                  }}
-                >
-                  {result.usingCustomLimit && (
-                    <NoteBox color="#1E40AF" bg="#F0F9FF" border="#BFDBFE">
-                      <strong>Custom goal in use:</strong> You've set a custom
-                      contribution goal of {fc(result.annualLimit)}. The IRS
-                      maximum for your age is {fc(result.maxAllowed)}.
-                    </NoteBox>
-                  )}
-                  {result.stdRem === 0 && result.yPre > 0 && (
-                    <NoteBox color="#166534" bg="#F0FDF4" border="#BBF7D0">
-                      <strong>Pre-tax base limit reached:</strong> You've
-                      already contributed {fc(result.yPre)} in pre-tax, which
-                      meets the {fc(LIMITS.standard)} base limit. Your remaining{" "}
-                      {fc(result.cuRem)} can only go to Roth catch-up
-                      contributions.
-                    </NoteBox>
-                  )}
-                  {result.highRate && (
-                    <NoteBox color="#78350F" bg="#FFFBEB" border="#FDE68A">
-                      <strong>Important — high contribution rate:</strong> The
-                      required combined rate of {result.totPct}% is a
-                      significant portion of your pay. Confirm your plan allows
-                      this election and that your net pay will cover your
-                      expenses. Some plans cap deferral elections — check with
-                      your plan administrator.
-                    </NoteBox>
-                  )}
-                </div>
+                {(result.usingCustomLimit || (result.stdRem === 0 && result.yPre > 0) || result.highRate) && (
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 8,
+                      marginBottom: 8,
+                    }}
+                  >
+                    {result.usingCustomLimit && (
+                      <NoteBox color="#1E40AF" bg="#F0F9FF" border="#BFDBFE">
+                        <strong>Custom goal in use:</strong> You've set a custom
+                        contribution goal of {fc(result.annualLimit)}. The IRS
+                        maximum for your age is {fc(result.maxAllowed)}.
+                      </NoteBox>
+                    )}
+                    {result.stdRem === 0 && result.yPre > 0 && (
+                      <NoteBox color="#166534" bg="#F0FDF4" border="#BBF7D0">
+                        <strong>Pre-tax base limit reached:</strong> You've
+                        already contributed {fc(result.yPre)} in pre-tax, which
+                        meets the {fc(LIMITS.standard)} base limit. Your remaining{" "}
+                        {fc(result.cuRem)} can only go to Roth catch-up
+                        contributions.
+                      </NoteBox>
+                    )}
+                    {result.highRate && (
+                      <NoteBox color="#78350F" bg="#FFFBEB" border="#FDE68A">
+                        <strong>Important — high contribution rate:</strong> The
+                        required combined rate of {result.totPct}% is a
+                        significant portion of your pay. Confirm your plan allows
+                        this election and that your net pay will cover your
+                        expenses. Some plans cap deferral elections — check with
+                        your plan administrator.
+                      </NoteBox>
+                    )}
+                  </div>
+                )}
                 {/* Collapsible Details */}
                 <details
                   style={{
@@ -2430,7 +2424,7 @@ export default function App() {
                     border: `1px solid ${T.border}`,
                     borderRadius: "8px",
                     overflow: "hidden",
-                    marginTop: 12,
+                    marginTop: 8,
                   }}
                 >
                   <summary
@@ -2467,84 +2461,42 @@ export default function App() {
                     </svg>
                   </summary>
                   <div style={{ padding: "0 14px 14px" }}>
-                    <div style={{ fontSize: "0.78rem", fontWeight: 600, color: T.textSub, fontFamily: T.font, marginTop: 8, marginBottom: 4 }}>Per Paycheck</div>
-                    <SummaryLine
-                      label="Pre-Tax"
-                      value={fc(ceilDollar(result.preDpc))}
-                    />
-                    <SummaryLine
-                      label="Roth Catch-Up"
-                      value={fc(ceilDollar(result.rDpc))}
-                    />
-                    <SummaryLine
-                      label="Total Per Paycheck"
-                      value={fc(ceilDollar(result.preDpc) + ceilDollar(result.rDpc))}
-                      bold
-                    />
-                    <SummaryLine
-                      label={
-                        result.usingCustomLimit
-                          ? "Your Goal"
-                          : "Total Annual Limit"
-                      }
-                      value={fc(result.annualLimit)}
-                      bold
-                      color={T.total}
-                    />
-                    <SummaryLine
-                      label="Total Remaining"
-                      value={fc(result.totRem)}
-                      bold
-                    />
-                    {result.usingCustomLimit && (
-                      <SummaryLine
-                        label="IRS Maximum for Your Age"
-                        value={fc(result.maxAllowed)}
-                        indent
-                        dimmed
-                      />
-                    )}
-                    {!result.usingCustomLimit && (
+                    {/* Section: Per Paycheck */}
+                    <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>Per Paycheck</div>
+                    <SummaryLine label="Pre-Tax" value={fc(ceilDollar(result.preDpc))} indent dimmed />
+                    <SummaryLine label="Roth Catch-Up" value={fc(ceilDollar(result.rDpc))} indent dimmed />
+                    <SummaryLine label="Total Per Paycheck" value={fc(ceilDollar(result.preDpc) + ceilDollar(result.rDpc))} indent bold />
+
+                    {/* Section: Annual Limit */}
+                    <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>Annual Limit</div>
+                    {result.usingCustomLimit ? (
+                      <SummaryLine label="IRS Maximum for Your Age" value={fc(result.maxAllowed)} indent dimmed />
+                    ) : (
                       <>
-                        <SummaryLine
-                          label="Base — pre-tax and/or Roth"
-                          value={fc(LIMITS.standard)}
-                          indent
-                          dimmed
-                        />
-                        <SummaryLine
-                          label={`Catch-Up (${result.catchUpType}) — Roth required`}
-                          value={fc(result.catchUpAmt)}
-                          indent
-                          dimmed
-                        />
+                        <SummaryLine label="Base — pre-tax and/or Roth" value={fc(LIMITS.standard)} indent dimmed />
+                        <SummaryLine label={`Catch-Up (${result.catchUpType}) — Roth required`} value={fc(result.catchUpAmt)} indent dimmed />
                       </>
                     )}
-                    <Divider />
                     <SummaryLine
-                      label="Pre-Tax Contributed (YTD)"
-                      value={fc(result.yPre)}
-                      bold={false}
-                      dimmed={result.yPre === 0}
+                      label={result.usingCustomLimit ? "Your Goal" : "Total Limit"}
+                      value={fc(result.annualLimit)}
+                      indent bold color={T.total}
                     />
-                    <SummaryLine
-                      label="Roth Contributed (YTD)"
-                      value={fc(result.yRoth)}
-                      bold={false}
-                      dimmed={result.yRoth === 0}
-                    />
-                    <SummaryLine
-                      label="Pre-Tax Remaining"
-                      value={fc(result.stdRem)}
-                      bold
-                      dimmed={result.stdRem === 0}
-                    />
-                    <SummaryLine
-                      label="Roth Remaining"
-                      value={fc(result.cuRem)}
-                      bold
-                      dimmed={result.cuRem === 0}
-                    />
+
+                    {/* Section: Contributed So Far */}
+                    <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>Contributed So Far</div>
+                    <SummaryLine label="Pre-Tax (Traditional) — YTD" value={fc(result.yPre)} indent dimmed={result.yPre === 0} />
+                    <SummaryLine label="Roth (After-Tax) — YTD" value={fc(result.yRoth)} indent dimmed={result.yRoth === 0} />
+                    <SummaryLine label="Total Contributed" value={fc(result.yPre + result.yRoth)} indent bold />
+
+                    {/* Section: Remaining Capacity */}
+                    <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>Remaining Capacity</div>
+                    <SummaryLine label="Pre-Tax Remaining" value={fc(result.stdRem)} indent dimmed={result.stdRem === 0} />
+                    <SummaryLine label="Roth Catch-Up Remaining" value={fc(result.cuRem)} indent dimmed={result.cuRem === 0} />
+                    <SummaryLine label="Total Remaining" value={fc(result.totRem)} indent bold />
+                    <div style={{ fontSize: "0.72rem", color: T.textSub, fontFamily: T.font, lineHeight: 1.5, marginTop: 8, paddingLeft: 12 }}>
+                      Electing the rates shown above each paycheck will reach your {result.usingCustomLimit ? "goal" : "limit"} of {fc(result.annualLimit)} by year end.
+                    </div>
                   </div>
                 </details>
 
@@ -2556,7 +2508,7 @@ export default function App() {
                   style={{
                     display: "flex",
                     gap: 10,
-                    marginBottom: 12,
+                    marginBottom: 8,
                     flexWrap: isMobile ? "wrap" : "nowrap",
                   }}
                 >
@@ -2574,62 +2526,64 @@ export default function App() {
                     subLines={[`${result.checks} paychecks remaining`]}
                   />
                 </div>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 12,
-                    marginBottom: 12,
-                  }}
-                >
-                  {result.usingCustomLimit && (
-                    <NoteBox color="#1E40AF" bg="#F0F9FF" border="#BFDBFE">
-                      <strong>Custom goal in use:</strong> You've set a custom
-                      contribution goal of {fc(result.annualLimit)}. The IRS
-                      maximum for your age is {fc(result.maxAllowed)}.
-                    </NoteBox>
-                  )}
-                  {result.rothOnlyMode && parse(ytdPre) > 0 && (
-                    <NoteBox color="#78350F" bg="#FFFBEB" border="#FDE68A">
-                      <strong>Mid-year switch to Roth:</strong> You've
-                      contributed {fc(parse(ytdPre))} pre-tax so far this year.
-                      Your remaining contributions of {fc(result.rem)} will go
-                      entirely to Roth as selected. Combined, you'll reach{" "}
-                      {fc(result.annualLimit)} for the year.
-                    </NoteBox>
-                  )}
-                  {result.rothOnlyMode &&
-                    parse(ytdPre) === 0 &&
-                    !result.fica && (
+                {(result.usingCustomLimit || (result.rothOnlyMode && parse(ytdPre) > 0) || (result.rothOnlyMode && parse(ytdPre) === 0 && !result.fica) || (result.rothOnlyMode && result.fica === true) || result.highRate) && (
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 8,
+                      marginBottom: 8,
+                    }}
+                  >
+                    {result.usingCustomLimit && (
                       <NoteBox color="#1E40AF" bg="#F0F9FF" border="#BFDBFE">
-                        <strong>Roth-only strategy:</strong> All your
-                        contributions will go to Roth (after-tax) as selected.
-                        You have {fc(result.rem)} remaining to reach your{" "}
-                        {result.usingCustomLimit ? "goal" : "limit"} of{" "}
-                        {fc(result.annualLimit)}.
+                        <strong>Custom goal in use:</strong> You've set a custom
+                        contribution goal of {fc(result.annualLimit)}. The IRS
+                        maximum for your age is {fc(result.maxAllowed)}.
                       </NoteBox>
                     )}
-                  {result.rothOnlyMode && result.fica === true && (
-                    <NoteBox color="#1E40AF" bg="#F0F9FF" border="#BFDBFE">
-                      <strong>Roth-only strategy:</strong> All your remaining{" "}
-                      {fc(result.rem)} will go to Roth as selected. Note: Since
-                      your FICA wages were more than {FICA_THRESHOLD_DISPLAY},
-                      your {fc(result.catchUpAmt)} catch-up would have been
-                      required to be Roth regardless, but your{" "}
-                      {fc(LIMITS.standard)} base is Roth by your choice.
-                    </NoteBox>
-                  )}
-                  {result.highRate && (
-                    <NoteBox color="#78350F" bg="#FFFBEB" border="#FDE68A">
-                      <strong>Important — high contribution rate:</strong>{" "}
-                      Reaching the limit requires a {result.pct}% deferral rate,
-                      which is a significant portion of your pay. Confirm your
-                      plan allows this election and that your net pay will cover
-                      your expenses. Some plans cap deferral elections — check
-                      with your plan administrator.
-                    </NoteBox>
-                  )}
-                </div>
+                    {result.rothOnlyMode && parse(ytdPre) > 0 && (
+                      <NoteBox color="#78350F" bg="#FFFBEB" border="#FDE68A">
+                        <strong>Mid-year switch to Roth:</strong> You've
+                        contributed {fc(parse(ytdPre))} pre-tax so far this year.
+                        Your remaining contributions of {fc(result.rem)} will go
+                        entirely to Roth as selected. Combined, you'll reach{" "}
+                        {fc(result.annualLimit)} for the year.
+                      </NoteBox>
+                    )}
+                    {result.rothOnlyMode &&
+                      parse(ytdPre) === 0 &&
+                      !result.fica && (
+                        <NoteBox color="#1E40AF" bg="#F0F9FF" border="#BFDBFE">
+                          <strong>Roth-only strategy:</strong> All your
+                          contributions will go to Roth (after-tax) as selected.
+                          You have {fc(result.rem)} remaining to reach your{" "}
+                          {result.usingCustomLimit ? "goal" : "limit"} of{" "}
+                          {fc(result.annualLimit)}.
+                        </NoteBox>
+                      )}
+                    {result.rothOnlyMode && result.fica === true && (
+                      <NoteBox color="#1E40AF" bg="#F0F9FF" border="#BFDBFE">
+                        <strong>Roth-only strategy:</strong> All your remaining{" "}
+                        {fc(result.rem)} will go to Roth as selected. Note: Since
+                        your FICA wages were more than {FICA_THRESHOLD_DISPLAY},
+                        your {fc(result.catchUpAmt)} catch-up would have been
+                        required to be Roth regardless, but your{" "}
+                        {fc(LIMITS.standard)} base is Roth by your choice.
+                      </NoteBox>
+                    )}
+                    {result.highRate && (
+                      <NoteBox color="#78350F" bg="#FFFBEB" border="#FDE68A">
+                        <strong>Important — high contribution rate:</strong>{" "}
+                        Reaching the limit requires a {result.pct}% deferral rate,
+                        which is a significant portion of your pay. Confirm your
+                        plan allows this election and that your net pay will cover
+                        your expenses. Some plans cap deferral elections — check
+                        with your plan administrator.
+                      </NoteBox>
+                    )}
+                  </div>
+                )}
                 {/* Collapsible Details */}
                 <details
                   style={{
@@ -2637,7 +2591,7 @@ export default function App() {
                     border: `1px solid ${T.border}`,
                     borderRadius: "8px",
                     overflow: "hidden",
-                    marginTop: 12,
+                    marginTop: 8,
                   }}
                 >
                   <summary
@@ -2674,75 +2628,44 @@ export default function App() {
                     </svg>
                   </summary>
                   <div style={{ padding: "0 14px 14px" }}>
-                    <div style={{ fontSize: "0.78rem", fontWeight: 600, color: T.textSub, fontFamily: T.font, marginTop: 8, marginBottom: 4 }}>Per Paycheck</div>
+                    {/* Section: Per Paycheck */}
+                    <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>Per Paycheck</div>
                     <SummaryLine
-                      label={
-                        result.rothOnlyMode
-                          ? "Roth Contribution"
-                          : "Pre-Tax Contribution"
-                      }
+                      label={result.rothOnlyMode ? "Roth Contribution (After-Tax)" : "Pre-Tax Contribution (Traditional)"}
                       value={fc(ceilDollar(result.dpc))}
-                      bold
+                      indent bold
                     />
-                    <SummaryLine
-                      label={
-                        result.usingCustomLimit
-                          ? "Your Goal"
-                          : "Total Annual Limit"
-                      }
-                      value={fc(result.annualLimit)}
-                      bold
-                      color={T.total}
-                    />
-                    <SummaryLine
-                      label="Total Remaining"
-                      value={fc(result.rem)}
-                      bold
-                    />
-                    {result.usingCustomLimit && (
-                      <SummaryLine
-                        label="IRS Maximum for Your Age"
-                        value={fc(result.maxAllowed)}
-                        indent
-                        dimmed
-                      />
-                    )}
-                    {!result.usingCustomLimit && (
+
+                    {/* Section: Annual Limit */}
+                    <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>Annual Limit</div>
+                    {result.usingCustomLimit ? (
+                      <SummaryLine label="IRS Maximum for Your Age" value={fc(result.maxAllowed)} indent dimmed />
+                    ) : (
                       <>
-                        <SummaryLine
-                          label="Base Limit"
-                          value={fc(LIMITS.standard)}
-                          indent
-                          dimmed
-                        />
+                        <SummaryLine label="Base Limit" value={fc(LIMITS.standard)} indent dimmed />
                         {result.catchUpAmt > 0 && (
-                          <SummaryLine
-                            label={`Catch-Up — ${result.catchUpType}`}
-                            value={fc(result.catchUpAmt)}
-                            indent
-                            dimmed
-                          />
+                          <SummaryLine label={`Catch-Up — ${result.catchUpType}`} value={fc(result.catchUpAmt)} indent dimmed />
                         )}
                       </>
                     )}
-                    <Divider />
                     <SummaryLine
-                      label="Pre-Tax Contributed (YTD)"
-                      value={fc(result.yPre)}
-                      bold={false}
-                      dimmed={result.yPre === 0}
+                      label={result.usingCustomLimit ? "Your Goal" : "Total Limit"}
+                      value={fc(result.annualLimit)}
+                      indent bold color={T.total}
                     />
-                    <SummaryLine
-                      label="Roth Contributed (YTD)"
-                      value={fc(result.yRoth)}
-                      bold={false}
-                      dimmed={result.yRoth === 0}
-                    />
-                    <SummaryLine
-                      label="Total Contributed (YTD)"
-                      value={fc(result.totYtd)}
-                      bold
-                    />
+
+                    {/* Section: Contributed So Far */}
+                    <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>Contributed So Far</div>
+                    <SummaryLine label="Pre-Tax (Traditional) — YTD" value={fc(result.yPre)} indent dimmed={result.yPre === 0} />
+                    <SummaryLine label="Roth (After-Tax) — YTD" value={fc(result.yRoth)} indent dimmed={result.yRoth === 0} />
+                    <SummaryLine label="Total Contributed" value={fc(result.totYtd)} indent bold />
+
+                    {/* Section: Remaining Capacity */}
+                    <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>Remaining Capacity</div>
+                    <SummaryLine label="Total Remaining" value={fc(result.rem)} indent bold />
+                    <div style={{ fontSize: "0.72rem", color: T.textSub, fontFamily: T.font, lineHeight: 1.5, marginTop: 8, paddingLeft: 12 }}>
+                      Electing the rate shown above each paycheck will reach your {result.usingCustomLimit ? "goal" : "limit"} of {fc(result.annualLimit)} by year end.
+                    </div>
                   </div>
                 </details>
 
