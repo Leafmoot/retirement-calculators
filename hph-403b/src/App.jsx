@@ -506,7 +506,7 @@ function StatCard({ label, value, sub, subLines, color, small }) {
         background: "#FFFFFF",
         borderRadius: "8px",
         border: "1px solid #E5E7EB",
-        padding: small ? "16px 18px" : "20px 24px",
+        padding: small ? "10px 10px" : "12px 12px",
         flex: 1,
         minWidth: 0,
         overflow: "hidden",
@@ -527,7 +527,7 @@ function StatCard({ label, value, sub, subLines, color, small }) {
             letterSpacing: "0.01em",
             color: "#64748B",
             fontFamily: T.font,
-            marginBottom: 12,
+            marginBottom: 6,
           }}
         >
           {label}
@@ -541,7 +541,7 @@ function StatCard({ label, value, sub, subLines, color, small }) {
             fontFamily: T.font,
             letterSpacing: "-0.03em",
             fontVariantNumeric: "tabular-nums",
-            marginBottom: 8,
+            marginBottom: 4,
           }}
           className="mobile-text-sm"
         >
@@ -845,46 +845,37 @@ function computeNextYearProjection(salary, age, ficaOverride, strategy) {
   }
 }
 // ── Reusable next-year projection block for use inside details panels ─────────
-function ProjectionBlock({ salary, age, fica, strategy, planYear }) {
+function ProjectionBlock({ salary, age, fica, strategy }) {
   const proj = computeNextYearProjection(parse(salary), parseInt(age), fica, strategy);
   if (!proj) return null;
   return (
     <>
-      <Divider label={`${planYear + 1} Full-Year Projection`} />
-      <div
-        style={{
-          background: "#F0FDF4",
-          border: `1px solid #BBF7D0`,
-          borderRadius: T.radius,
-          padding: "10px 12px",
-          marginBottom: 6,
-        }}
-      >
-        <div style={{ fontSize: "0.72rem", color: T.textSub, fontFamily: T.font, marginBottom: 8, lineHeight: 1.55 }}>
-          Estimated rates at age {proj.nextAge} over a full 26-period year, assuming current salary and {planYear + 1} IRS limits carry forward.
-          {proj.limitChanged && (
-            <span style={{ color: proj.limitDirection === "increases" ? T.green : T.amber, fontWeight: 600 }}>
-              {" "}Your annual limit {proj.limitDirection} to {fc(proj.nextMaxAllowed)} at age {proj.nextAge}.
-            </span>
-          )}
-          {proj.ficaUnknown && (
-            <span style={{ color: T.amber, fontWeight: 600 }}>
-              {" "}Note: you'll be catch-up eligible at {proj.nextAge} — your Roth requirement will depend on your prior-year FICA wages.
-            </span>
-          )}
-        </div>
-        {proj.split ? (
-          <>
-            <SummaryLine label="Pre-Tax (Traditional)" value={`${proj.prePct}%`} bold />
-            <SummaryLine label={`Roth Catch-Up (${proj.nextCatchUpType})`} value={`${proj.rPct}%`} bold />
-          </>
-        ) : (
-          <SummaryLine
-            label={proj.rothOnly ? "Roth (After-Tax)" : "Pre-Tax (Traditional)"}
-            value={`${proj.pct}%`}
-            bold
-            color={T.total}
-          />
+      <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4 }}>Next Year Projection</div>
+      {proj.split ? (
+        <>
+          <SummaryLine label="Pre-Tax (Traditional)" value={`${proj.prePct}%`} indent bold />
+          <SummaryLine label={`Roth Catch-Up (${proj.nextCatchUpType})`} value={`${proj.rPct}%`} indent bold />
+        </>
+      ) : (
+        <SummaryLine
+          label={proj.rothOnly ? "Roth (After-Tax)" : "Pre-Tax (Traditional)"}
+          value={`${proj.pct}%`}
+          indent
+          bold
+          color={T.total}
+        />
+      )}
+      <div style={{ fontSize: "0.72rem", color: T.textSub, fontFamily: T.font, lineHeight: 1.5, marginTop: 8, paddingLeft: 12 }}>
+        Estimated rates at age {proj.nextAge} over a full 26-period year, assuming current salary and next year's IRS limits carry forward.
+        {proj.limitChanged && (
+          <span style={{ color: proj.limitDirection === "increases" ? T.green : T.amber, fontWeight: 600 }}>
+            {" "}Your annual limit {proj.limitDirection} to {fc(proj.nextMaxAllowed)} at age {proj.nextAge}.
+          </span>
+        )}
+        {proj.ficaUnknown && (
+          <span style={{ color: T.amber, fontWeight: 600 }}>
+            {" "}Note: you'll be catch-up eligible at {proj.nextAge} — your Roth requirement will depend on your prior-year FICA wages.
+          </span>
         )}
       </div>
     </>
@@ -955,7 +946,7 @@ function ResultNotices({ result }) {
     if (result.catchUpAmt > 0 && result.fica === false) {
       notes.push(
         <NoteBox key="fullflex" color="#1E40AF" bg="#F0F9FF" border="#BFDBFE">
-          <strong>Full flexibility:</strong> Since your FICA wages were {FICA_THRESHOLD_DISPLAY}
+          <strong>Full flexibility:</strong> Since your FICA wages were {FICA_THRESHOLD_DISPLAY}{" "}
           or less, your entire {fc(result.annualLimit)} — including the{" "}
           {fc(result.catchUpAmt)} catch-up — may be pre-tax, Roth, or any
           combination.
@@ -981,8 +972,8 @@ function ResultNotices({ result }) {
       style={{
         display: "flex",
         flexDirection: "column",
-        gap: 12,
-        marginTop: 14,
+        gap: 8,
+        marginTop: 8,
       }}
     >
       {notes}
@@ -1845,7 +1836,7 @@ export default function App() {
           <div
             style={{
               overflowY: (isMobile || !result) ? "hidden" : "auto",
-              padding: "14px 16px",
+              padding: "12px 16px",
               position: "relative",
             }}
           >
@@ -1920,20 +1911,23 @@ export default function App() {
               </div>
             )}
             {/* ── Pay Schedule — always visible in results ── */}
-            <div style={{ marginBottom: 14 }}>
-              <div style={{ fontSize: "0.8rem", fontWeight: 700, color: T.text, fontFamily: T.font, paddingLeft: 2, marginBottom: 8 }}>
-                Pay Schedule
-              </div>
+            <div style={{ marginBottom: 8 }}>
               <div style={{
                 background: T.surface,
                 borderRadius: T.radius,
                 border: `1px solid ${T.border}`,
                 boxShadow: T.shadow,
-                padding: "12px 16px",
-                display: "flex",
-                flexDirection: "column",
-                gap: 6,
+                overflow: "hidden",
               }}>
+                <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, padding: "7px 16px 6px", borderBottom: `1px solid ${T.border}` }}>
+                  Pay Schedule
+                </div>
+                <div style={{
+                  padding: "7px 16px 8px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 4,
+                }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontFamily: T.font }}>
                   <span style={{ fontSize: "0.78rem", color: T.textSub }}>Paychecks remaining</span>
                   <span style={{ fontSize: "0.78rem", fontWeight: 700, color: T.text }}>{periodsLeft} of {periodsTotal}</span>
@@ -1960,6 +1954,7 @@ export default function App() {
                     <span style={{ fontSize: "0.78rem", fontWeight: 600, color: T.text }}>{fmtCutoff(cutoffPassed ? firstEligibleCutoff : cutoffDate)}</span>
                   </div>
                 )}
+              </div>
               </div>
             </div>
 
@@ -2096,7 +2091,7 @@ export default function App() {
                   bold
                   color={T.red}
                 />
-                <ProjectionBlock salary={salary} age={age} fica={result.fica} strategy={strategy} planYear={PLAN_YEAR} />
+                <ProjectionBlock salary={salary} age={age} fica={result.fica} strategy={strategy} />
               </div>
             ) : result.maxed ? (
               <div>
@@ -2232,7 +2227,7 @@ export default function App() {
                       indent
                       dimmed
                     />
-                    <ProjectionBlock salary={salary} age={age} fica={result.fica} strategy={result.strategy} planYear={PLAN_YEAR} />
+                    <ProjectionBlock salary={salary} age={age} fica={result.fica} strategy={result.strategy} />
                   </div>
                 </details>
               </div>
@@ -2242,7 +2237,7 @@ export default function App() {
                   style={{
                     display: "flex",
                     gap: 10,
-                    marginBottom: 12,
+                    marginBottom: 8,
                     flexWrap: isMobile ? "wrap" : "nowrap",
                   }}
                 >
@@ -2261,12 +2256,13 @@ export default function App() {
                     ]}
                   />
                 </div>
+                {(result.usingCustomLimit || (result.stdRem === 0 && result.yPre > 0) || result.highRate) && (
                 <div
                   style={{
                     display: "flex",
                     flexDirection: "column",
-                    gap: 12,
-                    marginBottom: 12,
+                    gap: 8,
+                    marginBottom: 8,
                   }}
                 >
                   {result.usingCustomLimit && (
@@ -2288,14 +2284,15 @@ export default function App() {
                   {result.highRate && (
                     <NoteBox color="#78350F" bg="#FFFBEB" border="#FDE68A">
                       <strong>Important — high contribution rate:</strong> The
-                      required combined rate of {result.totPct}% is a
-                      significant portion of your pay. Confirm your plan allows
-                      this election and that your net pay will cover your
-                      expenses. Some plans cap deferral elections — check with
-                      your plan administrator.
+                        required combined rate of {result.totPct}% is a
+                        significant portion of your pay. Confirm your plan allows
+                        this election and that your net pay will cover your
+                        expenses. Some plans cap deferral elections — check with
+                        your plan administrator.
                     </NoteBox>
                   )}
                 </div>
+                )}
                 {/* Collapsible Details */}
                 <details
                   style={{
@@ -2303,7 +2300,7 @@ export default function App() {
                     border: `1px solid ${T.border}`,
                     borderRadius: "8px",
                     overflow: "hidden",
-                    marginTop: 12,
+                    marginTop: 8,
                   }}
                 >
                   <summary
@@ -2340,43 +2337,26 @@ export default function App() {
                     </svg>
                   </summary>
                   <div style={{ padding: "0 14px 14px" }}>
-                    <div style={{ fontSize: "0.78rem", fontWeight: 600, color: T.textSub, fontFamily: T.font, marginTop: 8, marginBottom: 4 }}>Per Paycheck</div>
+                    {/* Section: Per Paycheck */}
+                    <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>Per Paycheck</div>
                     <SummaryLine
-                      label="Pre-Tax"
+                      label="Pre-Tax (Traditional)"
                       value={fc(ceilDollar(result.preDpc))}
+                      indent
                     />
                     <SummaryLine
-                      label="Roth Catch-Up"
+                      label="Roth Catch-Up (After-Tax)"
                       value={fc(ceilDollar(result.rDpc))}
+                      indent
                     />
                     <SummaryLine
                       label="Total Per Paycheck"
                       value={fc(ceilDollar(result.preDpc) + ceilDollar(result.rDpc))}
+                      indent
                       bold
                     />
-                    <SummaryLine
-                      label={
-                        result.usingCustomLimit
-                          ? "Your Goal"
-                          : "Total Annual Limit"
-                      }
-                      value={fc(result.annualLimit)}
-                      bold
-                      color={T.total}
-                    />
-                    <SummaryLine
-                      label="Total Remaining"
-                      value={fc(result.totRem)}
-                      bold
-                    />
-                    {result.usingCustomLimit && (
-                      <SummaryLine
-                        label="IRS Maximum for Your Age"
-                        value={fc(result.maxAllowed)}
-                        indent
-                        dimmed
-                      />
-                    )}
+                    {/* Section: Annual Limit */}
+                    <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>Annual Limit</div>
                     {!result.usingCustomLimit && (
                       <>
                         <SummaryLine
@@ -2393,33 +2373,66 @@ export default function App() {
                         />
                       </>
                     )}
-                    <Divider />
+                    {result.usingCustomLimit && (
+                      <SummaryLine
+                        label="IRS Maximum for Your Age"
+                        value={fc(result.maxAllowed)}
+                        indent
+                        dimmed
+                      />
+                    )}
                     <SummaryLine
-                      label="Pre-Tax Contributed (YTD)"
+                      label={result.usingCustomLimit ? "Your Goal" : "Total Limit"}
+                      value={fc(result.annualLimit)}
+                      indent
+                      bold
+                      color={T.total}
+                    />
+                    {/* Section: Contributed So Far */}
+                    <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>Contributed So Far</div>
+                    <SummaryLine
+                      label="Pre-Tax (Traditional) — YTD"
                       value={fc(result.yPre)}
-                      bold={false}
+                      indent
                       dimmed={result.yPre === 0}
                     />
                     <SummaryLine
-                      label="Roth Contributed (YTD)"
+                      label="Roth (After-Tax) — YTD"
                       value={fc(result.yRoth)}
-                      bold={false}
+                      indent
                       dimmed={result.yRoth === 0}
                     />
                     <SummaryLine
+                      label="Total Contributed (YTD)"
+                      value={fc(result.yPre + result.yRoth)}
+                      indent
+                      bold
+                    />
+                    {/* Section: Remaining Capacity */}
+                    <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>Remaining Capacity</div>
+                    <SummaryLine
                       label="Pre-Tax Remaining"
                       value={fc(result.stdRem)}
-                      bold
+                      indent
                       dimmed={result.stdRem === 0}
                     />
                     <SummaryLine
                       label="Roth Remaining"
                       value={fc(result.cuRem)}
-                      bold
+                      indent
                       dimmed={result.cuRem === 0}
                     />
+                    <SummaryLine
+                      label="Total Remaining"
+                      value={fc(result.totRem)}
+                      indent
+                      bold
+                    />
+                    <div style={{ fontSize: "0.72rem", color: T.textSub, fontFamily: T.font, lineHeight: 1.5, marginTop: 8, paddingLeft: 12 }}>
+                      {`Electing the rates shown above each paycheck will reach your ${result.usingCustomLimit ? "goal" : "limit"} of ${fc(result.annualLimit)} by year end.`}
+                    </div>
                     {/* Next-year projection */}
-                    <ProjectionBlock salary={salary} age={age} fica={result.fica} strategy={result.strategy} planYear={PLAN_YEAR} />
+                    <ProjectionBlock salary={salary} age={age} fica={result.fica} strategy={result.strategy} />
                   </div>
                 </details>
 
@@ -2431,7 +2444,7 @@ export default function App() {
                   style={{
                     display: "flex",
                     gap: 10,
-                    marginBottom: 12,
+                    marginBottom: 8,
                     flexWrap: isMobile ? "wrap" : "nowrap",
                   }}
                 >
@@ -2445,12 +2458,13 @@ export default function App() {
                     subLines={[`${result.checks} paychecks remaining`]}
                   />
                 </div>
+                {(result.usingCustomLimit || result.rothOnlyMode || result.highRate) && (
                 <div
                   style={{
                     display: "flex",
                     flexDirection: "column",
-                    gap: 12,
-                    marginBottom: 12,
+                    gap: 8,
+                    marginBottom: 8,
                   }}
                 >
                   {result.usingCustomLimit && (
@@ -2501,6 +2515,7 @@ export default function App() {
                     </NoteBox>
                   )}
                 </div>
+                )}
                 {/* Collapsible Details */}
                 <details
                   style={{
@@ -2508,7 +2523,7 @@ export default function App() {
                     border: `1px solid ${T.border}`,
                     borderRadius: "8px",
                     overflow: "hidden",
-                    marginTop: 12,
+                    marginTop: 8,
                   }}
                 >
                   <summary
@@ -2545,39 +2560,20 @@ export default function App() {
                     </svg>
                   </summary>
                   <div style={{ padding: "0 14px 14px" }}>
-                    <div style={{ fontSize: "0.78rem", fontWeight: 600, color: T.textSub, fontFamily: T.font, marginTop: 8, marginBottom: 4 }}>Per Paycheck</div>
+                    {/* Section: Per Paycheck */}
+                    <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>Per Paycheck</div>
                     <SummaryLine
                       label={
                         result.rothOnlyMode
-                          ? "Roth Contribution"
-                          : "Pre-Tax Contribution"
+                          ? "Roth Contribution (After-Tax)"
+                          : "Pre-Tax Contribution (Traditional)"
                       }
                       value={fc(ceilDollar(result.dpc))}
+                      indent
                       bold
                     />
-                    <SummaryLine
-                      label={
-                        result.usingCustomLimit
-                          ? "Your Goal"
-                          : "Total Annual Limit"
-                      }
-                      value={fc(result.annualLimit)}
-                      bold
-                      color={T.total}
-                    />
-                    <SummaryLine
-                      label="Total Remaining"
-                      value={fc(result.rem)}
-                      bold
-                    />
-                    {result.usingCustomLimit && (
-                      <SummaryLine
-                        label="IRS Maximum for Your Age"
-                        value={fc(result.maxAllowed)}
-                        indent
-                        dimmed
-                      />
-                    )}
+                    {/* Section: Annual Limit */}
+                    <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>Annual Limit</div>
                     {!result.usingCustomLimit && (
                       <>
                         <SummaryLine
@@ -2596,26 +2592,57 @@ export default function App() {
                         )}
                       </>
                     )}
-                    <Divider />
+                    {result.usingCustomLimit && (
+                      <SummaryLine
+                        label="IRS Maximum for Your Age"
+                        value={fc(result.maxAllowed)}
+                        indent
+                        dimmed
+                      />
+                    )}
                     <SummaryLine
-                      label="Pre-Tax Contributed (YTD)"
+                      label={result.usingCustomLimit ? "Your Goal" : "Total Limit"}
+                      value={fc(result.annualLimit)}
+                      indent
+                      bold
+                      color={T.total}
+                    />
+                    {/* Section: Contributed So Far */}
+                    <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>Contributed So Far</div>
+                    <SummaryLine
+                      label="Pre-Tax (Traditional) — YTD"
                       value={fc(result.yPre)}
-                      bold={false}
+                      indent
                       dimmed={result.yPre === 0}
                     />
                     <SummaryLine
-                      label="Roth Contributed (YTD)"
+                      label="Roth (After-Tax) — YTD"
                       value={fc(result.yRoth)}
-                      bold={false}
+                      indent
                       dimmed={result.yRoth === 0}
                     />
                     <SummaryLine
                       label="Total Contributed (YTD)"
                       value={fc(result.totYtd)}
+                      indent
                       bold
                     />
+                    {/* Section: Remaining Capacity */}
+                    <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>Remaining Capacity</div>
+                    <SummaryLine
+                      label="Total Remaining"
+                      value={fc(result.rem)}
+                      indent
+                      bold
+                    />
+                    <div style={{ fontSize: "0.72rem", color: T.textSub, fontFamily: T.font, lineHeight: 1.5, marginTop: 8, paddingLeft: 12 }}>
+                      {result.rem <= 0
+                        ? `You have reached your ${result.usingCustomLimit ? "goal" : "limit"} of ${fc(result.annualLimit)} for the year. No further contributions are needed.`
+                        : `Electing the rate shown above each paycheck will reach your ${result.usingCustomLimit ? "goal" : "limit"} of ${fc(result.annualLimit)} by year end.`
+                      }
+                    </div>
                     {/* Next-year projection */}
-                    <ProjectionBlock salary={salary} age={age} fica={result.fica} strategy={result.strategy} planYear={PLAN_YEAR} />
+                    <ProjectionBlock salary={salary} age={age} fica={result.fica} strategy={result.strategy} />
                   </div>
                 </details>
 
