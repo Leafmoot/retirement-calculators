@@ -280,15 +280,6 @@ function SummaryLine({ label, value, color, bold, indent, dimmed }) {
   );
 }
 
-function PlanLine({ label, value, bold, highlight, indent }) {
-  return (
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", padding: "3px 0", borderBottom: `1px solid rgba(0,0,0,0.06)` }}>
-      <span style={{ fontSize: "0.75rem", color: T.textSub, fontFamily: T.font, fontWeight: bold ? 600 : 400, paddingLeft: indent ? 12 : 0 }}>{label}</span>
-      <span style={{ fontSize: bold ? "0.84rem" : "0.78rem", fontFamily: T.font, fontWeight: bold ? 700 : 400, color: highlight || T.text, fontVariantNumeric: "tabular-nums" }}>{value}</span>
-    </div>
-  );
-}
-
 function NoteBox({ color, bg, border, children }) {
   return (
     <div style={{ background: bg, border: `1px solid ${border}`, borderRadius: T.radius, padding: "10px 12px", fontSize: "0.78rem", color, lineHeight: 1.55, fontFamily: T.font }}>
@@ -867,20 +858,23 @@ export default function App() {
 
           <div style={{ overflowY: (isMobile || !result) ? "hidden" : "auto", padding: "14px 16px" }}>
 
-            <div style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: "0.8rem", fontWeight: 700, color: T.text, fontFamily: T.font, paddingLeft: 2, marginBottom: 8 }}>
-                Pay Schedule
-              </div>
+            <div style={{ marginBottom: 8 }}>
               <div style={{
                 background: T.surface,
                 borderRadius: T.radius,
                 border: `1px solid ${T.border}`,
                 boxShadow: T.shadow,
-                padding: "12px 16px",
-                display: "flex",
-                flexDirection: "column",
-                gap: 6,
+                overflow: "hidden",
               }}>
+                <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, padding: "7px 16px 6px", borderBottom: `1px solid ${T.border}` }}>
+                  Pay Schedule
+                </div>
+                <div style={{
+                  padding: "7px 16px 8px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 4,
+                }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontFamily: T.font }}>
                   <span style={{ fontSize: "0.78rem", color: T.textSub }}>Paychecks remaining</span>
                   <span style={{ fontSize: "0.78rem", fontWeight: 700, color: T.text }}>{periodsLeft} of {periodsTotal}</span>
@@ -907,6 +901,7 @@ export default function App() {
                     <span style={{ fontSize: "0.78rem", fontWeight: 600, color: T.text }}>{fmtCutoff(cutoffPassed ? firstEligibleCutoff : cutoffDate)}</span>
                   </div>
                 )}
+              </div>
               </div>
             </div>
 
@@ -936,7 +931,7 @@ export default function App() {
                       {result.usingTarget && <span style={{ fontSize: "0.65rem", color: T.textMuted, fontFamily: T.font }}>Priority 1 &amp; 2</span>}
                     </div>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1, background: T.btnBorder }}>
-                      <div style={{ background: T.greenLight, padding: "8px 14px" }}>
+                      <div style={{ background: T.greenLight, padding: "0 14px 8px" }}>
                         <div style={{ fontSize: "0.72rem", fontWeight: 600, color: T.textSub, fontFamily: T.font, marginBottom: 3 }}>Elective (pre-tax / Roth)</div>
                         {result.electiveNotNeeded
                           ? <div style={{ fontSize: "0.82rem", fontWeight: 600, color: T.textMuted, fontFamily: T.font, lineHeight: 1.4 }}>Not needed — goal met by other plans</div>
@@ -944,10 +939,9 @@ export default function App() {
                           ? <div style={{ fontSize: "1.1rem", fontWeight: 700, color: T.green, fontFamily: T.font }}>Limit reached ✓</div>
                           : <>
                               <div style={{ fontSize: "1.6rem", fontWeight: 700, color: T.btn, fontFamily: T.font, letterSpacing: "-0.02em", lineHeight: 1 }}>{result.electivePct}%</div>
-                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginTop: 3 }}>
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginTop: 6 }}>
                                 <div>
-                                  {result.electiveDpc > 0 && <div style={{ fontSize: "0.78rem", color: T.textSub, fontFamily: T.font }}>{fc(ceilDollar(result.electiveDpc))} per paycheck</div>}
-                                  {result.electiveChecks > 0 && <div style={{ fontSize: "0.78rem", color: T.textSub, fontFamily: T.font, marginTop: 1 }}>{result.electiveChecks} paychecks to limit</div>}
+                                  {result.electiveChecks > 0 && <div style={{ fontSize: "0.78rem", color: T.textSub, fontFamily: T.font }}>{result.electiveChecks} paychecks to limit</div>}
                                 </div>
                                 {result.electiveSalaryCapped && (
                                   <div style={{ fontSize: "0.7rem", color: T.amber, fontFamily: T.font, display: "flex", alignItems: "center", gap: 3, flexShrink: 0, marginLeft: 8 }}>
@@ -959,7 +953,7 @@ export default function App() {
                             </>
                         }
                       </div>
-                      <div style={{ background: T.greenLight, padding: "8px 14px" }}>
+                      <div style={{ background: T.greenLight, padding: "0 14px 8px" }}>
                         <div style={{ fontSize: "0.72rem", fontWeight: 600, color: T.textSub, fontFamily: T.font, marginBottom: 3 }}>After-tax (Mega Roth)</div>
                         {result.afterTax403bNotNeeded
                           ? <div style={{ fontSize: "0.82rem", fontWeight: 600, color: T.textMuted, fontFamily: T.font, lineHeight: 1.4 }}>Not needed — goal met</div>
@@ -967,10 +961,9 @@ export default function App() {
                           ? <div style={{ fontSize: "1.1rem", fontWeight: 700, color: T.green, fontFamily: T.font }}>Limit reached ✓</div>
                           : <>
                               <div style={{ fontSize: "1.6rem", fontWeight: 700, color: T.btn, fontFamily: T.font, letterSpacing: "-0.02em", lineHeight: 1 }}>{result.afterTax403bPct}%</div>
-                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginTop: 3 }}>
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginTop: 6 }}>
                                 <div>
-                                  {result.afterTax403bDpc > 0 && <div style={{ fontSize: "0.78rem", color: T.textSub, fontFamily: T.font }}>{fc(ceilDollar(result.afterTax403bDpc))} per paycheck</div>}
-                                  {result.afterTax403bChecks > 0 && <div style={{ fontSize: "0.78rem", color: T.textSub, fontFamily: T.font, marginTop: 1 }}>{result.afterTax403bChecks} paychecks to limit</div>}
+                                  {result.afterTax403bChecks > 0 && <div style={{ fontSize: "0.78rem", color: T.textSub, fontFamily: T.font }}>{result.afterTax403bChecks} paychecks to limit</div>}
                                 </div>
                                 {result.afterTax403bSalaryCapped && (
                                   <div style={{ fontSize: "0.7rem", color: T.amber, fontFamily: T.font, display: "flex", alignItems: "center", gap: 3, flexShrink: 0, marginLeft: 8 }}>
@@ -984,21 +977,32 @@ export default function App() {
                       </div>
                     </div>
                     <details style={{ borderTop: `1px solid ${T.btnBorder}` }}>
-                      <summary style={{ cursor: "pointer", padding: "8px 14px", fontSize: "0.75rem", fontWeight: 600, color: T.btn, fontFamily: T.font, userSelect: "none", listStyle: "none", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                        <span>View details</span>
-                        <svg width="11" height="11" viewBox="0 0 12 12" fill="none" style={{ flexShrink: 0, transition: "transform 0.2s" }} className="details-arrow">
-                          <path d="M3 4.5l3 3 3-3" stroke={T.btn} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                      <summary style={{ cursor: "pointer", padding: "14px 16px", fontSize: "0.8rem", fontWeight: 700, color: T.text, fontFamily: T.font, userSelect: "none", listStyle: "none", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                        <span>View Details</span>
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ flexShrink: 0, transition: "transform 0.2s" }} className="details-arrow">
+                          <path d="M3 5l4 4 4-4" stroke={T.textSub} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
                       </summary>
-                      <div style={{ padding: "4px 14px 12px" }}>
-                        <PlanLine label={`415(c) limit${result.catchUp > 0 ? ` + catch-up` : ""}`} value={fc(LIMIT_415C + result.catchUp)} />
-                        <PlanLine label={`Elective limit (402(g)${result.catchUp > 0 ? ` + catch-up` : ""})`} value={fc(result.electiveLimit)} indent />
-                        {result.ytd403bElective > 0 && <PlanLine label="Contributed (YTD)" value={fc(result.ytd403bElective)} indent />}
-                        <PlanLine label="Annual contribution" value={fc(result.electiveRem)} bold />
-                        <Divider />
-                        <PlanLine label="415(c) after-tax room" value={fc(result.afterTax403bLimit)} />
-                        {result.ytd403bAfterTaxAmt > 0 && <PlanLine label="Contributed after-tax (YTD)" value={fc(result.ytd403bAfterTaxAmt)} indent />}
-                        <PlanLine label="Annual contribution" value={fc(result.afterTax403bRem)} bold />
+                      <div style={{ padding: "0 14px 12px" }}>
+                        {(result.electiveDpc > 0 || result.afterTax403bDpc > 0) && (
+                          <>
+                            <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>Per Paycheck</div>
+                            {result.electiveDpc > 0 && <SummaryLine label="Elective (pre-tax / Roth)" value={fc(ceilDollar(result.electiveDpc))} indent />}
+                            {result.afterTax403bDpc > 0 && <SummaryLine label="After-tax (Mega Roth)" value={fc(ceilDollar(result.afterTax403bDpc))} indent />}
+                            {result.electiveDpc > 0 && result.afterTax403bDpc > 0 && (
+                              <SummaryLine label="Total per paycheck" value={fc(ceilDollar(result.electiveDpc) + ceilDollar(result.afterTax403bDpc))} indent bold />
+                            )}
+                          </>
+                        )}
+                        <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>Elective (pre-tax / Roth)</div>
+                        <SummaryLine label={`415(c) limit${result.catchUp > 0 ? ` + catch-up` : ""}`} value={fc(LIMIT_415C + result.catchUp)} indent dimmed />
+                        <SummaryLine label={`Elective limit (402(g)${result.catchUp > 0 ? ` + catch-up` : ""})`} value={fc(result.electiveLimit)} indent dimmed />
+                        {result.ytd403bElective > 0 && <SummaryLine label="Contributed (YTD)" value={fc(result.ytd403bElective)} indent dimmed />}
+                        <SummaryLine label="Elective remaining" value={fc(result.electiveRem)} indent bold />
+                        <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>After-Tax (Mega Roth)</div>
+                        <SummaryLine label="415(c) after-tax room" value={fc(result.afterTax403bLimit)} indent dimmed />
+                        {result.ytd403bAfterTaxAmt > 0 && <SummaryLine label="Contributed after-tax (YTD)" value={fc(result.ytd403bAfterTaxAmt)} indent dimmed />}
+                        <SummaryLine label="After-tax remaining" value={fc(result.afterTax403bRem)} indent bold />
                       </div>
                     </details>
                   </div>
@@ -1021,10 +1025,9 @@ export default function App() {
                           ? <div style={{ fontSize: "1.1rem", fontWeight: 700, color: T.green, fontFamily: T.font }}>Limit reached ✓</div>
                           : <>
                               <div style={{ fontSize: "1.6rem", fontWeight: 700, color: T.blue, fontFamily: T.font, letterSpacing: "-0.02em", lineHeight: 1 }}>{result.afterTax401aPct}%</div>
-                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginTop: 3 }}>
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginTop: 6 }}>
                                 <div>
-                                  {result.afterTax401aDpc > 0 && <div style={{ fontSize: "0.78rem", color: T.textSub, fontFamily: T.font }}>{fc(ceilDollar(result.afterTax401aDpc))} per paycheck</div>}
-                                  {result.afterTax401aChecks > 0 && <div style={{ fontSize: "0.78rem", color: T.textSub, fontFamily: T.font, marginTop: 1 }}>{result.afterTax401aChecks} paychecks to limit</div>}
+                                  {result.afterTax401aChecks > 0 && <div style={{ fontSize: "0.78rem", color: T.textSub, fontFamily: T.font }}>{result.afterTax401aChecks} paychecks to limit</div>}
                                 </div>
                                 {result.afterTax401aSalaryCapped && (
                                   <div style={{ fontSize: "0.7rem", color: T.amber, fontFamily: T.font, display: "flex", alignItems: "center", gap: 3, flexShrink: 0, marginLeft: 8 }}>
@@ -1038,20 +1041,28 @@ export default function App() {
                       </div>
                     )}
                     <details style={{ borderTop: `1px solid #BFDBFE` }}>
-                      <summary style={{ cursor: "pointer", padding: "8px 14px", fontSize: "0.75rem", fontWeight: 600, color: T.blue, fontFamily: T.font, userSelect: "none", listStyle: "none", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                        <span>View details</span>
-                        <svg width="11" height="11" viewBox="0 0 12 12" fill="none" style={{ flexShrink: 0, transition: "transform 0.2s" }} className="details-arrow">
-                          <path d="M3 4.5l3 3 3-3" stroke={T.blue} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                      <summary style={{ cursor: "pointer", padding: "14px 16px", fontSize: "0.8rem", fontWeight: 700, color: T.text, fontFamily: T.font, userSelect: "none", listStyle: "none", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                        <span>View Details</span>
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ flexShrink: 0, transition: "transform 0.2s" }} className="details-arrow">
+                          <path d="M3 5l4 4 4-4" stroke={T.textSub} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
                       </summary>
-                      <div style={{ padding: "4px 14px 12px" }}>
-                        <PlanLine label="415(c) limit" value={fc(LIMIT_415C)} />
-                        <PlanLine label="Employer match (projected)" value={fc(result.empMatchAmt)} indent />
-                        <PlanLine label="Employer discretionary (projected)" value={fc(result.empDiscAmt)} indent />
-                        <PlanLine label="After-tax room for employee" value={fc(result.afterTax401aLimit)} bold />
-                        {result.ytd401aAfterTaxAmt > 0 && <PlanLine label="After-tax contributed (YTD)" value={fc(result.ytd401aAfterTaxAmt)} indent />}
-                        <PlanLine label="Annual contribution" value={fc(result.afterTax401aRem)} bold />
-                        {result.ytd401aEmployerAmt > 0 && <PlanLine label="Employer contributions (YTD)" value={fc(result.ytd401aEmployerAmt)} indent />}
+                      <div style={{ padding: "0 14px 12px" }}>
+                        {result.afterTax401aDpc > 0 && (
+                          <>
+                            <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>Per Paycheck</div>
+                            <SummaryLine label="After-tax (Mega Roth)" value={fc(ceilDollar(result.afterTax401aDpc))} indent bold />
+                          </>
+                        )}
+                        <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>After-Tax Room Calculation</div>
+                        <SummaryLine label="415(c) limit" value={fc(LIMIT_415C)} indent dimmed />
+                        <SummaryLine label="Employer match (projected)" value={fc(result.empMatchAmt)} indent dimmed />
+                        <SummaryLine label="Employer discretionary (projected)" value={fc(result.empDiscAmt)} indent dimmed />
+                        <SummaryLine label="After-tax room for employee" value={fc(result.afterTax401aLimit)} indent bold />
+                        <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>After-Tax (Mega Roth)</div>
+                        {result.ytd401aAfterTaxAmt > 0 && <SummaryLine label="Contributed after-tax (YTD)" value={fc(result.ytd401aAfterTaxAmt)} indent dimmed />}
+                        <SummaryLine label="Annual contribution" value={fc(result.afterTax401aRem)} indent bold />
+                        {result.ytd401aEmployerAmt > 0 && <SummaryLine label="Employer contributions (YTD)" value={fc(result.ytd401aEmployerAmt)} indent dimmed />}
                       </div>
                     </details>
                   </div>
@@ -1074,10 +1085,9 @@ export default function App() {
                           ? <div style={{ fontSize: "1.1rem", fontWeight: 700, color: T.green, fontFamily: T.font }}>Limit reached ✓</div>
                           : <>
                               <div style={{ fontSize: "1.6rem", fontWeight: 700, color: T.preTax, fontFamily: T.font, letterSpacing: "-0.02em", lineHeight: 1 }}>{result.dpc457b === 0 ? "$0" : fc(result.dpc457b, 2)}</div>
-                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginTop: 3 }}>
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginTop: 6 }}>
                                 <div>
-                                  {result.dpc457b > 0 && <div style={{ fontSize: "0.78rem", color: T.textSub, fontFamily: T.font }}>per paycheck</div>}
-                                  {result.checks457b > 0 && <div style={{ fontSize: "0.78rem", color: T.textSub, fontFamily: T.font, marginTop: 1 }}>{result.checks457b} paychecks to limit</div>}
+                                  {result.checks457b > 0 && <div style={{ fontSize: "0.78rem", color: T.textSub, fontFamily: T.font }}>{result.checks457b} paychecks to limit</div>}
                                 </div>
                                 {result.salary457bCapped && (
                                   <div style={{ fontSize: "0.7rem", color: T.amber, fontFamily: T.font, display: "flex", alignItems: "center", gap: 3, flexShrink: 0, marginLeft: 8 }}>
@@ -1091,16 +1101,23 @@ export default function App() {
                       </div>
                     )}
                     <details style={{ borderTop: `1px solid ${T.preTaxBorder}` }}>
-                      <summary style={{ cursor: "pointer", padding: "8px 14px", fontSize: "0.75rem", fontWeight: 600, color: T.preTax, fontFamily: T.font, userSelect: "none", listStyle: "none", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                        <span>View details</span>
-                        <svg width="11" height="11" viewBox="0 0 12 12" fill="none" style={{ flexShrink: 0, transition: "transform 0.2s" }} className="details-arrow">
-                          <path d="M3 4.5l3 3 3-3" stroke={T.preTax} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                      <summary style={{ cursor: "pointer", padding: "14px 16px", fontSize: "0.8rem", fontWeight: 700, color: T.text, fontFamily: T.font, userSelect: "none", listStyle: "none", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                        <span>View Details</span>
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ flexShrink: 0, transition: "transform 0.2s" }} className="details-arrow">
+                          <path d="M3 5l4 4 4-4" stroke={T.textSub} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
                       </summary>
-                      <div style={{ padding: "4px 14px 12px" }}>
-                        <PlanLine label="457(b) annual limit" value={fc(LIMIT_457B)} />
-                        {result.ytd457bAmt > 0 && <PlanLine label="Contributed (YTD)" value={fc(result.ytd457bAmt)} indent />}
-                        <PlanLine label="Annual contribution" value={fc(result.rem457b)} bold />
+                      <div style={{ padding: "0 14px 12px" }}>
+                        {result.dpc457b > 0 && (
+                          <>
+                            <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>Per Paycheck</div>
+                            <SummaryLine label="Pre-tax" value={fc(result.dpc457b, 2)} indent bold />
+                          </>
+                        )}
+                        <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>457(b) Pre-Tax</div>
+                        <SummaryLine label="457(b) annual limit" value={fc(LIMIT_457B)} indent dimmed />
+                        {result.ytd457bAmt > 0 && <SummaryLine label="Contributed (YTD)" value={fc(result.ytd457bAmt)} indent dimmed />}
+                        <SummaryLine label="Annual contribution" value={fc(result.rem457b)} indent bold />
                       </div>
                     </details>
                   </div>
@@ -1123,18 +1140,18 @@ export default function App() {
                         </svg>
                       </summary>
                       <div style={{ padding: "0 14px 14px" }}>
-                        <div style={{ fontSize: "0.78rem", fontWeight: 600, color: T.textSub, fontFamily: T.font, marginTop: 8, marginBottom: 4 }}>Employee contributions</div>
-                        {proj403bElective > 0 && <SummaryLine label="403(b) elective (pre-tax / Roth)" value={fc(proj403bElective)} />}
-                        {proj403bAfterTax > 0 && <SummaryLine label="403(b) after-tax (Mega Roth)" value={fc(proj403bAfterTax)} />}
-                        {proj401aAfterTax > 0 && <SummaryLine label="401(a) after-tax (Mega Roth)" value={fc(proj401aAfterTax)} />}
-                        {proj457b > 0 && <SummaryLine label="457(b) pre-tax" value={fc(proj457b)} />}
-                        <SummaryLine label="Total employee" value={fc(totalEmployee)} bold />
-                        <div style={{ fontSize: "0.78rem", fontWeight: 600, color: T.textSub, fontFamily: T.font, marginTop: 12, marginBottom: 4 }}>Employer contributions</div>
-                        <SummaryLine label={`Match — 50% × 8% of ${fc(result.compBasis)}`} value={fc(result.empMatchAmt)} dimmed />
-                        <SummaryLine label={`Discretionary — 3% of ${fc(result.compBasis)}`} value={fc(result.empDiscAmt)} dimmed />
-                        <SummaryLine label="Total employer" value={fc(result.totalEmployer401a)} bold />
-                        <Divider />
-                        <SummaryLine label="Total retirement compensation" value={fc(totalAll)} bold color={T.total} />
+                        <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>Employee contributions</div>
+                        {proj403bElective > 0 && <SummaryLine label="403(b) elective (pre-tax / Roth)" value={fc(proj403bElective)} indent />}
+                        {proj403bAfterTax > 0 && <SummaryLine label="403(b) after-tax (Mega Roth)" value={fc(proj403bAfterTax)} indent />}
+                        {proj401aAfterTax > 0 && <SummaryLine label="401(a) after-tax (Mega Roth)" value={fc(proj401aAfterTax)} indent />}
+                        {proj457b > 0 && <SummaryLine label="457(b) pre-tax" value={fc(proj457b)} indent />}
+                        <SummaryLine label="Total employee" value={fc(totalEmployee)} indent bold />
+                        <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>Employer contributions</div>
+                        <SummaryLine label={`Match — 50% × 8% of ${fc(result.compBasis)}`} value={fc(result.empMatchAmt)} indent dimmed />
+                        <SummaryLine label={`Discretionary — 3% of ${fc(result.compBasis)}`} value={fc(result.empDiscAmt)} indent dimmed />
+                        <SummaryLine label="Total employer" value={fc(result.totalEmployer401a)} indent bold />
+                        <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>Total Retirement Compensation</div>
+                        <SummaryLine label="Combined employee + employer" value={fc(totalAll)} indent bold color={T.total} />
                       </div>
                     </details>
                   );
