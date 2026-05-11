@@ -640,7 +640,7 @@ function StatCard({ label, value, sub, subLines, color, small }) {
                 <div
                   key={i}
                   style={{
-                    fontSize: "0.8rem",
+                    fontSize: "0.85rem",
                     color: "#64748B",
                     fontFamily: T.font,
                     lineHeight: 1.5,
@@ -830,6 +830,82 @@ function EmptyResults({ isCalculating }) {
         )}
       </div>
     </div>
+  );
+}
+
+// ── Next-year full-cycle projection ──────────────────────────────────────────
+function computeNextYearProjection(salary, age, ficaOverride, strategy) {
+  const nextAge = age + 1;
+  const currCatchUpAmt = getCatchUp(age);
+  const currMaxAllowed = LIMITS.standard + currCatchUpAmt;
+  const nextCatchUpAmt = getCatchUp(nextAge);
+  const nextMaxAllowed = LIMITS.standard + nextCatchUpAmt;
+  const nextIs6063 = nextAge >= 60 && nextAge <= 63;
+  const nextCatchUpType = nextIs6063 ? "Ages 60–63" : "Age 50+";
+  const limitDiff = nextMaxAllowed - currMaxAllowed;
+  const limitChanged = limitDiff !== 0;
+  const limitDirection = limitDiff > 0 ? "increases" : "decreases";
+  const crossingCatchUpThreshold = currCatchUpAmt === 0 && nextCatchUpAmt > 0;
+  const ficaUnknown = crossingCatchUpThreshold && ficaOverride === null;
+  const nextRothRequired = nextCatchUpAmt > 0 && ficaOverride === true;
+  const fullPeriods = 26;
+  const perCheck = salary / fullPeriods;
+  if (perCheck <= 0) return null;
+  if (nextRothRequired && strategy !== "roth-only") {
+    const prePct = ceilPct(LIMITS.standard / fullPeriods / perCheck);
+    const rPct = ceilPct(nextCatchUpAmt / fullPeriods / perCheck);
+    return {
+      split: true,
+      nextAge, nextMaxAllowed, nextCatchUpAmt, nextCatchUpType, nextIs6063,
+      limitChanged, limitDirection, ficaUnknown,
+      prePct, rPct, totPct: prePct + rPct,
+      preDpc: (perCheck * prePct) / 100,
+      rDpc: (perCheck * rPct) / 100,
+    };
+  } else {
+    const pct = ceilPct(nextMaxAllowed / fullPeriods / perCheck);
+    return {
+      split: false,
+      nextAge, nextMaxAllowed, nextCatchUpAmt, nextCatchUpType, nextIs6063,
+      limitChanged, limitDirection, ficaUnknown,
+      rothOnly: strategy === "roth-only",
+      pct, dpc: (perCheck * pct) / 100,
+    };
+  }
+}
+
+function ProjectionBlock({ salary, age, fica, strategy }) {
+  const proj = computeNextYearProjection(parse(salary), parseInt(age), fica, strategy);
+  if (!proj) return null;
+  return (
+    <>
+      <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4 }}>Next Year Projection</div>
+      {proj.split ? (
+        <>
+          <SummaryLine label="Pre-Tax (Traditional)" value={`${proj.prePct}%`} indent bold />
+          <SummaryLine label={`Roth Catch-Up (${proj.nextCatchUpType})`} value={`${proj.rPct}%`} indent bold />
+        </>
+      ) : (
+        <SummaryLine
+          label={proj.rothOnly ? "Roth (After-Tax)" : "Pre-Tax (Traditional)"}
+          value={`${proj.pct}%`}
+          indent bold color={T.total}
+        />
+      )}
+      <div style={{ fontSize: "0.72rem", color: T.textSub, fontFamily: T.font, lineHeight: 1.5, marginTop: 8, paddingLeft: 12 }}>
+        Estimated rates at age {proj.nextAge} over a full 26-period year, assuming current salary and next year's IRS limits carry forward.
+        {proj.limitChanged && (
+          <span style={{ color: proj.limitDirection === "increases" ? T.green : T.amber, fontWeight: 600 }}>
+            {" "}Your annual limit {proj.limitDirection} to {fc(proj.nextMaxAllowed)} at age {proj.nextAge}.
+          </span>
+        )}
+        {proj.ficaUnknown && (
+          <span style={{ color: T.amber, fontWeight: 600 }}>
+            {" "}Note: you'll be catch-up eligible at {proj.nextAge} — your Roth requirement will depend on your prior-year FICA wages.
+          </span>
+        )}
+      </div>
+    </>
   );
 }
 
@@ -2006,7 +2082,7 @@ export default function App() {
           <div
             style={{
               overflowY: (isMobile || !result) ? "hidden" : "auto",
-              padding: "14px 16px",
+              padding: "12px 16px",
               position: "relative",
             }}
           >
@@ -2253,19 +2329,6 @@ export default function App() {
                     desired.
                   </NoteBox>
                 )}
-                <Divider label="Limit Summary" />
-                <SummaryLine
-                  label={result.usingCustomLimit ? "Your Goal" : "Annual Limit"}
-                  value={fc(result.annualLimit)}
-                  bold
-                />
-                <SummaryLine
-                  label="Total Contributed"
-                  value={fc(result.yPre + result.yRoth)}
-                  bold
-                />
-                <SummaryLine label="Remaining" value={fc(0)} bold />
-
                 {/* Collapsible Details */}
                 <details
                   style={{
@@ -2340,6 +2403,7 @@ export default function App() {
                     <div style={{ fontSize: "0.72rem", color: T.textSub, fontFamily: T.font, lineHeight: 1.5, marginTop: 8, paddingLeft: 12 }}>
                       You have reached your {result.usingCustomLimit ? "goal" : "limit"} of {fc(result.annualLimit)} for the year. No further contributions are needed.
                     </div>
+                    <ProjectionBlock salary={salary} age={age} fica={result.fica} strategy={result.strategy} />
                   </div>
                 </details>
               </div>
@@ -2497,6 +2561,7 @@ export default function App() {
                     <div style={{ fontSize: "0.72rem", color: T.textSub, fontFamily: T.font, lineHeight: 1.5, marginTop: 8, paddingLeft: 12 }}>
                       Electing the rates shown above each paycheck will reach your {result.usingCustomLimit ? "goal" : "limit"} of {fc(result.annualLimit)} by year end.
                     </div>
+                    <ProjectionBlock salary={salary} age={age} fica={result.fica} strategy={result.strategy} />
                   </div>
                 </details>
 
@@ -2666,6 +2731,7 @@ export default function App() {
                     <div style={{ fontSize: "0.72rem", color: T.textSub, fontFamily: T.font, lineHeight: 1.5, marginTop: 8, paddingLeft: 12 }}>
                       Electing the rate shown above each paycheck will reach your {result.usingCustomLimit ? "goal" : "limit"} of {fc(result.annualLimit)} by year end.
                     </div>
+                    <ProjectionBlock salary={salary} age={age} fica={result.fica} strategy={result.strategy} />
                   </div>
                 </details>
 
