@@ -556,7 +556,6 @@ function SummaryLine({ label, value, color, bold, indent, dimmed }) {
           fontWeight: bold ? 600 : 400,
         }}
       >
-        {indent ? "↳ " : ""}
         {label}
       </span>
       <span
@@ -649,7 +648,7 @@ function StatCard({ label, value, sub, subLines, color, small }) {
                 <div
                   key={i}
                   style={{
-                    fontSize: "0.8rem",
+                    fontSize: "0.85rem",
                     color: "#64748B",
                     fontFamily: T.font,
                     lineHeight: 1.5,
@@ -1435,12 +1434,13 @@ export default function App() {
                 >
                   {/* Header strip */}
                   <div style={{
-                    padding: "14px 16px",
+                    padding: "7px 16px 6px",
                     borderBottom: `1px solid ${T.border}`,
-                    background: T.surfaceAlt,
-                    fontSize: "0.8rem",
+                    fontSize: "0.68rem",
                     fontWeight: 700,
-                    color: T.text,
+                    letterSpacing: "0.08em",
+                    textTransform: "uppercase",
+                    color: T.textSub,
                     fontFamily: T.font,
                     display: "flex",
                     alignItems: "center",
@@ -1502,7 +1502,7 @@ export default function App() {
                         <div style={{ width: 1, background: T.border, alignSelf: "stretch" }} />
                         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
                           <span style={{ fontSize: "0.75rem", color: T.textMuted, fontFamily: T.font }}>Roth</span>
-                          <span style={{ fontSize: "0.82rem", fontWeight: 600, fontVariantNumeric: "tabular-nums", color: T.textSub, fontFamily: T.font }}>$0</span>
+                          <span style={{ fontSize: "0.82rem", fontWeight: 600, fontVariantNumeric: "tabular-nums", color: T.text, fontFamily: T.font }}>$0</span>
                         </div>
                       </div>
                     )}
@@ -1586,12 +1586,16 @@ export default function App() {
                       <>
                         <div
                           style={{
-                            fontSize: "0.78rem",
-                            fontWeight: 600,
+                            fontSize: "0.68rem",
+                            fontWeight: 700,
+                            letterSpacing: "0.08em",
+                            textTransform: "uppercase",
                             color: T.textSub,
                             fontFamily: T.font,
-                            marginTop: 8,
+                            marginTop: 16,
                             marginBottom: 4,
+                            paddingBottom: 4,
+                            borderBottom: `1px solid ${T.border}`,
                           }}
                         >
                           Pre-Tax — Annual
@@ -1601,10 +1605,12 @@ export default function App() {
                           value={fc(
                             result.preTaxContribution * result.payPeriods
                           )}
+                          indent
                         />
                         <SummaryLine
                           label="True Cost"
                           value={fc(result.preTaxTrueCost * result.payPeriods)}
+                          indent
                         />
                         <SummaryLine
                           label="Tax Savings"
@@ -1612,6 +1618,7 @@ export default function App() {
                             result.preTaxTaxSavings * result.payPeriods
                           )}
                           color={T.green}
+                          indent
                         />
                       </>
                     )}
@@ -1620,12 +1627,16 @@ export default function App() {
                       <>
                         <div
                           style={{
-                            fontSize: "0.78rem",
-                            fontWeight: 600,
+                            fontSize: "0.68rem",
+                            fontWeight: 700,
+                            letterSpacing: "0.08em",
+                            textTransform: "uppercase",
                             color: T.textSub,
                             fontFamily: T.font,
-                            marginTop: 12,
+                            marginTop: 16,
                             marginBottom: 4,
+                            paddingBottom: 4,
+                            borderBottom: `1px solid ${T.border}`,
                           }}
                         >
                           Roth — Annual
@@ -1635,16 +1646,17 @@ export default function App() {
                           value={fc(
                             result.rothContribution * result.payPeriods
                           )}
+                          indent
                         />
                         <SummaryLine
                           label="True Cost"
                           value={fc(result.rothTrueCost * result.payPeriods)}
+                          indent
                         />
                         <SummaryLine
                           label="Tax Savings"
                           value="$0"
-                          color={T.textMuted}
-                          dimmed
+                          indent
                         />
                       </>
                     )}
@@ -1653,12 +1665,16 @@ export default function App() {
                       <>
                         <div
                           style={{
-                            fontSize: "0.78rem",
-                            fontWeight: 600,
+                            fontSize: "0.68rem",
+                            fontWeight: 700,
+                            letterSpacing: "0.08em",
+                            textTransform: "uppercase",
                             color: T.textSub,
                             fontFamily: T.font,
-                            marginTop: 12,
+                            marginTop: 16,
                             marginBottom: 4,
+                            paddingBottom: 4,
+                            borderBottom: `1px solid ${T.border}`,
                           }}
                         >
                           Combined — Annual
@@ -1666,15 +1682,18 @@ export default function App() {
                         <SummaryLine
                           label="Contribution"
                           value={fc(result.annualTotalContribution)}
+                          indent
                         />
                         <SummaryLine
                           label="True Cost"
                           value={fc(result.annualTrueCost)}
+                          indent
                         />
                         <SummaryLine
                           label="Tax Savings"
                           value={fc(result.annualTaxSavings)}
                           color={T.green}
+                          indent
                         />
                       </>
                     )}
