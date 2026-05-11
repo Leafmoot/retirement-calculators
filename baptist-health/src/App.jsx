@@ -1084,7 +1084,7 @@ export default function App() {
                           : result.rem457b <= 0 && !result.salary457bCapped
                           ? <div style={{ fontSize: "1.1rem", fontWeight: 700, color: T.green, fontFamily: T.font }}>Limit reached ✓</div>
                           : <>
-                              <div style={{ fontSize: "1.6rem", fontWeight: 700, color: T.preTax, fontFamily: T.font, letterSpacing: "-0.02em", lineHeight: 1 }}>{result.dpc457b === 0 ? "$0" : fc(result.dpc457b, 2)}</div>
+                              <div style={{ fontSize: "1.6rem", fontWeight: 700, color: T.preTax, fontFamily: T.font, letterSpacing: "-0.02em", lineHeight: 1 }}>{result.dpc457b === 0 ? "$0" : fc(ceilDollar(result.dpc457b))}</div>
                               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginTop: 6 }}>
                                 <div>
                                   {result.checks457b > 0 && <div style={{ fontSize: "0.78rem", color: T.textSub, fontFamily: T.font }}>{result.checks457b} paychecks to limit</div>}
@@ -1111,7 +1111,7 @@ export default function App() {
                         {result.dpc457b > 0 && (
                           <>
                             <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>Per Paycheck</div>
-                            <SummaryLine label="Pre-tax" value={fc(result.dpc457b, 2)} indent bold />
+                            <SummaryLine label="Pre-tax" value={fc(ceilDollar(result.dpc457b))} indent bold />
                           </>
                         )}
                         <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>457(b) Pre-Tax</div>
@@ -1140,6 +1140,19 @@ export default function App() {
                         </svg>
                       </summary>
                       <div style={{ padding: "0 14px 14px" }}>
+                        {(() => {
+                          const totalDpc = (result.electiveDpc || 0) + (result.afterTax403bDpc || 0) + (result.afterTax401aDpc || 0) + (result.dpc457b || 0);
+                          return totalDpc > 0 ? (
+                            <>
+                              <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>Per Paycheck</div>
+                              {result.electiveDpc > 0 && <SummaryLine label="403(b) elective (pre-tax / Roth)" value={fc(ceilDollar(result.electiveDpc))} indent />}
+                              {result.afterTax403bDpc > 0 && <SummaryLine label="403(b) after-tax (Mega Roth)" value={fc(ceilDollar(result.afterTax403bDpc))} indent />}
+                              {result.afterTax401aDpc > 0 && <SummaryLine label="401(a) after-tax (Mega Roth)" value={fc(ceilDollar(result.afterTax401aDpc))} indent />}
+                              {result.dpc457b > 0 && <SummaryLine label="457(b) pre-tax" value={fc(ceilDollar(result.dpc457b))} indent />}
+                              <SummaryLine label="Total per paycheck" value={fc(ceilDollar(result.electiveDpc || 0) + ceilDollar(result.afterTax403bDpc || 0) + ceilDollar(result.afterTax401aDpc || 0) + ceilDollar(result.dpc457b || 0))} indent bold />
+                            </>
+                          ) : null;
+                        })()}
                         <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>Employee contributions</div>
                         {proj403bElective > 0 && <SummaryLine label="403(b) elective (pre-tax / Roth)" value={fc(proj403bElective)} indent />}
                         {proj403bAfterTax > 0 && <SummaryLine label="403(b) after-tax (Mega Roth)" value={fc(proj403bAfterTax)} indent />}
@@ -1170,7 +1183,7 @@ export default function App() {
 
           <div style={{ flexShrink: 0, padding: "8px 16px", borderTop: `1px solid ${T.border}`, background: T.surfaceAlt }}>
             <div style={{ fontSize: "0.64rem", color: T.textMuted, lineHeight: 1.55 }}>
-              Pay schedule from the Baptist Health {PLAN_YEAR} bi-weekly payroll calendar. Rates rounded up to nearest whole %. Based on {PLAN_YEAR} IRS limits. Employer contributions estimated from plan design — actual amounts may vary. For educational use only — not financial or tax advice.
+              Pay schedule from the Baptist Health {PLAN_YEAR} bi-weekly payroll calendar. Contribution amounts rounded to the nearest dollar. Rates rounded up to nearest whole %. Based on {PLAN_YEAR} IRS limits. Employer contributions estimated from plan design — actual amounts may vary. For educational use only — not financial or tax advice.
             </div>
           </div>
         </div>
