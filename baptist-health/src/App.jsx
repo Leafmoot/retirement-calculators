@@ -505,10 +505,18 @@ export default function App() {
       const ytd403bPreAmt = parse(ytd403bPre);
       const ytd403bRothAmt = parse(ytd403bRoth);
       const ytd403bElective = ytd403bPreAmt + ytd403bRothAmt;
-      const ytd403bAfterTaxAmt = parse(ytd403bAfterTax);
-      const ytd401aAfterTaxAmt = parse(ytd401aAfterTax);
+      const ytd403bAfterTaxRaw = parse(ytd403bAfterTax);
       const ytd401aEmployerAmt = parse(ytd401aEmployer);
       const ytd457bAmt = parse(ytd457b);
+
+      // Baptist Health administrative note: 401(a) after-tax contributions are currently
+      // reported on the 403(b) statement. If the entered 403(b) after-tax YTD exceeds the
+      // 403(b) after-tax ceiling (based on YTD elective history), the overflow is inferred
+      // to be 401(a) after-tax money reported in the wrong account.
+      const ytd403bAfterTaxCeiling = Math.max(LIMIT_415C - ytd403bElective, 0);
+      const ytd403bAfterTaxAmt = Math.min(ytd403bAfterTaxRaw, ytd403bAfterTaxCeiling);
+      const ytd403bReclassifiedTo401a = Math.max(ytd403bAfterTaxRaw - ytd403bAfterTaxCeiling, 0);
+      const ytd401aAfterTaxAmt = parse(ytd401aAfterTax) + ytd403bReclassifiedTo401a;
 
       // Full-year employer estimate (used for display and summary)
       const empMatchAmt = compBasis * MATCH_CAP_PCT * MATCH_RATE;
@@ -627,15 +635,17 @@ export default function App() {
       const afterTax401aNotNeeded = usingTarget && afterTax401aAllocated === 0 && afterTax401aRemMax > 0;
       usedPct += afterTax401aPct;
 
+      // 457(b) is an independent limit — it does not share a pool with the 403(b) or 401(a).
+      // However, total contributions across all plans still cannot exceed the employee's salary.
+      // The salary room available for 457(b) is whatever is left after the 403(b) and 401(a) are funded.
       const rem457bMax = include457b ? Math.max(LIMIT_457B - ytd457bAmt, 0) : 0;
-      const allocated457b = Math.min(budget, rem457bMax);
-      const rem457b = allocated457b;
-      // 457b is a dollar amount — cap the per-paycheck dollar at remaining paycheck after other plans
+      const salaryRoomFor457b = Math.max(w - totalYtdEmployee - electiveAllocated - afterTax403bAllocated - afterTax401aAllocated, 0);
+      const rem457b = usingTarget ? 0 : Math.min(rem457bMax, salaryRoomFor457b);
       const remaining457bDpc = Math.max((perCheck * (100 - usedPct)) / 100, 0);
       const dpc457bRaw = periodsLeft > 0 && rem457b > 0 ? Math.ceil((rem457b / periodsLeft) * 100) / 100 : 0;
       const dpc457b = Math.min(dpc457bRaw, remaining457bDpc);
       const checks457b = dpc457b > 0 ? Math.ceil(rem457b / dpc457b) : 0;
-      const notNeeded457b = usingTarget && allocated457b === 0 && rem457bMax > 0;
+      const notNeeded457b = usingTarget && rem457bMax > 0;
 
       // Determine whether elective is shown as split or single rate
       const electiveSplit = rothRequired && strategy !== "roth-only" && catchUp > 0 && !electiveNotNeeded && electiveRem > 0;
@@ -651,6 +661,7 @@ export default function App() {
         electivePreDpc, electiveCatchUpDpc,
         electivePreChecks, electiveCatchUpChecks,
         ytd403bElective, ytd403bPreAmt, ytd403bRothAmt,
+        ytd403bAfterTaxRaw, ytd403bAfterTaxCeiling, ytd403bReclassifiedTo401a,
         afterTax403bLimit,
         afterTax403bRem: afterTax403bRemFinal,
         afterTax403bPct, afterTax403bDpc, afterTax403bChecks, afterTax403bNotNeeded,
@@ -667,7 +678,7 @@ export default function App() {
         electiveSalaryCapped: w < maxEmployee && (!usingTarget || parse(targetAmount) > w) && electiveAllocated < electiveRemMax,
         afterTax403bSalaryCapped: w < maxEmployee && (!usingTarget || parse(targetAmount) > w) && afterTax403bAllocated < afterTax403bRemMax,
         afterTax401aSalaryCapped: w < maxEmployee && (!usingTarget || parse(targetAmount) > w) && afterTax401aAllocated < afterTax401aRemMax,
-        salary457bCapped: w < maxEmployee && (!usingTarget || parse(targetAmount) > w) && allocated457b < rem457bMax,
+        salary457bCapped: w < maxEmployee && (!usingTarget || parse(targetAmount) > w) && salaryRoomFor457b < rem457bMax,
         totalAnnualEmployee: salaryCapLimit,
       });
     }, 650);
@@ -1472,6 +1483,11 @@ export default function App() {
                           ) : null;
                         })()}
                         <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>Employee contributions</div>
+                        {result.ytd403bReclassifiedTo401a > 0 && (
+                          <div style={{ background: T.amberLight, border: `1px solid #FCD34D`, borderRadius: T.radius, padding: "8px 10px", fontSize: "0.74rem", color: T.amber, fontFamily: T.font, lineHeight: 1.55, margin: "8px 0" }}>
+                            <strong>403(b) after-tax reclassification:</strong> Your reported 403(b) after-tax YTD of {fc(result.ytd403bAfterTaxRaw)} exceeds the 403(b) after-tax limit of {fc(result.ytd403bAfterTaxCeiling)}. The {fc(result.ytd403bReclassifiedTo401a)} above that limit has been applied to your 401(a) after-tax — this reflects how Baptist Health currently reports these contributions on your 403(b) statement.
+                          </div>
+                        )}
                         {proj403bElective > 0 && <SummaryLine label={`403(b) ${result.strategy === "roth-only" ? "Roth" : result.catchUp > 0 ? "pre-tax / Roth" : "pre-tax"}`} value={fc(proj403bElective)} indent />}
                         {proj403bAfterTax > 0 && <SummaryLine label="403(b) after-tax (Mega Roth)" value={fc(proj403bAfterTax)} indent />}
                         {proj401aAfterTax > 0 && <SummaryLine label="401(a) after-tax (Mega Roth)" value={fc(proj401aAfterTax)} indent />}
