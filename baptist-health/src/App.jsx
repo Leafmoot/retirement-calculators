@@ -332,7 +332,7 @@ function ExpandRow({ label, hint, tooltip, isOpen, onToggle, marginTop = 0, colo
         width: "100%",
         boxSizing: "border-box",
         padding: "9px 12px",
-        fontSize: "0.875rem",
+        fontSize: "0.8rem",
         fontFamily: T.font,
         color: showActive ? c.active : T.text,
         fontWeight: showActive ? 600 : 400,
