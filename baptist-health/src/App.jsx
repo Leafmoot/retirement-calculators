@@ -979,7 +979,7 @@ export default function App() {
                     onToggle={() => { setUseTarget(v => !v); markDirty(); }}
                     colors={{ active: T.slate, activeBg: T.slateLight, activeBorder: T.slateBorder }}
                     hasData={!useTarget && hasTarget}
-                    hint={!useTarget && hasTarget ? `${fc(targetVal)} target` : undefined}
+                    hint={!useTarget && hasTarget ? `${fc(targetVal)} entered` : undefined}
                     onClear={() => { setTargetAmount(""); setErrors((p) => ({ ...p, targetAmount: "" })); markDirty(); }}
                   />
                   {useTarget && (
@@ -1550,11 +1550,6 @@ export default function App() {
                 {result.electiveSplit && (
                   <NoteBox color={T.amber} bg={T.amberLight} border="#FCD34D">
                     <strong>Roth catch-up required:</strong> Because your prior-year FICA wages exceeded {FICA_THRESHOLD_DISPLAY}, your {fc(result.catchUp)} catch-up contribution must be made as Roth. Your {fc(LIMIT_402G)} base can still be pre-tax — only the catch-up portion is restricted.
-                  </NoteBox>
-                )}
-                {result.catchUp > 0 && result.fica === false && (
-                  <NoteBox color="#1E40AF" bg="#F0F9FF" border="#BFDBFE">
-                    <strong>Full flexibility:</strong> Since your prior-year FICA wages were {FICA_THRESHOLD_DISPLAY} or less, your entire {fc(result.electiveLimit)} — including the catch-up — can be pre-tax, Roth, or any combination.
                   </NoteBox>
                 )}
               </div>
