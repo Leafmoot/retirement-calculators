@@ -140,7 +140,7 @@ const T = {
   red: "#DC2626", redLight: "#FEF2F2",
   green: "#16A34A", greenLight: "#F0FDF4",
   btn: "#166534", btnHover: "#14532D", btnLight: "#DCFCE7", btnBorder: "#BBF7D0",
-  slate: "#475569", slateLight: "#F1F5F9", slateBorder: "#CBD5E1",
+  slate: "#3A3739", slateLight: "#F5F3EF", slateBorder: "#C8C0B5",
   total: "#166534",
   shadow: "0 1px 3px rgba(0,0,0,0.08)",
   shadowMd: "0 4px 12px rgba(0,0,0,0.08)",
@@ -321,9 +321,9 @@ function TogglePair({ options, value, onChange, err, colors }) {
 }
 
 // ── ExpandRow — styled like True Cost Select button ───────────────────────────
-function ExpandRow({ label, hint, tooltip, isOpen, onToggle, marginTop = 0, colors, hasData, onClear }) {
+function ExpandRow({ label, hint, tooltip, isOpen, onToggle, marginTop = 0, colors, hasData, onClear, alwaysColor }) {
   const c = colors || { active: T.btn, activeBg: T.btnLight, activeBorder: T.btn };
-  const showActive = isOpen || hasData;
+  const showActive = isOpen || hasData || alwaysColor;
   return (
     <button
       type="button"
@@ -332,7 +332,7 @@ function ExpandRow({ label, hint, tooltip, isOpen, onToggle, marginTop = 0, colo
         width: "100%",
         boxSizing: "border-box",
         padding: "9px 12px",
-        fontSize: "0.875rem",
+        fontSize: "0.8rem",
         fontFamily: T.font,
         color: showActive ? c.active : T.text,
         fontWeight: showActive ? 600 : 400,
@@ -661,12 +661,13 @@ export default function App() {
       // The salary room available for 457(b) is whatever is left after the 403(b) and 401(a) are funded.
       const rem457bMax = include457b ? Math.max(LIMIT_457B - ytd457bAmt, 0) : 0;
       const salaryRoomFor457b = Math.max(w - totalYtdEmployee - electiveAllocated - afterTax403bAllocated - afterTax401aAllocated, 0);
-      const rem457b = usingTarget ? 0 : Math.min(rem457bMax, salaryRoomFor457b);
+      const budget457b = usingTarget ? budget : salaryRoomFor457b;
+      const rem457b = Math.min(rem457bMax, budget457b);
       const remaining457bDpc = Math.max((perCheck * (100 - usedPct)) / 100, 0);
       const dpc457bRaw = periodsLeft > 0 && rem457b > 0 ? Math.ceil((rem457b / periodsLeft) * 100) / 100 : 0;
       const dpc457b = Math.min(dpc457bRaw, remaining457bDpc);
       const checks457b = dpc457b > 0 ? Math.ceil(rem457b / dpc457b) : 0;
-      const notNeeded457b = usingTarget && rem457bMax > 0;
+      const notNeeded457b = include457b && rem457bMax > 0 && rem457b === 0;
 
       // Determine whether elective is shown as split or single rate
       const electiveSplit = rothRequired && strategy !== "roth-only" && catchUp > 0 && !electiveNotNeeded && electiveRem > 0;
@@ -840,8 +841,9 @@ export default function App() {
                   <ExpandRow
                     label="403(b)"
                     isOpen={show403bYtd}
-                    onToggle={() => { setShow403bYtd(v => !v); markDirty(); }}
+                    onToggle={() => { setShow403bYtd(v => !v); }}
                     colors={{ active: T.btn, activeBg: T.btnLight, activeBorder: T.btnBorder }}
+                    alwaysColor
                     hasData={!show403bYtd && has403b}
                     hint={!show403bYtd && has403b ? `${fc(total403b)} entered` : undefined}
                     onClear={() => { setYtd403bPre(""); setYtd403bRoth(""); setYtd403bAfterTax(""); markDirty(); }}
@@ -878,9 +880,10 @@ export default function App() {
                   <ExpandRow
                     label="401(a)"
                     isOpen={show401aYtd}
-                    onToggle={() => { setShow401aYtd(v => !v); markDirty(); }}
+                    onToggle={() => { setShow401aYtd(v => !v); }}
                     marginTop={6}
                     colors={{ active: T.blue, activeBg: T.blueLight, activeBorder: "#BFDBFE" }}
+                    alwaysColor
                     hasData={!show401aYtd && has401a}
                     hint={!show401aYtd && has401a ? `${fc(total401a)} entered` : undefined}
                     onClear={() => { setYtd401aAfterTax(""); setYtd401aEmployer(""); markDirty(); }}
@@ -912,9 +915,10 @@ export default function App() {
                   <ExpandRow
                     label="457(b)"
                     isOpen={show457bYtd}
-                    onToggle={() => { setShow457bYtd(v => !v); markDirty(); }}
+                    onToggle={() => { setShow457bYtd(v => !v); }}
                     marginTop={6}
                     colors={{ active: T.preTax, activeBg: T.preTaxLight, activeBorder: T.preTaxBorder }}
+                    alwaysColor
                     hasData={!show457bYtd && has457b}
                     hint={!show457bYtd && has457b ? `${fc(total457b)} entered` : undefined}
                     onClear={() => { setYtd457b(""); markDirty(); }}
@@ -976,7 +980,7 @@ export default function App() {
                   <ExpandRow
                     label="Set a target"
                     isOpen={useTarget}
-                    onToggle={() => { setUseTarget(v => !v); markDirty(); }}
+                    onToggle={() => { setUseTarget(v => !v); }}
                     colors={{ active: T.slate, activeBg: T.slateLight, activeBorder: T.slateBorder }}
                     hasData={!useTarget && hasTarget}
                     hint={!useTarget && hasTarget ? `${fc(targetVal)} entered` : undefined}
@@ -1193,7 +1197,7 @@ export default function App() {
                       )}
 
                       {/* ── Col 3: After-tax (split mode only) ── */}
-                      {result.electiveSplit && (
+                      {result.rothRequired && (
                         <div style={{ background: T.greenLight, padding: "0 14px 8px" }}>
                           <div style={{ fontSize: "0.72rem", fontWeight: 600, color: T.textSub, fontFamily: T.font, marginBottom: 3 }}>After-tax (Mega Roth)</div>
                           {result.afterTax403bNotNeeded
@@ -1257,7 +1261,7 @@ export default function App() {
                           });
                           return (
                             <div style={{ marginTop: 16 }}>
-                              <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>403(b) Contribution Limits</div>
+                              <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>Contribution Limits</div>
                               <div style={{ border: `1px solid ${T.border}`, borderRadius: 6, overflow: "hidden", marginTop: 6 }}>
                                 <div style={{ display: "grid", gridTemplateColumns: cols, padding: "5px 12px 5px", borderBottom: `1px solid ${T.border}` }}>
                                   <span style={headerCell}>Age</span>
@@ -1382,7 +1386,7 @@ export default function App() {
                       <div style={{ padding: "0 14px 12px" }}>
                         {/* 401(a) Contribution Limits table — shown first */}
                         <div style={{ marginTop: 16 }}>
-                          <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>401(a) Contribution Limits</div>
+                          <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>Contribution Limit</div>
                           <div style={{ border: `1px solid ${T.border}`, borderRadius: 6, overflow: "hidden", marginTop: 6 }}>
                             <div style={{ display: "grid", gridTemplateColumns: "1fr auto", padding: "5px 12px", borderBottom: `1px solid ${T.border}` }}>
                               <span style={{ fontSize: "0.68rem", fontWeight: 700, color: T.textSub, fontFamily: T.font }}>Component</span>
@@ -1397,7 +1401,7 @@ export default function App() {
 
                         {/* After-tax math */}
                         <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>After-Tax (Mega Roth)</div>
-                        <SummaryLine label="Total annual limit" value={fc(LIMIT_415C)} indent dimmed />
+                        <SummaryLine label="Total contributions allowed" value={fc(LIMIT_415C)} indent dimmed />
                         <SummaryLine label="Employer match (projected)" value={`− ${fc(result.empMatchAmt)}`} indent dimmed />
                         <SummaryLine label="Employer discretionary (projected)" value={`− ${fc(result.empDiscAmt)}`} indent dimmed />
                         <SummaryLine label="Available to contribute" value={fc(result.afterTax401aLimit)} indent bold />
@@ -1457,7 +1461,7 @@ export default function App() {
                       <div style={{ padding: "0 14px 12px" }}>
                         {/* 457(b) Contribution Limits table — shown first */}
                         <div style={{ marginTop: 16 }}>
-                          <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>457(b) Contribution Limits</div>
+                          <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>Contribution Limit</div>
                           <div style={{ border: `1px solid ${T.border}`, borderRadius: 6, overflow: "hidden", marginTop: 6 }}>
                             <div style={{ display: "grid", gridTemplateColumns: "1fr auto", padding: "5px 12px", borderBottom: `1px solid ${T.border}` }}>
                               <span style={{ fontSize: "0.68rem", fontWeight: 700, color: T.textSub, fontFamily: T.font }}>Component</span>
@@ -1547,7 +1551,7 @@ export default function App() {
                 })()}
 
 
-                {result.electiveSplit && (
+                {result.rothRequired && (
                   <NoteBox color={T.amber} bg={T.amberLight} border="#FCD34D">
                     <strong>Roth catch-up required:</strong> Because your prior-year FICA wages exceeded {FICA_THRESHOLD_DISPLAY}, your {fc(result.catchUp)} catch-up contribution must be made as Roth. Your {fc(LIMIT_402G)} base can still be pre-tax — only the catch-up portion is restricted.
                   </NoteBox>
