@@ -1512,7 +1512,7 @@ export default function App() {
                           const totalDpc = (result.electiveDpc || 0) + (result.afterTax403bDpc || 0) + (result.afterTax401aDpc || 0) + (result.dpc457b || 0);
                           return totalDpc > 0 ? (
                             <>
-                              <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>Per Paycheck</div>
+                              <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>Per Paycheck Contributions</div>
                               {result.electiveSplit ? (
                                 <>
                                   {result.electivePreDpc > 0 && <SummaryLine label="403(b) pre-tax" value={fc(ceilDollar(result.electivePreDpc))} indent />}
@@ -1538,13 +1538,13 @@ export default function App() {
                         {proj403bAfterTax > 0 && <SummaryLine label="403(b) after-tax (Mega Roth)" value={fc(proj403bAfterTax)} indent />}
                         {proj401aAfterTax > 0 && <SummaryLine label="401(a) after-tax (Mega Roth)" value={fc(proj401aAfterTax)} indent />}
                         {proj457b > 0 && <SummaryLine label="457(b) pre-tax" value={fc(proj457b)} indent />}
-                        <SummaryLine label="Total employee" value={fc(totalEmployee)} indent bold />
+                        <SummaryLine label="Total employee contributions" value={fc(totalEmployee)} indent bold />
                         <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>Annual Employer Contributions</div>
                         <SummaryLine label={`Match — 50% × 8% of ${fc(result.compBasis)}`} value={fc(result.empMatchAmt)} indent dimmed />
                         <SummaryLine label={`Discretionary — 3% of ${fc(result.compBasis)}`} value={fc(result.empDiscAmt)} indent dimmed />
-                        <SummaryLine label="Total employer" value={fc(result.totalEmployer401a)} indent bold />
-                        <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>Total Annual Retirement Contributions</div>
-                        <SummaryLine label="Combined employee + employer" value={fc(totalAll)} indent bold color={T.total} />
+                        <SummaryLine label="Total employer contributions" value={fc(result.totalEmployer401a)} indent bold />
+                        <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>Total Annual Contributions</div>
+                        <SummaryLine label="Employee + Employer" value={fc(totalAll)} indent bold color={T.total} />
                       </div>
                     </details>
                   );
