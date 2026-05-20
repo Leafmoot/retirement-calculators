@@ -1524,7 +1524,7 @@ export default function App() {
                             </>
                           ) : null;
                         })()}
-                        <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>Employee contributions</div>
+                        <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>Annual Employee Contributions</div>
                         {result.ytd403bReclassifiedTo401a > 0 && (
                           <div style={{ background: T.amberLight, border: `1px solid #FCD34D`, borderRadius: T.radius, padding: "8px 10px", fontSize: "0.74rem", color: T.amber, fontFamily: T.font, lineHeight: 1.55, margin: "8px 0" }}>
                             <strong>403(b) after-tax reclassification:</strong> Your reported 403(b) after-tax YTD of {fc(result.ytd403bAfterTaxRaw)} exceeds the 403(b) after-tax limit of {fc(result.ytd403bAfterTaxCeiling)}. The {fc(result.ytd403bReclassifiedTo401a)} above that limit has been applied to your 401(a) after-tax — this reflects how Baptist Health currently reports these contributions on your 403(b) statement.
@@ -1535,11 +1535,11 @@ export default function App() {
                         {proj401aAfterTax > 0 && <SummaryLine label="401(a) after-tax (Mega Roth)" value={fc(proj401aAfterTax)} indent />}
                         {proj457b > 0 && <SummaryLine label="457(b) pre-tax" value={fc(proj457b)} indent />}
                         <SummaryLine label="Total employee" value={fc(totalEmployee)} indent bold />
-                        <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>Employer contributions</div>
+                        <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>Annual Employer Contributions</div>
                         <SummaryLine label={`Match — 50% × 8% of ${fc(result.compBasis)}`} value={fc(result.empMatchAmt)} indent dimmed />
                         <SummaryLine label={`Discretionary — 3% of ${fc(result.compBasis)}`} value={fc(result.empDiscAmt)} indent dimmed />
                         <SummaryLine label="Total employer" value={fc(result.totalEmployer401a)} indent bold />
-                        <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>Total Retirement Compensation</div>
+                        <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>Total Annual Retirement Contributions</div>
                         <SummaryLine label="Combined employee + employer" value={fc(totalAll)} indent bold color={T.total} />
                       </div>
                     </details>
