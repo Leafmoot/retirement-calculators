@@ -332,7 +332,7 @@ function ExpandRow({ label, hint, tooltip, isOpen, onToggle, marginTop = 0, colo
         width: "100%",
         boxSizing: "border-box",
         padding: "9px 12px",
-        fontSize: "0.8rem",
+        fontSize: "0.875rem",
         fontFamily: T.font,
         color: showActive ? c.active : T.text,
         fontWeight: showActive ? 600 : 400,
@@ -984,9 +984,10 @@ export default function App() {
                   />
                   {useTarget && (
                     <div style={{ marginTop: 8, marginBottom: 4 }}>
-                      <Label tooltip={`Enter your total employee contribution goal for ${PLAN_YEAR}. Plans are filled in order — 403(b) elective first, then 403(b) after-tax, then 401(a) after-tax, then 457(b). Employer contributions are not counted toward your target.`}>
+                      <div style={{ fontSize: "0.71rem", fontWeight: 600, color: T.textSub, marginBottom: 3, fontFamily: T.font, display: "flex", alignItems: "center" }}>
                         Target annual contribution
-                      </Label>
+                        <span style={{ marginLeft: 4 }}><InfoTooltip text={`Enter your total employee contribution goal for ${PLAN_YEAR}. Plans are filled in order — 403(b) elective first, then 403(b) after-tax, then 401(a) after-tax, then 457(b). Employer contributions are not counted toward your target.`} /></span>
+                      </div>
                       <Input value={targetAmount} onChange={(v) => { setTargetAmount(v); setErrors((p) => ({ ...p, targetAmount: "" })); markDirty(); }} prefix="$" type="number" err={errors.targetAmount} />
                       <FieldErr msg={errors.targetAmount} />
                     </div>
