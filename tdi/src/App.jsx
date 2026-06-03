@@ -652,7 +652,7 @@ export default function App() {
                 {PLAN_YEAR} Maximum Contribution Rates — Highly Compensated Employees
               </div>
               <div style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.55)", fontFamily: T.font, marginTop: 4 }}>
-                All limits expressed as a percentage of total compensation
+                All limits expressed as a percentage of total compensation (W-2 wages)
               </div>
             </div>
 
@@ -662,10 +662,10 @@ export default function App() {
               {/* Plan cards row */}
               <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "2fr 1fr", gap: 0, background: T.navyBorder }}>
 
-              {/* LEFT ZONE: Qualified ESOP Plan card */}
+              {/* LEFT ZONE: 401(k)/ESOP Plan card */}
               <div style={{ border: "none", borderRadius: 0, overflow: "hidden", display: "flex", flexDirection: "column" }}>
                 <div style={{ background: T.navyLight, borderBottom: `1px solid ${T.navyBorder}`, padding: "8px 14px", textAlign: "center" }}>
-                  <div style={{ fontSize: "0.92rem", fontWeight: 800, color: T.navy, fontFamily: T.font, letterSpacing: "-0.01em" }}>Qualified ESOP Plan</div>
+                  <div style={{ fontSize: "0.92rem", fontWeight: 800, color: T.navy, fontFamily: T.font, letterSpacing: "-0.01em" }}>401(k)/ESOP Plan</div>
                   <div style={{ fontSize: "0.62rem", color: T.textSub, fontFamily: T.font, marginTop: 3 }}>Subject to IRS dollar limits</div>
                 </div>
 
@@ -679,19 +679,15 @@ export default function App() {
                     </div>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
                       <div style={{ background: T.skyLight, border: `1px solid ${T.skyBorder}`, borderRadius: 6, padding: "8px 6px", textAlign: "center" }}>
-                        <div style={{ fontSize: "0.6rem", color: T.sky, fontFamily: T.font, marginBottom: 3 }}>Pre-Tax</div>
+                        <div style={{ fontSize: "0.6rem", color: T.sky, fontFamily: T.font, marginBottom: 3 }}>Pre-tax</div>
                         <div style={{ fontSize: "1.25rem", fontWeight: 800, color: T.navy, fontFamily: T.font, lineHeight: 1 }}>10%</div>
                         <div style={{ fontSize: "0.55rem", color: T.textMuted, fontFamily: T.font, marginTop: 1 }}>max</div>
                       </div>
                       <div style={{ background: T.skyLight, border: `1px solid ${T.skyBorder}`, borderRadius: 6, padding: "8px 6px", textAlign: "center" }}>
-                        <div style={{ fontSize: "0.6rem", color: T.sky, fontFamily: T.font, marginBottom: 3 }}>Roth</div>
+                        <div style={{ fontSize: "0.6rem", color: T.sky, fontFamily: T.font, marginBottom: 3 }}>Roth after-tax</div>
                         <div style={{ fontSize: "1.25rem", fontWeight: 800, color: T.navy, fontFamily: T.font, lineHeight: 1 }}>10%</div>
                         <div style={{ fontSize: "0.55rem", color: T.textMuted, fontFamily: T.font, marginTop: 1 }}>max</div>
                       </div>
-                    </div>
-                    <div style={{ background: T.skyLight, border: `1px solid ${T.skyBorder}`, borderRadius: 6, padding: "5px 8px", textAlign: "center" }}>
-                      <div style={{ fontSize: "0.58rem", color: T.textSub, fontFamily: T.font }}>Combined</div>
-                      <div style={{ fontSize: "0.88rem", fontWeight: 800, color: T.sky, fontFamily: T.font }}>10% max</div>
                     </div>
                   </div>
 
@@ -702,19 +698,15 @@ export default function App() {
                     </div>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
                       <div style={{ background: T.greenLight, border: `1px solid ${T.greenBorder}`, borderRadius: 6, padding: "8px 6px", textAlign: "center" }}>
-                        <div style={{ fontSize: "0.6rem", color: T.green, fontFamily: T.font, marginBottom: 3 }}>Pre-Tax</div>
+                        <div style={{ fontSize: "0.6rem", color: T.green, fontFamily: T.font, marginBottom: 3 }}>Pre-tax</div>
                         <div style={{ fontSize: "1.25rem", fontWeight: 800, color: T.navy, fontFamily: T.font, lineHeight: 1 }}>10%</div>
                         <div style={{ fontSize: "0.55rem", color: T.textMuted, fontFamily: T.font, marginTop: 1 }}>max</div>
                       </div>
                       <div style={{ background: T.greenLight, border: `1px solid ${T.greenBorder}`, borderRadius: 6, padding: "8px 6px", textAlign: "center" }}>
-                        <div style={{ fontSize: "0.6rem", color: T.green, fontFamily: T.font, marginBottom: 3 }}>Roth</div>
+                        <div style={{ fontSize: "0.6rem", color: T.green, fontFamily: T.font, marginBottom: 3 }}>Roth after-tax</div>
                         <div style={{ fontSize: "1.25rem", fontWeight: 800, color: T.navy, fontFamily: T.font, lineHeight: 1 }}>10%</div>
                         <div style={{ fontSize: "0.55rem", color: T.textMuted, fontFamily: T.font, marginTop: 1 }}>max</div>
                       </div>
-                    </div>
-                    <div style={{ background: T.greenLight, border: `1px solid ${T.greenBorder}`, borderRadius: 6, padding: "5px 8px", textAlign: "center" }}>
-                      <div style={{ fontSize: "0.58rem", color: T.textSub, fontFamily: T.font }}>Combined</div>
-                      <div style={{ fontSize: "0.88rem", fontWeight: 800, color: T.green, fontFamily: T.font }}>10% max</div>
                     </div>
                   </div>
 
@@ -723,7 +715,7 @@ export default function App() {
                 {/* Qualified combined footer — inside the card, ties both plans together */}
                 <div style={{ background: T.navyLight, borderTop: `1px solid ${T.navyBorder}`, padding: "10px 14px", textAlign: "center" }}>
                   <div style={{ fontSize: "0.63rem", color: T.textSub, fontFamily: T.font, marginBottom: 3 }}>
-                    401(k) + ESOP combined — cannot exceed
+                    401(k)/ESOP combined — cannot exceed
                   </div>
                   <div style={{ fontSize: "1.35rem", fontWeight: 800, color: T.navy, fontFamily: T.font, letterSpacing: "-0.02em", lineHeight: 1 }}>
                     10% maximum
@@ -741,7 +733,7 @@ export default function App() {
                 <div style={{ background: T.surface, padding: "10px 12px 10px", flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
                     <div style={{ background: T.ssepLight, border: `1px solid ${T.ssepBorder}`, borderRadius: 6, padding: "8px 6px", textAlign: "center" }}>
-                      <div style={{ fontSize: "0.6rem", color: T.ssep, fontFamily: T.font, marginBottom: 3 }}>Pre-Tax</div>
+                      <div style={{ fontSize: "0.6rem", color: T.ssep, fontFamily: T.font, marginBottom: 3 }}>Pre-tax</div>
                       <div style={{ fontSize: "1.25rem", fontWeight: 800, color: T.navy, fontFamily: T.font, lineHeight: 1 }}>10%</div>
                       <div style={{ fontSize: "0.55rem", color: T.textMuted, fontFamily: T.font, marginTop: 1 }}>max</div>
                     </div>
@@ -754,7 +746,7 @@ export default function App() {
                 </div>
                 <div style={{ background: T.ssepLight, borderTop: `1px solid ${T.ssepBorder}`, padding: "10px 14px", textAlign: "center" }}>
                   <div style={{ fontSize: "0.63rem", color: T.textSub, fontFamily: T.font, marginBottom: 3 }}>
-                    Pre-Tax + ESOP combined
+                    Pre-tax + ESOP combined
                   </div>
                   <div style={{ fontSize: "1.35rem", fontWeight: 800, color: T.ssep, fontFamily: T.font, letterSpacing: "-0.02em", lineHeight: 1 }}>
                     10% maximum
@@ -784,7 +776,7 @@ export default function App() {
                       All Plans Combined
                     </div>
                     <div style={{ fontSize: "0.65rem", color: T.textSub, fontFamily: T.font, marginTop: 2 }}>
-                      401(k) + ESOP + SSEP — cannot exceed
+                      401(k)/ESOP Plan + SSEP combined — cannot exceed
                     </div>
                   </div>
                   <div style={{ fontSize: "2.2rem", fontWeight: 800, color: T.navy, fontFamily: T.font, letterSpacing: "-0.04em", lineHeight: 1, flexShrink: 0 }}>
@@ -796,13 +788,9 @@ export default function App() {
             </div>
 
             {/* IRS dollar limit note */}
-            <div style={{ marginTop: 10, padding: "9px 13px", background: "rgba(255,255,255,0.05)", border: `1px solid rgba(255,255,255,0.10)`, borderRadius: T.radius, display: "flex", gap: 10, alignItems: "flex-start" }}>
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ flexShrink: 0, marginTop: 1 }}>
-                <circle cx="7" cy="7" r="6" stroke="rgba(255,255,255,0.35)" strokeWidth="1.2" />
-                <path d="M7 6v3.5M7 4.5v.5" stroke="rgba(255,255,255,0.55)" strokeWidth="1.3" strokeLinecap="round" />
-              </svg>
+            <div style={{ marginTop: 10, padding: "9px 13px", background: "rgba(255,255,255,0.05)", border: `1px solid rgba(255,255,255,0.10)`, borderRadius: T.radius }}>
               <div style={{ fontSize: "0.71rem", color: "rgba(255,255,255,0.6)", fontFamily: T.font, lineHeight: 1.6 }}>
-                The qualified plan (401(k) and ESOP) is also subject to IRS dollar limits — <strong style={{ color: "rgba(255,255,255,0.85)" }}>{fc(LIMIT_402G)} in elective deferrals</strong> for {PLAN_YEAR}{parseInt(age) >= 50 ? `, plus a ${parseInt(age) >= 60 && parseInt(age) <= 63 ? fc(LIMIT_CATCHUP_6063) + " enhanced catch-up (ages 60\u201363)" : fc(LIMIT_CATCHUP_50) + " catch-up contribution"}` : " (a catch-up contribution is available at age 50)"}. The SSEP has no IRS dollar limits.
+                The 401(k)/ESOP Plan is also subject to IRS dollar limits — <strong style={{ color: "rgba(255,255,255,0.85)" }}>{fc(LIMIT_402G)} in elective deferrals</strong> for {PLAN_YEAR}{parseInt(age) >= 50 ? `, plus a ${parseInt(age) >= 60 && parseInt(age) <= 63 ? fc(LIMIT_CATCHUP_6063) + " enhanced catch-up (ages 60\u201363)" : fc(LIMIT_CATCHUP_50) + " catch-up contribution"}` : " (a catch-up contribution is available after age 50)"}. The SSEP has no IRS dollar limits.
               </div>
             </div>
 
@@ -851,21 +839,21 @@ export default function App() {
               )}
             </div>
 
-            {/* ── Qualified ESOP Plan ── */}
-            <Divider label="Qualified ESOP Plan" />
+            {/* ── 401(k)/ESOP Plan ── */}
+            <Divider label="401(k)/ESOP Plan" />
 
             {/* 401(k) card */}
             <div style={{ border: `1.5px solid ${T.skyBorder}`, borderRadius: T.radius, overflow: "hidden", marginBottom: 10 }}>
               <div style={{ background: T.skyLight, borderBottom: `1px solid ${T.skyBorder}`, padding: "7px 12px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <span style={{ fontSize: "0.8rem", fontWeight: 700, color: T.sky, fontFamily: T.font, display: "flex", alignItems: "center", gap: 4 }}>
                   401(k) Savings
-                  <InfoTooltip text="Your 401(k) pre-tax and Roth contributions combined cannot exceed 10% of your compensation. Pre-tax contributions reduce your taxable income now; Roth contributions are made after tax and grow tax-free." />
+                  <InfoTooltip text="Your 401(k)/ESOP Plan is a qualified plan subject to IRS limits. Your 401(k) pre-tax and Roth after-tax contributions combined cannot exceed 10% of your compensation." />
                 </span>
                 {anyRateEntered && <BudgetPill used={used401k} max={MAX_401K_PCT} />}
               </div>
               <div style={{ padding: "10px 12px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }} className="mobile-stack">
                 <PctInput
-                  label="Pre-Tax"
+                  label="Pre-tax"
                   value={r401kPre}
                   accentColor={T.sky}
                   disabled={lock401kPre && p401kPre === 0}
@@ -873,10 +861,10 @@ export default function App() {
                   onChange={(v) => handleRateChange(setR401kPre, p401kPre, [
                     [used401k, MAX_401K_PCT], [usedQual, MAX_QUALIFIED_PCT], [usedTotal, MAX_TOTAL_PCT],
                   ], v)}
-                  tooltip="Reduces your taxable income now. Withdrawn as ordinary income in retirement."
+                  tooltip="Reduces your taxable income now; pay taxes later when withdrawn as ordinary income."
                 />
                 <PctInput
-                  label="Roth"
+                  label="Roth after-tax"
                   value={r401kRoth}
                   accentColor={T.sky}
                   disabled={lock401kRoth && p401kRoth === 0}
@@ -884,7 +872,7 @@ export default function App() {
                   onChange={(v) => handleRateChange(setR401kRoth, p401kRoth, [
                     [used401k, MAX_401K_PCT], [usedQual, MAX_QUALIFIED_PCT], [usedTotal, MAX_TOTAL_PCT],
                   ], v)}
-                  tooltip="Made after tax. Qualified withdrawals in retirement, including earnings, are tax-free."
+                  tooltip="Pay taxes now; earnings are tax-free if Roth account open for at least 5 years AND withdrawn after age 59½ or due to death or disability."
                 />
               </div>
             </div>
@@ -894,13 +882,13 @@ export default function App() {
               <div style={{ background: T.greenLight, borderBottom: `1px solid ${T.greenBorder}`, padding: "7px 12px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <span style={{ fontSize: "0.8rem", fontWeight: 700, color: T.green, fontFamily: T.font, display: "flex", alignItems: "center", gap: 4 }}>
                   ESOP Savings
-                  <InfoTooltip text="Your ESOP pre-tax and Roth contributions combined cannot exceed 10% of your compensation. Your 401(k) and ESOP contributions also share an overall 10% combined limit for the qualified plan." />
+                  <InfoTooltip text="Your ESOP pre-tax and Roth after-tax contributions combined cannot exceed 10% of your compensation. Your 401(k) and ESOP contributions also share an overall 10% combined limit for the 401(k)/ESOP Plan." />
                 </span>
                 {anyRateEntered && <BudgetPill used={usedEsop} max={MAX_ESOP_PCT} />}
               </div>
               <div style={{ padding: "10px 12px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }} className="mobile-stack">
                 <PctInput
-                  label="Pre-Tax"
+                  label="Pre-tax"
                   value={rEsopPre}
                   accentColor={T.green}
                   disabled={lockEsopPre && pEsopPre === 0}
@@ -908,10 +896,10 @@ export default function App() {
                   onChange={(v) => handleRateChange(setREsopPre, pEsopPre, [
                     [usedEsop, MAX_ESOP_PCT], [usedQual, MAX_QUALIFIED_PCT], [usedTotal, MAX_TOTAL_PCT],
                   ], v)}
-                  tooltip="Pre-tax ESOP contributions. Subject to the same 402(g) elective deferral limit as your 401(k)."
+                  tooltip="Reduces your taxable income now; pay taxes later when withdrawn as ordinary income."
                 />
                 <PctInput
-                  label="Roth"
+                  label="Roth after-tax"
                   value={rEsopRoth}
                   accentColor={T.green}
                   disabled={lockEsopRoth && pEsopRoth === 0}
@@ -919,7 +907,7 @@ export default function App() {
                   onChange={(v) => handleRateChange(setREsopRoth, pEsopRoth, [
                     [usedEsop, MAX_ESOP_PCT], [usedQual, MAX_QUALIFIED_PCT], [usedTotal, MAX_TOTAL_PCT],
                   ], v)}
-                  tooltip="Roth ESOP contributions. Qualified withdrawals in retirement are tax-free."
+                  tooltip="Pay taxes now; earnings are tax-free if Roth account open for at least 5 years AND withdrawn after age 59½ or due to death or disability."
                 />
               </div>
             </div>
@@ -941,20 +929,20 @@ export default function App() {
             )}
 
             {/* ── Supplemental Savings Plan (SSEP) ── */}
-            <Divider label="Supplemental Savings Plan" />
+            <Divider label="Supplemental Savings and ESOP Plan (SSEP)" />
 
             {/* SSEP card */}
             <div style={{ border: `1.5px solid ${T.ssepBorder}`, borderRadius: T.radius, overflow: "hidden", marginBottom: 4 }}>
               <div style={{ background: T.ssepLight, borderBottom: `1px solid ${T.ssepBorder}`, padding: "7px 12px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <span style={{ fontSize: "0.8rem", fontWeight: 700, color: T.ssep, fontFamily: T.font, display: "flex", alignItems: "center", gap: 4 }}>
                   SSEP
-                  <InfoTooltip text="The SSEP is a non-qualified supplemental plan with no IRS dollar limits. Your SSEP pre-tax and ESOP contributions combined cannot exceed 10% of compensation, and your total across all plans cannot exceed 20%." />
+                  <InfoTooltip text="The SSEP is a non-qualified plan that only allows for pre-tax contributions. There are no IRS limits. Your SSEP pre-tax and ESOP pre-tax contributions combined cannot exceed 10% of compensation. Your total deferral across all plans cannot exceed 20%." />
                 </span>
                 {anyRateEntered && <BudgetPill used={usedSsep} max={MAX_SSEP_PCT} />}
               </div>
               <div style={{ padding: "10px 12px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }} className="mobile-stack">
                 <PctInput
-                  label="Pre-Tax"
+                  label="Pre-tax"
                   value={rSsepPre}
                   accentColor={T.ssep}
                   disabled={lockSsepPre && pSsepPre === 0}
@@ -962,7 +950,7 @@ export default function App() {
                   onChange={(v) => handleRateChange(setRSsepPre, pSsepPre, [
                     [usedSsep, MAX_SSEP_PCT], [usedTotal, MAX_TOTAL_PCT],
                   ], v)}
-                  tooltip="Non-qualified supplemental pre-tax contributions. No IRS dollar limits apply."
+                  tooltip="Reduces your taxable income now; pay taxes later when withdrawn as ordinary income."
                 />
                 <PctInput
                   label="ESOP"
@@ -973,7 +961,7 @@ export default function App() {
                   onChange={(v) => handleRateChange(setRSsepEsop, pSsepEsop, [
                     [usedSsep, MAX_SSEP_PCT], [usedTotal, MAX_TOTAL_PCT],
                   ], v)}
-                  tooltip="Non-qualified supplemental ESOP contributions. No IRS dollar limits apply."
+                  tooltip="Reduces your taxable income now; pay taxes later when withdrawn as ordinary income."
                 />
               </div>
             </div>
@@ -1105,14 +1093,14 @@ export default function App() {
                 {result.hasQualContribs && (
                   <div style={{ border: `1px solid ${T.navyBorder}`, borderRadius: T.radius, overflow: "hidden" }}>
                     <div style={{ padding: "8px 14px 6px", background: T.navyLight, borderBottom: `1px solid ${T.navyBorder}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                      <span style={{ fontSize: "0.82rem", fontWeight: 700, color: T.navy, fontFamily: T.font }}>Qualified ESOP Plan</span>
+                      <span style={{ fontSize: "0.82rem", fontWeight: 700, color: T.navy, fontFamily: T.font }}>401(k)/ESOP Plan</span>
                     </div>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 1, background: T.navyBorder }}>
                       {[
-                        { label: "401(k) Pre-Tax", pct: result.el401kPre, dollars: result.d401kPre, color: T.sky },
-                        { label: "401(k) Roth", pct: result.el401kRoth, dollars: result.d401kRoth, color: T.sky },
-                        { label: "ESOP Pre-Tax", pct: result.elEsopPre, dollars: result.dEsopPre, color: T.green },
-                        { label: "ESOP Roth", pct: result.elEsopRoth, dollars: result.dEsopRoth, color: T.green },
+                        { label: "401(k) Pre-tax", pct: result.el401kPre, dollars: result.d401kPre, color: T.sky },
+                        { label: "401(k) Roth after-tax", pct: result.el401kRoth, dollars: result.d401kRoth, color: T.sky },
+                        { label: "ESOP Pre-tax", pct: result.elEsopPre, dollars: result.dEsopPre, color: T.green },
+                        { label: "ESOP Roth after-tax", pct: result.elEsopRoth, dollars: result.dEsopRoth, color: T.green },
                       ].map(({ label, pct, dollars, color }) => (
                         <div key={label} style={{ background: T.surface, padding: "8px 12px" }}>
                           <div style={{ fontSize: "0.68rem", fontWeight: 600, color: T.textSub, fontFamily: T.font, marginBottom: 3 }}>{label}</div>
@@ -1143,9 +1131,9 @@ export default function App() {
 
                       <Divider label="Employee Contributions" />
                       <SummaryLine label="401(k) pre-tax" value={fc(result.d401kPre)} indent />
-                      <SummaryLine label="401(k) Roth" value={fc(result.d401kRoth)} indent />
+                      <SummaryLine label="401(k) Roth after-tax" value={fc(result.d401kRoth)} indent />
                       <SummaryLine label="ESOP pre-tax" value={fc(result.dEsopPre)} indent />
-                      <SummaryLine label="ESOP Roth" value={fc(result.dEsopRoth)} indent />
+                      <SummaryLine label="ESOP Roth after-tax" value={fc(result.dEsopRoth)} indent />
                       <SummaryLine label="Total employee (qualified plan)" value={fc(result.dQualEmployee)} bold />
 
                       <Divider label="Employer Match" />
@@ -1173,7 +1161,7 @@ export default function App() {
                     </div>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1, background: T.ssepBorder }}>
                       {[
-                        { label: "SSEP Pre-Tax", pct: result.elSsepPre, dollars: result.dSsepPre },
+                        { label: "SSEP Pre-tax", pct: result.elSsepPre, dollars: result.dSsepPre },
                         { label: "SSEP ESOP", pct: result.elSsepEsop, dollars: result.dSsepEsop },
                       ].map(({ label, pct, dollars }) => (
                         <div key={label} style={{ background: T.surface, padding: "8px 12px" }}>
@@ -1239,10 +1227,10 @@ export default function App() {
                 {/* Collapsible total summary */}
                 <SummaryPanel isOpen={showTotalSummary} onToggle={() => setShowTotalSummary(v => !v)}>
                   <SummaryLine label="Total compensation" value={fc(result.totalComp)} />
-                  <SummaryLine label="Employee — Qualified ESOP" value={result.hasQualContribs ? fc(result.dQualEmployee) : "—"} indent />
+                  <SummaryLine label="Employee — 401(k)/ESOP" value={result.hasQualContribs ? fc(result.dQualEmployee) : "—"} indent />
                   <SummaryLine label="Employee — SSEP" value={result.hasSsepContribs ? fc(result.dSsepTotal) : "—"} indent />
                   <SummaryLine label="Total employee contributions" value={fc(result.dEmployeeTotal)} bold />
-                  <SummaryLine label="Employer match — Qualified ESOP" value={result.hasQualContribs ? fc(result.qualMatchNet) : "—"} indent />
+                  <SummaryLine label="Employer match — 401(k)/ESOP" value={result.hasQualContribs ? fc(result.qualMatchNet) : "—"} indent />
                   {result.has415cSpillover && (
                     <SummaryLine label="Employer match — Excess Benefit Plan" value={fc(result.spilloverExcessBenefit)} indent color={T.amber} />
                   )}
