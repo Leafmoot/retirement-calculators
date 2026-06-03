@@ -562,7 +562,7 @@ function SummaryPanel({ isOpen, onToggle, children }) {
         onMouseEnter={(e) => (e.currentTarget.style.background = T.border)}
         onMouseLeave={(e) => (e.currentTarget.style.background = T.surfaceAlt)}
       >
-        <span>Total contributions summary</span>
+        <span>Total Contributions Summary</span>
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none"
           style={{ flexShrink: 0, transform: isOpen ? "rotate(180deg)" : "none", transition: "transform 0.15s" }}>
           <path d="M2 4l4 4 4-4" stroke={T.textSub} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -573,6 +573,23 @@ function SummaryPanel({ isOpen, onToggle, children }) {
           {children}
         </div>
       )}
+    </div>
+  );
+}
+
+// ── Plan Cell ─────────────────────────────────────────────────────────────────
+function PlanCell({ label, pct, dollars, ytd, periodsLeft }) {
+  const perCheck = periodsLeft > 0 ? Math.max(dollars - ytd, 0) / periodsLeft : null;
+  return (
+    <div style={{ background: T.surface, padding: "8px 12px" }}>
+      <div style={{ fontSize: "0.68rem", fontWeight: 600, color: T.textSub, fontFamily: T.font, marginBottom: 3 }}>{label}</div>
+      {pct === 0
+        ? <div style={{ fontSize: "0.82rem", fontWeight: 600, color: T.textMuted, fontFamily: T.font }}>-</div>
+        : <div>
+            <div style={{ fontSize: "1.35rem", fontWeight: 700, color: T.navy, fontFamily: T.font, letterSpacing: "-0.02em", lineHeight: 1 }}>{pct}%</div>
+            {perCheck !== null && <div style={{ fontSize: "0.72rem", color: T.textSub, fontFamily: T.font, marginTop: 2 }}>{fc(perCheck)}/paycheck</div>}
+          </div>
+      }
     </div>
   );
 }
@@ -696,21 +713,6 @@ export default function App() {
   const lockSsepPre  = (usedSsep >= MAX_SSEP_PCT) || (usedTotal >= MAX_TOTAL_PCT);
   const lockSsepEsop = (usedSsep >= MAX_SSEP_PCT) || (usedTotal >= MAX_TOTAL_PCT);
 
-  // ── FICA pre-tax sub-cap ─────────────────────────────────────────────────
-  // When FICA is Yes and catch-up applies, combined qualified pre-tax dollars
-  // (401k pre-tax + ESOP pre-tax) cannot exceed the standard $24,500 limit.
-  // The catch-up dollars above $24,500 must be Roth. This cap does not apply
-  // when FICA is No or unanswered.
-  const ficaPreTaxCapActive = fica === true && liveCatchUp > 0;
-  // Pre-tax dollars already consumed by YTD (only pre-tax YTD buckets count here)
-  const ytdPreTaxOnly = ytd401kPreAmt + ytdEsopPreAmt;
-  // Remaining room for pre-tax elections under $24,500 after YTD
-  const effectivePreTaxLimit = Math.max(LIMIT_402G - ytdPreTaxOnly, 0);
-  // As a percentage — floor so we never allow even one cent over $24,500
-  const maxPreTaxPct = ficaPreTaxCapActive && liveComp > 0
-    ? Math.floor((effectivePreTaxLimit / liveComp) * 10000) / 100
-    : 9999;
-
   function handleRateChange(setter, fieldUsed, bucketChecks, newVal) {
     const raw = newVal === "" ? 0 : parsePct(newVal);
     for (const [bucketUsed, bucketMax] of bucketChecks) {
@@ -727,52 +729,49 @@ export default function App() {
     markDirty();
   }
 
-  // Handler for qualified pre-tax fields when FICA cap is active.
-  // otherPreTaxPct: the current pre-tax percentage in the OTHER qualified pre-tax field.
-  // rothSetter: setter for the Roth field of the SAME plan.
-  // currentRothPct: current value of the Roth field of the same plan (used to compute spill).
-  // bucketChecks: the standard plan/total limit checks passed through to handleRateChange.
+  // ── FICA pre-tax sub-cap ─────────────────────────────────────────────────
+  // When FICA is Yes and catch-up applies, combined qualified pre-tax dollars
+  // (401k pre-tax + ESOP pre-tax) cannot exceed the standard $24,500 limit.
+  // Catch-up dollars above $24,500 must be Roth. No restriction when FICA is No.
+  const ficaPreTaxCapActive = fica === true && liveCatchUp > 0;
+  const ytdPreTaxOnly = ytd401kPreAmt + ytdEsopPreAmt;
+  const effectivePreTaxLimit = Math.max(LIMIT_402G - ytdPreTaxOnly, 0);
+
   function handlePreTaxWithFicaCap(setter, fieldUsed, bucketChecks, newVal, otherPreTaxPct, rothSetter) {
     if (!ficaPreTaxCapActive) {
-      // No FICA restriction — behave exactly like a normal rate change
       handleRateChange(setter, fieldUsed, bucketChecks, newVal);
       return;
     }
 
     const raw = newVal === "" ? 0 : parsePct(newVal);
 
-    // How much pre-tax room is left after the other pre-tax field has its share?
+    // How much pre-tax room remains after the other pre-tax field's share?
     const otherPreTaxDollars = liveComp > 0 ? liveComp * (otherPreTaxPct / 100) : 0;
     const remainingPreTaxRoom = Math.max(effectivePreTaxLimit - otherPreTaxDollars, 0);
-    // Max this field can hold as a percentage — floor so we stay under $24,500
+    // Floor — cannot let even one cent of catch-up go pre-tax
     const fieldPreTaxMaxPct = liveComp > 0
       ? Math.floor((remainingPreTaxRoom / liveComp) * 10000) / 100
       : 9999;
 
-    // What the user actually typed, capped at the pre-tax ceiling for this field
-    const snappedPreTax = Math.min(raw, fieldPreTaxMaxPct);
-    // Also enforce the standard plan/total bucket checks on the snapped value
-    let finalPreTax = snappedPreTax;
+    let snappedPreTax = Math.min(raw, fieldPreTaxMaxPct);
+    // Also enforce standard plan/total bucket checks
     for (const [bucketUsed, bucketMax] of bucketChecks) {
       const otherContrib = bucketUsed - fieldUsed;
-      if (finalPreTax + otherContrib > bucketMax) {
+      if (snappedPreTax + otherContrib > bucketMax) {
         const maxAllowed = Math.max(bucketMax - otherContrib, 0);
-        finalPreTax = Math.min(finalPreTax, Math.ceil(maxAllowed));
+        snappedPreTax = Math.min(snappedPreTax, Math.ceil(maxAllowed));
       }
     }
 
-    setter(finalPreTax === 0 && newVal === "" ? "" : String(Math.floor(finalPreTax)));
+    setter(snappedPreTax === 0 && newVal === "" ? "" : String(Math.floor(snappedPreTax)));
 
-    // If the user typed more than the snapped value, the overflow must go to Roth
+    // Overflow must go to Roth for the same plan
     if (raw > snappedPreTax && liveComp > 0) {
       const overflowDollars = (raw - snappedPreTax) * (liveComp / 100);
-      // The Roth field can hold up to the remaining room under the full catch-up ceiling
-      // Room under full ceiling = effectiveElectiveLimit minus pre-tax dollars in both fields
-      // after snap, minus what's already in the other plan's Roth
-      const snappedPreTaxDollars = finalPreTax * (liveComp / 100);
+      const snappedPreTaxDollars = snappedPreTax * (liveComp / 100);
+      const effectiveElectiveLimit = Math.max(liveElectiveLimit - ytdQualTotal, 0);
       const rothSpillDollars = Math.min(overflowDollars, effectiveElectiveLimit - snappedPreTaxDollars - otherPreTaxDollars);
       const rothSpillPct = Math.ceil((Math.max(rothSpillDollars, 0) / liveComp) * 10000) / 100;
-      // Write the minimum required Roth — replace whatever was there
       rothSetter(rothSpillPct <= 0 ? "" : String(Math.ceil(rothSpillPct)));
     }
 
@@ -978,7 +977,7 @@ export default function App() {
           type="button"
           onClick={() => setShowLimitsGuide(v => !v)}
           aria-expanded={showLimitsGuide}
-          aria-label="How the contribution limits work"
+          aria-label="How the Contribution Limits Work"
           style={{
             width: "100%", padding: "9px 14px",
             display: "flex", alignItems: "center", justifyContent: "space-between",
@@ -992,12 +991,12 @@ export default function App() {
         >
           <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <rect x="1" y="4" width="4" height="8" rx="1" fill={showLimitsGuide ? T.sky : T.sky} opacity="0.85" />
-              <rect x="6" y="4" width="4" height="8" rx="1" fill={showLimitsGuide ? T.green : T.green} opacity="0.85" />
-              <rect x="11" y="4" width="4" height="8" rx="1" fill={showLimitsGuide ? T.ssep : T.ssep} opacity="0.85" />
+              <rect x="1" y="4" width="4" height="8" rx="1" fill={showLimitsGuide ? "rgba(255,255,255,0.5)" : T.navyBorder} />
+              <rect x="6" y="4" width="4" height="8" rx="1" fill={showLimitsGuide ? "rgba(255,255,255,0.7)" : T.borderStrong} />
+              <rect x="11" y="4" width="4" height="8" rx="1" fill={showLimitsGuide ? "rgba(255,255,255,0.9)" : T.navy} />
             </svg>
             <span style={{ fontSize: "0.82rem", fontWeight: 700, color: showLimitsGuide ? "#FFFFFF" : T.navy, letterSpacing: "-0.01em" }}>
-              How the contribution limits work
+              How the Contribution Limits Work
             </span>
           </span>
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none"
@@ -1019,7 +1018,7 @@ export default function App() {
             {/* Title */}
             <div style={{ textAlign: "center", marginBottom: 20 }}>
               <div style={{ fontSize: isMobile ? "0.95rem" : "1.05rem", fontWeight: 800, color: "#FFFFFF", fontFamily: T.font, letterSpacing: "-0.02em" }}>
-                {PLAN_YEAR} Maximum Contribution Rates — Highly Compensated Employees
+                {PLAN_YEAR} Maximum Contribution Rates: Highly Compensated Employees
               </div>
               <div style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.55)", fontFamily: T.font, marginTop: 4 }}>
                 All limits expressed as a percentage of total compensation (W-2 wages)
@@ -1044,17 +1043,17 @@ export default function App() {
 
                   {/* 401(k) column */}
                   <div style={{ background: T.surface, padding: "10px 12px 10px", display: "flex", flexDirection: "column", gap: 8 }}>
-                    <div style={{ background: T.skyLight, border: `1px solid ${T.skyBorder}`, borderRadius: 6, padding: "8px 10px", textAlign: "center" }}>
-                      <div style={{ fontSize: "0.92rem", fontWeight: 800, color: T.sky, fontFamily: T.font, letterSpacing: "-0.01em" }}>401(k) Savings</div>
+                    <div style={{ background: T.navyLight, border: `1px solid ${T.navyBorder}`, borderRadius: 6, padding: "8px 10px", textAlign: "center" }}>
+                      <div style={{ fontSize: "0.92rem", fontWeight: 800, color: T.navy, fontFamily: T.font, letterSpacing: "-0.01em" }}>401(k) Savings</div>
                     </div>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
-                      <div style={{ background: T.skyLight, border: `1px solid ${T.skyBorder}`, borderRadius: 6, padding: "8px 6px", textAlign: "center" }}>
-                        <div style={{ fontSize: "0.6rem", color: T.sky, fontFamily: T.font, marginBottom: 3 }}>Pre-tax</div>
+                      <div style={{ background: T.navyLight, border: `1px solid ${T.navyBorder}`, borderRadius: 6, padding: "8px 6px", textAlign: "center" }}>
+                        <div style={{ fontSize: "0.6rem", color: T.navy, fontFamily: T.font, marginBottom: 3 }}>Pre-tax</div>
                         <div style={{ fontSize: "1.25rem", fontWeight: 800, color: T.navy, fontFamily: T.font, lineHeight: 1 }}>10%</div>
                         <div style={{ fontSize: "0.55rem", color: T.textMuted, fontFamily: T.font, marginTop: 1 }}>max</div>
                       </div>
-                      <div style={{ background: T.skyLight, border: `1px solid ${T.skyBorder}`, borderRadius: 6, padding: "8px 6px", textAlign: "center" }}>
-                        <div style={{ fontSize: "0.6rem", color: T.sky, fontFamily: T.font, marginBottom: 3 }}>Roth after-tax</div>
+                      <div style={{ background: T.navyLight, border: `1px solid ${T.navyBorder}`, borderRadius: 6, padding: "8px 6px", textAlign: "center" }}>
+                        <div style={{ fontSize: "0.6rem", color: T.navy, fontFamily: T.font, marginBottom: 3 }}>Roth after-tax</div>
                         <div style={{ fontSize: "1.25rem", fontWeight: 800, color: T.navy, fontFamily: T.font, lineHeight: 1 }}>10%</div>
                         <div style={{ fontSize: "0.55rem", color: T.textMuted, fontFamily: T.font, marginTop: 1 }}>max</div>
                       </div>
@@ -1063,17 +1062,17 @@ export default function App() {
 
                   {/* ESOP column */}
                   <div style={{ background: T.surface, padding: "10px 12px 10px", display: "flex", flexDirection: "column", gap: 8 }}>
-                    <div style={{ background: T.greenLight, border: `1px solid ${T.greenBorder}`, borderRadius: 6, padding: "8px 10px", textAlign: "center" }}>
-                      <div style={{ fontSize: "0.92rem", fontWeight: 800, color: T.green, fontFamily: T.font, letterSpacing: "-0.01em" }}>ESOP Savings</div>
+                    <div style={{ background: T.surfaceAlt, border: `1px solid ${T.border}`, borderRadius: 6, padding: "8px 10px", textAlign: "center" }}>
+                      <div style={{ fontSize: "0.92rem", fontWeight: 800, color: T.navy, fontFamily: T.font, letterSpacing: "-0.01em" }}>ESOP Savings</div>
                     </div>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
-                      <div style={{ background: T.greenLight, border: `1px solid ${T.greenBorder}`, borderRadius: 6, padding: "8px 6px", textAlign: "center" }}>
-                        <div style={{ fontSize: "0.6rem", color: T.green, fontFamily: T.font, marginBottom: 3 }}>Pre-tax</div>
+                      <div style={{ background: T.surfaceAlt, border: `1px solid ${T.border}`, borderRadius: 6, padding: "8px 6px", textAlign: "center" }}>
+                        <div style={{ fontSize: "0.6rem", color: T.navy, fontFamily: T.font, marginBottom: 3 }}>Pre-tax</div>
                         <div style={{ fontSize: "1.25rem", fontWeight: 800, color: T.navy, fontFamily: T.font, lineHeight: 1 }}>10%</div>
                         <div style={{ fontSize: "0.55rem", color: T.textMuted, fontFamily: T.font, marginTop: 1 }}>max</div>
                       </div>
-                      <div style={{ background: T.greenLight, border: `1px solid ${T.greenBorder}`, borderRadius: 6, padding: "8px 6px", textAlign: "center" }}>
-                        <div style={{ fontSize: "0.6rem", color: T.green, fontFamily: T.font, marginBottom: 3 }}>Roth after-tax</div>
+                      <div style={{ background: T.surfaceAlt, border: `1px solid ${T.border}`, borderRadius: 6, padding: "8px 6px", textAlign: "center" }}>
+                        <div style={{ fontSize: "0.6rem", color: T.navy, fontFamily: T.font, marginBottom: 3 }}>Roth after-tax</div>
                         <div style={{ fontSize: "1.25rem", fontWeight: 800, color: T.navy, fontFamily: T.font, lineHeight: 1 }}>10%</div>
                         <div style={{ fontSize: "0.55rem", color: T.textMuted, fontFamily: T.font, marginTop: 1 }}>max</div>
                       </div>
@@ -1085,7 +1084,7 @@ export default function App() {
                 {/* Qualified combined footer — inside the card, ties both plans together */}
                 <div style={{ background: T.navyLight, borderTop: `1px solid ${T.navyBorder}`, padding: "10px 14px", textAlign: "center" }}>
                   <div style={{ fontSize: "0.63rem", color: T.textSub, fontFamily: T.font, marginBottom: 3 }}>
-                    401(k)/ESOP combined — cannot exceed
+                    401(k)/ESOP combined: cannot exceed
                   </div>
                   <div style={{ fontSize: "1.35rem", fontWeight: 800, color: T.navy, fontFamily: T.font, letterSpacing: "-0.02em", lineHeight: 1 }}>
                     10% maximum
@@ -1095,30 +1094,30 @@ export default function App() {
 
               {/* RIGHT ZONE: SSEP card */}
               <div style={{ border: "none", borderLeft: `1px solid ${T.navyBorder}`, borderRadius: 0, overflow: "hidden", display: "flex", flexDirection: "column" }}>
-                <div style={{ background: T.ssepLight, borderBottom: `1px solid ${T.ssepBorder}`, padding: "8px 14px", textAlign: "center" }}>
-                  <div style={{ fontSize: "0.92rem", fontWeight: 800, color: T.ssep, fontFamily: T.font, letterSpacing: "-0.01em" }}>SSEP</div>
+                <div style={{ background: T.border, borderBottom: `1px solid ${T.borderStrong}`, padding: "8px 14px", textAlign: "center" }}>
+                  <div style={{ fontSize: "0.92rem", fontWeight: 800, color: T.navy, fontFamily: T.font, letterSpacing: "-0.01em" }}>SSEP</div>
                   <div style={{ fontSize: "0.62rem", color: T.textSub, fontFamily: T.font, marginTop: 3 }}>No IRS dollar limits</div>
                 </div>
                 {/* SSEP cells side by side — matching the 401(k)/ESOP layout above */}
                 <div style={{ background: T.surface, padding: "10px 12px 10px", flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
-                    <div style={{ background: T.ssepLight, border: `1px solid ${T.ssepBorder}`, borderRadius: 6, padding: "8px 6px", textAlign: "center" }}>
-                      <div style={{ fontSize: "0.6rem", color: T.ssep, fontFamily: T.font, marginBottom: 3 }}>Pre-tax</div>
+                    <div style={{ background: T.border, border: `1px solid ${T.borderStrong}`, borderRadius: 6, padding: "8px 6px", textAlign: "center" }}>
+                      <div style={{ fontSize: "0.6rem", color: T.navy, fontFamily: T.font, marginBottom: 3 }}>Pre-tax</div>
                       <div style={{ fontSize: "1.25rem", fontWeight: 800, color: T.navy, fontFamily: T.font, lineHeight: 1 }}>10%</div>
                       <div style={{ fontSize: "0.55rem", color: T.textMuted, fontFamily: T.font, marginTop: 1 }}>max</div>
                     </div>
-                    <div style={{ background: T.ssepLight, border: `1px solid ${T.ssepBorder}`, borderRadius: 6, padding: "8px 6px", textAlign: "center" }}>
-                      <div style={{ fontSize: "0.6rem", color: T.ssep, fontFamily: T.font, marginBottom: 3 }}>ESOP</div>
+                    <div style={{ background: T.border, border: `1px solid ${T.borderStrong}`, borderRadius: 6, padding: "8px 6px", textAlign: "center" }}>
+                      <div style={{ fontSize: "0.6rem", color: T.navy, fontFamily: T.font, marginBottom: 3 }}>ESOP</div>
                       <div style={{ fontSize: "1.25rem", fontWeight: 800, color: T.navy, fontFamily: T.font, lineHeight: 1 }}>10%</div>
                       <div style={{ fontSize: "0.55rem", color: T.textMuted, fontFamily: T.font, marginTop: 1 }}>max</div>
                     </div>
                   </div>
                 </div>
-                <div style={{ background: T.ssepLight, borderTop: `1px solid ${T.ssepBorder}`, padding: "10px 14px", textAlign: "center" }}>
+                <div style={{ background: T.border, borderTop: `1px solid ${T.borderStrong}`, padding: "10px 14px", textAlign: "center" }}>
                   <div style={{ fontSize: "0.63rem", color: T.textSub, fontFamily: T.font, marginBottom: 3 }}>
                     Pre-tax + ESOP combined
                   </div>
-                  <div style={{ fontSize: "1.35rem", fontWeight: 800, color: T.ssep, fontFamily: T.font, letterSpacing: "-0.02em", lineHeight: 1 }}>
+                  <div style={{ fontSize: "1.35rem", fontWeight: 800, color: T.navy, fontFamily: T.font, letterSpacing: "-0.02em", lineHeight: 1 }}>
                     10% maximum
                   </div>
                 </div>
@@ -1126,14 +1125,9 @@ export default function App() {
 
               </div>{/* end plan cards row */}
 
-              {/* 20% total bar — white with three-color stripe spanning all plans */}
+              {/* 20% total bar — single navy stripe */}
               <div style={{ background: T.surface }}>
-                {/* Three-color stripe aligned to columns: sky=401(k), green=ESOP, ssep=SSEP */}
-                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr 1fr" : "1fr 1fr 1fr", height: 5 }}>
-                  <div style={{ background: T.sky }} />
-                  <div style={{ background: T.green }} />
-                  <div style={{ background: T.ssep }} />
-                </div>
+                <div style={{ height: 5, background: T.navy, opacity: 0.18 }} />
                 <div style={{
                   padding: "12px 20px",
                   display: "flex",
@@ -1141,13 +1135,8 @@ export default function App() {
                   justifyContent: "space-between",
                   gap: 16,
                 }}>
-                  <div>
-                    <div style={{ fontSize: "0.78rem", fontWeight: 800, color: T.navy, fontFamily: T.font, letterSpacing: "0.04em", textTransform: "uppercase" }}>
-                      All Plans Combined
-                    </div>
-                    <div style={{ fontSize: "0.65rem", color: T.textSub, fontFamily: T.font, marginTop: 2 }}>
-                      401(k)/ESOP Plan + SSEP combined — cannot exceed
-                    </div>
+                  <div style={{ fontSize: "0.78rem", fontWeight: 700, color: T.navy, fontFamily: T.font, letterSpacing: "0.01em" }}>
+                    401(k)/ESOP Plan + SSEP Combined: cannot exceed
                   </div>
                   <div style={{ fontSize: "2.2rem", fontWeight: 800, color: T.navy, fontFamily: T.font, letterSpacing: "-0.04em", lineHeight: 1, flexShrink: 0 }}>
                     20%
@@ -1160,7 +1149,7 @@ export default function App() {
             {/* IRS dollar limit note */}
             <div style={{ marginTop: 10, padding: "9px 13px", background: "rgba(255,255,255,0.05)", border: `1px solid rgba(255,255,255,0.10)`, borderRadius: T.radius }}>
               <div style={{ fontSize: "0.71rem", color: "rgba(255,255,255,0.6)", fontFamily: T.font, lineHeight: 1.6 }}>
-                The 401(k)/ESOP Plan is also subject to IRS dollar limits — <strong style={{ color: "rgba(255,255,255,0.85)" }}>{fc(LIMIT_402G)} in elective deferrals</strong> for {PLAN_YEAR}{parseInt(age) >= 50 ? `, plus a ${parseInt(age) >= 60 && parseInt(age) <= 63 ? fc(LIMIT_CATCHUP_6063) + " enhanced catch-up (ages 60\u201363)" : fc(LIMIT_CATCHUP_50) + " catch-up contribution"}` : " (a catch-up contribution is available after age 50)"}. The SSEP has no IRS dollar limits.
+                The 401(k)/ESOP Plan is also subject to IRS dollar limits: <strong style={{ color: "rgba(255,255,255,0.85)" }}>{fc(LIMIT_402G)} in elective deferrals</strong> for {PLAN_YEAR}{parseInt(age) >= 50 ? `, plus a ${parseInt(age) >= 60 && parseInt(age) <= 63 ? fc(LIMIT_CATCHUP_6063) + " enhanced catch-up (ages 60\u201363)" : fc(LIMIT_CATCHUP_50) + " catch-up contribution"}` : " (a catch-up contribution is available after age 50)"}. The SSEP has no IRS dollar limits.
               </div>
             </div>
 
@@ -1201,8 +1190,8 @@ export default function App() {
               <Input value={age} onChange={(v) => { setAge(v); markDirty(); }} type="number" integersOnly err={errors.age} inputRef={ageRef} placeholder="e.g. 45" />
               <FieldErr msg={errors.age} />
               {age && parseInt(age) >= 50 && (
-                <div style={{ marginTop: 5, fontSize: "0.72rem", color: T.sky, fontFamily: T.font, fontWeight: 600 }}>
-                  Catch-up eligible — {parseInt(age) >= 60 && parseInt(age) <= 63
+                <div style={{ marginTop: 5, fontSize: "0.72rem", color: T.navy, fontFamily: T.font, fontWeight: 600 }}>
+                  Catch-up eligible – {parseInt(age) >= 60 && parseInt(age) <= 63
                     ? `${fc(LIMIT_CATCHUP_6063)} enhanced catch-up (ages 60–63)`
                     : `${fc(LIMIT_CATCHUP_50)} catch-up`}
                 </div>
@@ -1244,19 +1233,19 @@ export default function App() {
                     setYtd401kPre(""); setYtd401kRoth("");
                     markDirty();
                   }}
-                  colors={{ active: T.sky, activeBg: T.skyLight, activeBorder: T.skyBorder }}
+                  colors={{ active: T.navy, activeBg: T.navyLight, activeBorder: T.navyBorder }}
                   alwaysColor={true}
                 />
                 {show401k && (
-                  <div style={{ border: `1.5px solid ${T.skyBorder}`, borderTop: "none", borderRadius: `0 0 ${T.radius} ${T.radius}`, padding: "10px 12px", background: T.surface }}>
+                  <div style={{ border: `1.5px solid ${T.navyBorder}`, borderTop: "none", borderRadius: `0 0 ${T.radius} ${T.radius}`, padding: "10px 12px", background: T.surface }}>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }} className="mobile-stack">
-                      <PctInput label="Pre-tax" value={r401kPre} accentColor={T.sky}
+                      <PctInput label="Pre-tax" value={r401kPre} accentColor={T.navy}
                         disabled={lock401kPre && p401kPre === 0}
                         disabledReason={usedQual >= maxQualPct ? "IRS deferral limit reached" : usedQual >= MAX_QUALIFIED_PCT ? "Qualified plan limit reached" : usedTotal >= MAX_TOTAL_PCT ? "Overall 20% limit reached" : "401(k) 10% limit reached"}
                         onChange={(v) => handlePreTaxWithFicaCap(setR401kPre, p401kPre, [[used401k, MAX_401K_PCT], [usedQual, MAX_QUALIFIED_PCT], [usedTotal, MAX_TOTAL_PCT], [usedQual, maxQualPct]], v, pEsopPre, setR401kRoth)}
                         tooltip="Reduces your taxable income now; pay taxes later when withdrawn as ordinary income."
                       />
-                      <PctInput label="Roth after-tax" value={r401kRoth} accentColor={T.sky}
+                      <PctInput label="Roth after-tax" value={r401kRoth} accentColor={T.navy}
                         disabled={lock401kRoth && p401kRoth === 0}
                         disabledReason={usedQual >= maxQualPct ? "IRS deferral limit reached" : usedQual >= MAX_QUALIFIED_PCT ? "Qualified plan limit reached" : usedTotal >= MAX_TOTAL_PCT ? "Overall 20% limit reached" : "401(k) 10% limit reached"}
                         onChange={(v) => handleRateChange(setR401kRoth, p401kRoth, [[used401k, MAX_401K_PCT], [usedQual, MAX_QUALIFIED_PCT], [usedTotal, MAX_TOTAL_PCT], [usedQual, maxQualPct]], v)}
@@ -1266,18 +1255,18 @@ export default function App() {
                     {liveComp > 0 && used401k > 0 && (
                       <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 2px", marginBottom: 8 }}>
                         <span style={{ fontSize: "0.7rem", color: T.textSub, fontFamily: T.font }}>401(k) contributions</span>
-                        <span style={{ fontSize: "0.7rem", fontFamily: T.font, fontWeight: 600, color: T.sky }}>≈ {fc(liveComp * (used401k / 100))}/yr</span>
+                        <span style={{ fontSize: "0.7rem", fontFamily: T.font, fontWeight: 600, color: T.navy }}>≈ {fc(liveComp * (used401k / 100))}/yr</span>
                       </div>
                     )}
                     <Divider label="Year-to-date contributed" />
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }} className="mobile-stack">
                       <div>
-                        <div style={{ marginBottom: 4, fontSize: "0.78rem", fontWeight: 600, color: T.sky, fontFamily: T.font }}>Pre-tax</div>
+                        <div style={{ marginBottom: 4, fontSize: "0.78rem", fontWeight: 600, color: T.navy, fontFamily: T.font }}>Pre-tax</div>
                         <Input value={ytd401kPre} onChange={(v) => { setYtd401kPre(v); markDirty(); }} prefix="$" type="number" err={errors.ytd401kPre} inputRef={ytd401kPreRef} placeholder="0" />
                         <FieldErr msg={errors.ytd401kPre} />
                       </div>
                       <div>
-                        <div style={{ marginBottom: 4, fontSize: "0.78rem", fontWeight: 600, color: T.sky, fontFamily: T.font }}>Roth after-tax</div>
+                        <div style={{ marginBottom: 4, fontSize: "0.78rem", fontWeight: 600, color: T.navy, fontFamily: T.font }}>Roth after-tax</div>
                         <Input value={ytd401kRoth} onChange={(v) => { setYtd401kRoth(v); markDirty(); }} prefix="$" type="number" err={errors.ytd401kRoth} inputRef={ytd401kRothRef} placeholder="0" />
                         <FieldErr msg={errors.ytd401kRoth} />
                       </div>
@@ -1299,19 +1288,19 @@ export default function App() {
                     setYtdEsopPre(""); setYtdEsopRoth("");
                     markDirty();
                   }}
-                  colors={{ active: T.green, activeBg: T.greenLight, activeBorder: T.greenBorder }}
+                  colors={{ active: T.navy, activeBg: T.navyLight, activeBorder: T.navyBorder }}
                   alwaysColor={true}
                 />
                 {showEsop && (
-                  <div style={{ border: `1.5px solid ${T.greenBorder}`, borderTop: "none", borderRadius: `0 0 ${T.radius} ${T.radius}`, padding: "10px 12px", background: T.surface }}>
+                  <div style={{ border: `1.5px solid ${T.navyBorder}`, borderTop: "none", borderRadius: `0 0 ${T.radius} ${T.radius}`, padding: "10px 12px", background: T.surface }}>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }} className="mobile-stack">
-                      <PctInput label="Pre-tax" value={rEsopPre} accentColor={T.green}
+                      <PctInput label="Pre-tax" value={rEsopPre} accentColor={T.navy}
                         disabled={lockEsopPre && pEsopPre === 0}
                         disabledReason={usedQual >= maxQualPct ? "IRS deferral limit reached" : usedQual >= MAX_QUALIFIED_PCT ? "Qualified plan limit reached" : usedTotal >= MAX_TOTAL_PCT ? "Overall 20% limit reached" : "ESOP 10% limit reached"}
                         onChange={(v) => handlePreTaxWithFicaCap(setREsopPre, pEsopPre, [[usedEsop, MAX_ESOP_PCT], [usedQual, MAX_QUALIFIED_PCT], [usedTotal, MAX_TOTAL_PCT], [usedQual, maxQualPct]], v, p401kPre, setREsopRoth)}
                         tooltip="Reduces your taxable income now; pay taxes later when withdrawn as ordinary income."
                       />
-                      <PctInput label="Roth after-tax" value={rEsopRoth} accentColor={T.green}
+                      <PctInput label="Roth after-tax" value={rEsopRoth} accentColor={T.navy}
                         disabled={lockEsopRoth && pEsopRoth === 0}
                         disabledReason={usedQual >= maxQualPct ? "IRS deferral limit reached" : usedQual >= MAX_QUALIFIED_PCT ? "Qualified plan limit reached" : usedTotal >= MAX_TOTAL_PCT ? "Overall 20% limit reached" : "ESOP 10% limit reached"}
                         onChange={(v) => handleRateChange(setREsopRoth, pEsopRoth, [[usedEsop, MAX_ESOP_PCT], [usedQual, MAX_QUALIFIED_PCT], [usedTotal, MAX_TOTAL_PCT], [usedQual, maxQualPct]], v)}
@@ -1321,18 +1310,18 @@ export default function App() {
                     {liveComp > 0 && usedEsop > 0 && (
                       <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 2px", marginBottom: 8 }}>
                         <span style={{ fontSize: "0.7rem", color: T.textSub, fontFamily: T.font }}>ESOP contributions</span>
-                        <span style={{ fontSize: "0.7rem", fontFamily: T.font, fontWeight: 600, color: T.green }}>≈ {fc(liveComp * (usedEsop / 100))}/yr</span>
+                        <span style={{ fontSize: "0.7rem", fontFamily: T.font, fontWeight: 600, color: T.navy }}>≈ {fc(liveComp * (usedEsop / 100))}/yr</span>
                       </div>
                     )}
                     <Divider label="Year-to-date contributed" />
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }} className="mobile-stack">
                       <div>
-                        <div style={{ marginBottom: 4, fontSize: "0.78rem", fontWeight: 600, color: T.green, fontFamily: T.font }}>Pre-tax</div>
+                        <div style={{ marginBottom: 4, fontSize: "0.78rem", fontWeight: 600, color: T.navy, fontFamily: T.font }}>Pre-tax</div>
                         <Input value={ytdEsopPre} onChange={(v) => { setYtdEsopPre(v); markDirty(); }} prefix="$" type="number" err={errors.ytdEsopPre} inputRef={ytdEsopPreRef} placeholder="0" />
                         <FieldErr msg={errors.ytdEsopPre} />
                       </div>
                       <div>
-                        <div style={{ marginBottom: 4, fontSize: "0.78rem", fontWeight: 600, color: T.green, fontFamily: T.font }}>Roth after-tax</div>
+                        <div style={{ marginBottom: 4, fontSize: "0.78rem", fontWeight: 600, color: T.navy, fontFamily: T.font }}>Roth after-tax</div>
                         <Input value={ytdEsopRoth} onChange={(v) => { setYtdEsopRoth(v); markDirty(); }} prefix="$" type="number" err={errors.ytdEsopRoth} inputRef={ytdEsopRothRef} placeholder="0" />
                         <FieldErr msg={errors.ytdEsopRoth} />
                       </div>
@@ -1354,19 +1343,19 @@ export default function App() {
                     setYtdSsepPre(""); setYtdSsepEsop("");
                     markDirty();
                   }}
-                  colors={{ active: T.ssep, activeBg: T.ssepLight, activeBorder: T.ssepBorder }}
+                  colors={{ active: T.navy, activeBg: T.navyLight, activeBorder: T.navyBorder }}
                   alwaysColor={true}
                 />
                 {showSsep && (
-                  <div style={{ border: `1.5px solid ${T.ssepBorder}`, borderTop: "none", borderRadius: `0 0 ${T.radius} ${T.radius}`, padding: "10px 12px", background: T.surface }}>
+                  <div style={{ border: `1.5px solid ${T.navyBorder}`, borderTop: "none", borderRadius: `0 0 ${T.radius} ${T.radius}`, padding: "10px 12px", background: T.surface }}>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }} className="mobile-stack">
-                      <PctInput label="Pre-tax" value={rSsepPre} accentColor={T.ssep}
+                      <PctInput label="Pre-tax" value={rSsepPre} accentColor={T.navy}
                         disabled={lockSsepPre && pSsepPre === 0}
                         disabledReason={usedSsep >= MAX_SSEP_PCT ? "SSEP 10% limit reached" : "Overall 20% limit reached"}
                         onChange={(v) => handleRateChange(setRSsepPre, pSsepPre, [[usedSsep, MAX_SSEP_PCT], [usedTotal, MAX_TOTAL_PCT]], v)}
                         tooltip="Reduces your taxable income now; pay taxes later when withdrawn as ordinary income."
                       />
-                      <PctInput label="ESOP" value={rSsepEsop} accentColor={T.ssep}
+                      <PctInput label="ESOP" value={rSsepEsop} accentColor={T.navy}
                         disabled={lockSsepEsop && pSsepEsop === 0}
                         disabledReason={usedSsep >= MAX_SSEP_PCT ? "SSEP 10% limit reached" : "Overall 20% limit reached"}
                         onChange={(v) => handleRateChange(setRSsepEsop, pSsepEsop, [[usedSsep, MAX_SSEP_PCT], [usedTotal, MAX_TOTAL_PCT]], v)}
@@ -1376,17 +1365,17 @@ export default function App() {
                     {liveComp > 0 && usedSsep > 0 && (
                       <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 2px", marginBottom: 8 }}>
                         <span style={{ fontSize: "0.7rem", color: T.textSub, fontFamily: T.font }}>SSEP contributions</span>
-                        <span style={{ fontSize: "0.7rem", fontFamily: T.font, fontWeight: 600, color: T.ssep }}>≈ {fc(liveSsepDollars)}/yr</span>
+                        <span style={{ fontSize: "0.7rem", fontFamily: T.font, fontWeight: 600, color: T.navy }}>≈ {fc(liveSsepDollars)}/yr</span>
                       </div>
                     )}
                     <Divider label="Year-to-date contributed" />
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }} className="mobile-stack">
                       <div>
-                        <div style={{ marginBottom: 4, fontSize: "0.78rem", fontWeight: 600, color: T.ssep, fontFamily: T.font }}>Pre-tax</div>
+                        <div style={{ marginBottom: 4, fontSize: "0.78rem", fontWeight: 600, color: T.navy, fontFamily: T.font }}>Pre-tax</div>
                         <Input value={ytdSsepPre} onChange={(v) => { setYtdSsepPre(v); markDirty(); }} prefix="$" type="number" placeholder="0" />
                       </div>
                       <div>
-                        <div style={{ marginBottom: 4, fontSize: "0.78rem", fontWeight: 600, color: T.ssep, fontFamily: T.font }}>ESOP</div>
+                        <div style={{ marginBottom: 4, fontSize: "0.78rem", fontWeight: 600, color: T.navy, fontFamily: T.font }}>ESOP</div>
                         <Input value={ytdSsepEsop} onChange={(v) => { setYtdSsepEsop(v); markDirty(); }} prefix="$" type="number" placeholder="0" />
                       </div>
                     </div>
@@ -1400,11 +1389,11 @@ export default function App() {
             {anyRateEntered && (
               <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 6, marginBottom: 2 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 12px", background: T.surfaceAlt, border: `1px solid ${T.border}`, borderRadius: T.radius }}>
-                  <span style={{ fontSize: "0.68rem", color: T.textSub, fontFamily: T.font }}>Qualified plan combined (401(k) + ESOP)</span>
+                  <span style={{ fontSize: "0.68rem", color: T.textSub, fontFamily: T.font }}>401(k)/ESOP Plan</span>
                   <BudgetPill used={usedQual} max={MAX_QUALIFIED_PCT} />
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 12px", background: T.surfaceAlt, border: `1px solid ${T.border}`, borderRadius: T.radius }}>
-                  <span style={{ fontSize: "0.68rem", color: T.textSub, fontFamily: T.font }}>All plans combined</span>
+                  <span style={{ fontSize: "0.68rem", color: T.textSub, fontFamily: T.font }}>401(k)/ESOP Plan + SSEP Combined</span>
                   <BudgetPill used={usedTotal} max={MAX_TOTAL_PCT} />
                 </div>
               </div>
@@ -1490,7 +1479,7 @@ export default function App() {
                     <span style={{ fontSize: "0.78rem", color: T.textSub }}>Next payday</span>
                     <span style={{ fontSize: "0.78rem", fontWeight: cutoffPassed ? 400 : 600, color: cutoffPassed ? T.textMuted : T.text }}>
                       {cutoffPassed
-                        ? <>{fmtPayday(nextPayday)} <span style={{ fontWeight: 400, color: T.textMuted }}>— deadline passed</span></>
+                        ? <>{fmtPayday(nextPayday)} <span style={{ fontWeight: 400, color: T.textMuted }}>{" — deadline passed"}</span></>
                         : fmtPayday(nextPayday)}
                     </span>
                   </div>
@@ -1520,8 +1509,8 @@ export default function App() {
 
                 {/* Summary stat cards */}
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }} className="mobile-stack">
-                  <div style={{ background: T.skyLight, border: `1px solid ${T.skyBorder}`, borderRadius: T.radius, padding: "10px 12px" }}>
-                    <div style={{ fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: T.sky, fontFamily: T.font, marginBottom: 4 }}>Your Contributions</div>
+                  <div style={{ background: T.navyLight, border: `1px solid ${T.navyBorder}`, borderRadius: T.radius, padding: "10px 12px" }}>
+                    <div style={{ fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: T.navy, fontFamily: T.font, marginBottom: 4 }}>Your Contributions</div>
                     <div style={{ fontSize: "1.5rem", fontWeight: 800, color: T.navy, fontFamily: T.font, letterSpacing: "-0.03em", lineHeight: 1 }}>{fc(result.dEmployeeTotal)}</div>
                     <div style={{ fontSize: "0.7rem", color: T.textSub, fontFamily: T.font, marginTop: 3 }}>{result.elGrandTotal}% of compensation</div>
                   </div>
@@ -1530,9 +1519,9 @@ export default function App() {
                     <div style={{ fontSize: "1.5rem", fontWeight: 800, color: T.navy, fontFamily: T.font, letterSpacing: "-0.03em", lineHeight: 1 }}>{fc(result.dMatchTotal)}</div>
                     <div style={{ fontSize: "0.7rem", color: T.textSub, fontFamily: T.font, marginTop: 3 }}>Dollar-for-dollar</div>
                   </div>
-                  <div style={{ background: T.greenLight, border: `1px solid ${T.greenBorder}`, borderRadius: T.radius, padding: "10px 12px" }}>
-                    <div style={{ fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: T.green, fontFamily: T.font, marginBottom: 4 }}>Total Saved</div>
-                    <div style={{ fontSize: "1.5rem", fontWeight: 800, color: T.green, fontFamily: T.font, letterSpacing: "-0.03em", lineHeight: 1 }}>{fc(result.grandTotalSaved)}</div>
+                  <div style={{ background: T.navyLight, border: `1px solid ${T.navyBorder}`, borderRadius: T.radius, padding: "10px 12px" }}>
+                    <div style={{ fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: T.navy, fontFamily: T.font, marginBottom: 4 }}>Total Saved</div>
+                    <div style={{ fontSize: "1.5rem", fontWeight: 800, color: T.navy, fontFamily: T.font, letterSpacing: "-0.03em", lineHeight: 1 }}>{fc(result.grandTotalSaved)}</div>
                     <div style={{ fontSize: "0.7rem", color: T.textSub, fontFamily: T.font, marginTop: 3 }}>Employee + employer</div>
                   </div>
                 </div>
@@ -1552,29 +1541,20 @@ export default function App() {
                     </div>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 1, background: T.navyBorder }}>
                       {[
-                        { label: "401(k) Pre-tax", pct: result.el401kPre, dollars: result.d401kPre, color: T.sky },
-                        { label: "401(k) Roth after-tax", pct: result.el401kRoth, dollars: result.d401kRoth, color: T.sky },
-                        { label: "ESOP Pre-tax", pct: result.elEsopPre, dollars: result.dEsopPre, color: T.green },
-                        { label: "ESOP Roth after-tax", pct: result.elEsopRoth, dollars: result.dEsopRoth, color: T.green },
-                      ].map(({ label, pct, dollars, color }) => (
-                        <div key={label} style={{ background: T.surface, padding: "8px 12px" }}>
-                          <div style={{ fontSize: "0.68rem", fontWeight: 600, color: T.textSub, fontFamily: T.font, marginBottom: 3 }}>{label}</div>
-                          {pct === 0
-                            ? <div style={{ fontSize: "0.82rem", fontWeight: 600, color: T.textMuted, fontFamily: T.font }}>—</div>
-                            : <>
-                                <div style={{ fontSize: "1.35rem", fontWeight: 700, color, fontFamily: T.font, letterSpacing: "-0.02em", lineHeight: 1 }}>{pct}%</div>
-                                <div style={{ fontSize: "0.72rem", color: T.textSub, fontFamily: T.font, marginTop: 2 }}>{fc(dollars)}/yr</div>
-                              </>
-                          }
-                        </div>
+                        { label: "401(k) Pre-tax", pct: result.el401kPre, dollars: result.d401kPre, ytd: result.ytd401kPre },
+                        { label: "401(k) Roth after-tax", pct: result.el401kRoth, dollars: result.d401kRoth, ytd: result.ytd401kRoth },
+                        { label: "ESOP Pre-tax", pct: result.elEsopPre, dollars: result.dEsopPre, ytd: result.ytdEsopPre },
+                        { label: "ESOP Roth after-tax", pct: result.elEsopRoth, dollars: result.dEsopRoth, ytd: result.ytdEsopRoth },
+                      ].map((cell) => (
+                        <PlanCell key={cell.label} {...cell} periodsLeft={periodsLeft} />
                       ))}
                     </div>
 
-                    {/* Roth catch-up required NoteBox — only when FICA > $150k and catch-up is in play */}
+                    {/* Roth catch-up required NoteBox - only when FICA catchup is in play */}
                     {result.catchUpInPlay && (
-                      <div style={{ padding: "10px 12px 0" }}>
+                      <div style={{ padding: "10px 12px" }}>
                         <NoteBox color={T.sky} bg={T.skyLight} border={T.skyBorder}>
-                          <strong>Catch-up contributions are required to be Roth after-tax.</strong> Because your prior-year FICA wages exceeded {FICA_THRESHOLD_DISPLAY}, IRS rules require that your {PLAN_YEAR} catch-up contributions be made as Roth after-tax. To reach your {result.is6063 ? "enhanced " : ""}catch-up limit of {fc(result.catchUp)}, your 401(k) Roth after-tax rate would need to be approximately <strong>{result.rothCatchUpPct}%</strong> of your total compensation.
+                          <strong>Catch-up contributions must be Roth after-tax.</strong> Because your prior-year FICA wages exceeded {FICA_THRESHOLD_DISPLAY}, your {PLAN_YEAR} catch-up contributions of {fc(result.catchUp)} must be Roth. Your {fc(LIMIT_402G)} base limit may be any mix of pre-tax and Roth.
                         </NoteBox>
                       </div>
                     )}
@@ -1633,25 +1613,16 @@ export default function App() {
 
                 {/* SSEP card */}
                 {result.hasSsepContribs && (
-                  <div style={{ border: `1px solid ${T.ssepBorder}`, borderRadius: T.radius, overflow: "hidden" }}>
-                    <div style={{ padding: "8px 14px 6px", background: T.ssepLight, borderBottom: `1px solid ${T.ssepBorder}` }}>
-                      <span style={{ fontSize: "0.82rem", fontWeight: 700, color: T.ssep, fontFamily: T.font }}>Supplemental Savings Plan (SSEP)</span>
+                  <div style={{ border: `1px solid ${T.navyBorder}`, borderRadius: T.radius, overflow: "hidden" }}>
+                    <div style={{ padding: "8px 14px 6px", background: T.navyLight, borderBottom: `1px solid ${T.navyBorder}` }}>
+                      <span style={{ fontSize: "0.82rem", fontWeight: 700, color: T.navy, fontFamily: T.font }}>Supplemental Savings Plan (SSEP)</span>
                     </div>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1, background: T.ssepBorder }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1, background: T.navyBorder }}>
                       {[
-                        { label: "SSEP Pre-tax", pct: result.elSsepPre, dollars: result.dSsepPre },
-                        { label: "SSEP ESOP", pct: result.elSsepEsop, dollars: result.dSsepEsop },
-                      ].map(({ label, pct, dollars }) => (
-                        <div key={label} style={{ background: T.surface, padding: "8px 12px" }}>
-                          <div style={{ fontSize: "0.68rem", fontWeight: 600, color: T.textSub, fontFamily: T.font, marginBottom: 3 }}>{label}</div>
-                          {pct === 0
-                            ? <div style={{ fontSize: "0.82rem", fontWeight: 600, color: T.textMuted, fontFamily: T.font }}>—</div>
-                            : <>
-                                <div style={{ fontSize: "1.35rem", fontWeight: 700, color: T.ssep, fontFamily: T.font, letterSpacing: "-0.02em", lineHeight: 1 }}>{pct}%</div>
-                                <div style={{ fontSize: "0.72rem", color: T.textSub, fontFamily: T.font, marginTop: 2 }}>{fc(dollars)}/yr</div>
-                              </>
-                          }
-                        </div>
+                        { label: "SSEP Pre-tax", pct: result.elSsepPre, dollars: result.dSsepPre, ytd: result.ytdSsepPre },
+                        { label: "SSEP ESOP", pct: result.elSsepEsop, dollars: result.dSsepEsop, ytd: result.ytdSsepEsop },
+                      ].map((cell) => (
+                        <PlanCell key={cell.label} {...cell} periodsLeft={periodsLeft} />
                       ))}
                     </div>
 
@@ -1673,8 +1644,10 @@ export default function App() {
                       <Divider label="Employer Match" />
                       <SummaryLine label="Dollar-for-dollar match" value={fc(result.dMatchSsep)}
                         tooltip="TDIndustries matches SSEP contributions dollar-for-dollar. SSEP match amounts may be subject to different vesting schedules or discretionary treatment than the qualified plan match — confirm details with your plan administrator." />
-                      <div style={{ marginTop: 8, fontSize: "0.7rem", color: T.textSub, fontFamily: T.font, lineHeight: 1.55, padding: "8px 10px", background: T.amberLight, border: `1px solid ${T.amberBorder}`, borderRadius: T.radius }}>
-                        <strong style={{ color: T.amber }}>Note:</strong> The SSEP employer match shown is an estimate based on the dollar-for-dollar match rate. SSEP match contributions may be subject to vesting schedules or discretionary provisions that differ from the qualified plan. Confirm the terms with your plan administrator before making elections.
+                      <div style={{ marginTop: 8 }}>
+                        <NoteBox color={T.amber} bg={T.amberLight} border={T.amberBorder}>
+                          <strong>Note:</strong> The SSEP employer match shown is an estimate based on the dollar-for-dollar match rate. SSEP match contributions may be subject to vesting schedules or discretionary provisions that differ from the qualified plan. Confirm the terms with your plan administrator before making elections.
+                        </NoteBox>
                       </div>
                     </DetailPanel>
                   </div>
@@ -1720,7 +1693,7 @@ export default function App() {
                   )}
                   <SummaryLine label="Employer match — SSEP" value={result.hasSsepContribs ? fc(result.dMatchSsep) : "—"} indent />
                   <SummaryLine label="Total employer contributions" value={fc(result.dMatchTotal)} bold color={T.navy} />
-                  <SummaryLine label="Grand total saved" value={fc(result.grandTotalSaved)} bold color={T.green} />
+                  <SummaryLine label="Grand total saved" value={fc(result.grandTotalSaved)} bold color={T.navy} />
                   <div style={{ marginTop: 8, fontSize: "0.68rem", color: T.textMuted, fontFamily: T.font, lineHeight: 1.5 }}>
                     Annual estimates based on {fc(result.base)} base compensation{result.incv > 0 ? ` plus ${fc(result.incv)} estimated incentive` : ""}. Actual contributions may vary.
                   </div>
