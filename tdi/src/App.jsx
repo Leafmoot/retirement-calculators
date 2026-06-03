@@ -7,6 +7,128 @@ const LIMIT_CATCHUP_50   = 8000;
 const LIMIT_CATCHUP_6063 = 11250;
 const LIMIT_415C         = 72000;
 
+// ── TDI 2026 Payroll Calendar ─────────────────────────────────────────────────
+// TDIndustries runs weekly payroll. Payday is every Friday.
+// Cutoff for deferral changes is market close (3:00 PM CT) each Friday.
+// Exception: when a Friday is a federal holiday, cutoff shifts to Thursday at 3:00 PM CT.
+// Update PLAN_YEAR above and replace this array each January.
+const TDI_PAYDAYS_2026 = [
+  "2026-01-02", "2026-01-09", "2026-01-16", "2026-01-23", "2026-01-30",
+  "2026-02-06", "2026-02-13", "2026-02-20", "2026-02-27",
+  "2026-03-06", "2026-03-13", "2026-03-20", "2026-03-27",
+  "2026-04-03", "2026-04-10", "2026-04-17", "2026-04-24",
+  "2026-05-01", "2026-05-08", "2026-05-15", "2026-05-22", "2026-05-29",
+  "2026-06-05", "2026-06-12",
+  "2026-06-19", // Juneteenth — cutoff shifts to Thursday June 18
+  "2026-06-26",
+  "2026-07-03", // Independence Day observed — cutoff shifts to Thursday July 2
+  "2026-07-10", "2026-07-17", "2026-07-24", "2026-07-31",
+  "2026-08-07", "2026-08-14", "2026-08-21", "2026-08-28",
+  "2026-09-04", "2026-09-11", "2026-09-18", "2026-09-25",
+  "2026-10-02", "2026-10-09", "2026-10-16", "2026-10-23", "2026-10-30",
+  "2026-11-06", "2026-11-13", "2026-11-20", "2026-11-27",
+  "2026-12-04", "2026-12-11", "2026-12-18",
+  "2026-12-25", // Christmas — cutoff shifts to Thursday December 24
+];
+
+// Fridays that are federal holidays — cutoff shifts to Thursday for these weeks
+const TDI_FRIDAY_HOLIDAYS = new Set([
+  "2026-06-19", // Juneteenth
+  "2026-07-03", // Independence Day observed
+  "2026-12-25", // Christmas
+]);
+
+const TDI_CUTOFF_HOUR_CT = 15; // 3:00 PM CT = NYSE market close
+
+function getCentralOffset(date) {
+  const year = date.getUTCFullYear();
+  const march = new Date(Date.UTC(year, 2, 1));
+  const dstStart = new Date(Date.UTC(year, 2, (14 - march.getUTCDay()) % 7 + 8));
+  const nov = new Date(Date.UTC(year, 10, 1));
+  const dstEnd = new Date(Date.UTC(year, 10, (7 - nov.getUTCDay()) % 7 + 1));
+  const isDST = date >= dstStart && date < dstEnd;
+  return isDST ? -5 * 60 : -6 * 60;
+}
+
+function getTDICutoffForPayday(payday) {
+  // Cutoff is one week before the payday (the prior Friday at 3 PM CT).
+  // Exception: if that prior Friday is a federal holiday, cutoff shifts to Thursday at 3 PM CT.
+  const priorFriday = new Date(payday.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const priorFridayStr = `${priorFriday.getUTCFullYear()}-${String(priorFriday.getUTCMonth() + 1).padStart(2, "0")}-${String(priorFriday.getUTCDate()).padStart(2, "0")}`;
+  const isHoliday = TDI_FRIDAY_HOLIDAYS.has(priorFridayStr);
+  const cutoffDay = isHoliday
+    ? new Date(priorFriday.getTime() - 24 * 60 * 60 * 1000) // Thursday before
+    : priorFriday;
+  const ctOffset = getCentralOffset(cutoffDay);
+  const utcHour = TDI_CUTOFF_HOUR_CT - ctOffset / 60;
+  return new Date(
+    Date.UTC(cutoffDay.getUTCFullYear(), cutoffDay.getUTCMonth(), cutoffDay.getUTCDate()) +
+    utcHour * 60 * 60 * 1000
+  );
+}
+
+function computeTDIPeriods() {
+  const nowUtcMs = Date.now();
+  const nowDate = new Date(nowUtcMs);
+  const nowDateStr = `${nowDate.getUTCFullYear()}-${String(nowDate.getUTCMonth() + 1).padStart(2, "0")}-${String(nowDate.getUTCDate()).padStart(2, "0")}`;
+  const periodsTotal = TDI_PAYDAYS_2026.length;
+  let periodsCompleted = 0, nextPayday = null, nextPaydayStr = null, cutoffDate = null, cutoffPassed = false;
+
+  for (let i = 0; i < TDI_PAYDAYS_2026.length; i++) {
+    const pdStr = TDI_PAYDAYS_2026[i];
+    if (pdStr <= nowDateStr) { periodsCompleted++; }
+    else {
+      nextPaydayStr = pdStr;
+      nextPayday = new Date(`${pdStr}T12:00:00Z`);
+      cutoffDate = getTDICutoffForPayday(nextPayday);
+      cutoffPassed = nowUtcMs > cutoffDate.getTime();
+      break;
+    }
+  }
+
+  let firstEligiblePayday = cutoffPassed ? null : nextPayday;
+  let firstEligiblePaydayStr = cutoffPassed ? null : nextPaydayStr;
+  let firstEligibleCutoff = cutoffPassed ? null : cutoffDate;
+
+  if (cutoffPassed && nextPayday) {
+    const nextIdx = TDI_PAYDAYS_2026.findIndex((s) => s === nextPaydayStr);
+    if (nextIdx >= 0 && nextIdx + 1 < TDI_PAYDAYS_2026.length) {
+      firstEligiblePaydayStr = TDI_PAYDAYS_2026[nextIdx + 1];
+      firstEligiblePayday = new Date(`${firstEligiblePaydayStr}T12:00:00Z`);
+      firstEligibleCutoff = getTDICutoffForPayday(firstEligiblePayday);
+    }
+  }
+
+  return {
+    periodsLeft: Math.max(periodsTotal - periodsCompleted - (cutoffPassed ? 1 : 0), 0),
+    periodsTotal, nextPayday, cutoffDate, cutoffPassed, firstEligiblePayday, firstEligibleCutoff,
+  };
+}
+
+function ordinalSup(n) {
+  const s = ["th", "st", "nd", "rd"], v = n % 100;
+  return <>{n}<sup style={{ fontSize: "0.6em", verticalAlign: "super", lineHeight: 0 }}>{s[(v - 20) % 10] || s[v] || s[0]}</sup></>;
+}
+
+function fmtPayday(date) {
+  const d = date.toLocaleDateString("en-US", { timeZone: "America/Chicago", month: "short", day: "numeric" });
+  const [month, day] = d.split(" ");
+  return <>{month} {ordinalSup(parseInt(day))}</>;
+}
+
+function fmtCutoff(date) {
+  const day = date.toLocaleDateString("en-US", { timeZone: "America/Chicago", weekday: "short", month: "short", day: "numeric" });
+  const parts = day.split(" ");
+  // parts: ["Mon,", "Jan", "2"] or similar — extract month and day
+  const month = parts[1];
+  const dayNum = parseInt(parts[2]);
+  return <>{month} {ordinalSup(dayNum)} at 3 PM CT</>;
+}
+
+// ── FICA Catch-Up Threshold ───────────────────────────────────────────────────
+const FICA_CATCHUP_THRESHOLD = 150000;
+const FICA_THRESHOLD_DISPLAY = FICA_CATCHUP_THRESHOLD.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+
 // ── TDI Plan Rules (HCE only) ─────────────────────────────────────────────────
 const MAX_QUALIFIED_PCT = 10;
 const MAX_401K_PCT      = 10;
@@ -268,7 +390,7 @@ function PctInput({ value, onChange, label, tooltip, disabled, disabledReason, e
           onChange={(e) => {
             if (disabled) return;
             const v = e.target.value;
-            if (v === "" || /^\d*$/.test(v)) onChange(v);
+            if (v === "" || /^\d*\.?\d{0,2}$/.test(v)) onChange(v);
           }}
           onFocus={(e) => { if (!disabled) e.target.style.boxShadow = `0 0 0 3px ${err ? "#FCA5A544" : "#07A3DA33"}`; }}
           onBlur={(e) => (e.target.style.boxShadow = "none")}
@@ -304,7 +426,90 @@ function PctInput({ value, onChange, label, tooltip, disabled, disabledReason, e
   );
 }
 
-// ── Section Header with optional help tooltip ─────────────────────────────────
+// ── Expand Row (accordion toggle with hasData indicator) ──────────────────────
+function ExpandRow({ label, tooltip, isOpen, onToggle, colors, hasData, onClear, alwaysColor }) {
+  const c = colors || { active: T.btn, activeBg: T.btnLight, activeBorder: T.btn };
+  const showActive = isOpen || hasData || alwaysColor;
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      style={{
+        width: "100%", boxSizing: "border-box",
+        padding: "9px 12px", fontSize: "0.8rem", fontFamily: T.font,
+        color: showActive ? c.active : T.text,
+        fontWeight: showActive ? 600 : 400,
+        background: showActive ? c.activeBg : T.surface,
+        border: `1.5px solid ${showActive ? c.activeBorder : T.border}`,
+        borderRadius: T.radius, outline: "none", cursor: "pointer",
+        textAlign: "left", display: "flex", alignItems: "center",
+        justifyContent: "space-between", transition: "all 0.15s",
+        boxShadow: isOpen ? `0 0 0 3px ${c.activeBg}` : "none",
+      }}
+      onMouseEnter={(e) => { if (!showActive) e.currentTarget.style.background = T.surfaceAlt; }}
+      onMouseLeave={(e) => { e.currentTarget.style.background = showActive ? c.activeBg : T.surface; }}
+    >
+      <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        <span>{label}</span>
+        {tooltip && (
+          <span onClick={(e) => e.stopPropagation()}>
+            <InfoTooltip text={tooltip} />
+          </span>
+        )}
+      </span>
+      <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        {!isOpen && hasData && onClear && (
+          <span
+            role="button"
+            onClick={(e) => { e.stopPropagation(); onClear(); }}
+            style={{ fontSize: "0.68rem", color: c.active, fontWeight: 600, opacity: 0.7, textDecoration: "underline", cursor: "pointer", lineHeight: 1 }}
+          >
+            Clear
+          </span>
+        )}
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"
+          style={{ flexShrink: 0, transform: isOpen ? "rotate(180deg)" : "none", transition: "transform 0.15s" }}>
+          <path d="M2 4l4 4 4-4" stroke={showActive ? c.active : T.textSub} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </span>
+    </button>
+  );
+}
+
+// ── Toggle Pair ───────────────────────────────────────────────────────────────
+function TogglePair({ options, value, onChange, err }) {
+  return (
+    <div style={{ display: "flex", gap: 6 }}>
+      {options.map((opt) => {
+        const sel = value === opt.val;
+        return (
+          <button
+            key={String(opt.val)}
+            type="button"
+            onClick={() => onChange(opt.val)}
+            style={{
+              flex: 1,
+              padding: "9px 8px",
+              cursor: "pointer",
+              fontSize: "0.8rem",
+              fontWeight: sel ? 600 : 400,
+              fontFamily: T.font,
+              border: `1.5px solid ${sel ? T.btn : err ? T.red : T.border}`,
+              borderRadius: T.radius,
+              background: sel ? T.btnLight : err ? T.redLight : T.surface,
+              color: sel ? T.btn : err ? T.red : T.textSub,
+              transition: "all 0.15s",
+              lineHeight: 1.4,
+            }}
+          >
+            {opt.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 // ── Detail Panel (expandable) ─────────────────────────────────────────────────
 function DetailPanel({ label, isOpen, onToggle, children }) {
   return (
@@ -374,6 +579,8 @@ function SummaryPanel({ isOpen, onToggle, children }) {
 
 // ── Main App ──────────────────────────────────────────────────────────────────
 export default function App() {
+  const { periodsLeft, periodsTotal, nextPayday, cutoffDate, cutoffPassed, firstEligiblePayday, firstEligibleCutoff } = computeTDIPeriods();
+
   const [baseSalary, setBaseSalary] = useState("");
   const [incentive, setIncentive]   = useState("");
   const [age, setAge]               = useState("");
@@ -385,8 +592,20 @@ export default function App() {
   const [rSsepPre,  setRSsepPre]   = useState("");
   const [rSsepEsop, setRSsepEsop]  = useState("");
 
+  const [ytd401kPre,  setYtd401kPre]  = useState("");
+  const [ytd401kRoth, setYtd401kRoth] = useState("");
+  const [ytdEsopPre,  setYtdEsopPre]  = useState("");
+  const [ytdEsopRoth, setYtdEsopRoth] = useState("");
+  const [ytdSsepPre,  setYtdSsepPre]  = useState("");
+  const [ytdSsepEsop, setYtdSsepEsop] = useState("");
+  const [show401k, setShow401k]       = useState(false);
+  const [showEsop, setShowEsop]       = useState(false);
+  const [showSsep, setShowSsep]       = useState(false);
+
+  const [fica, setFica]                   = useState(null);
+
   const [result, setResult]               = useState(null);
-  const [errors, setErrors]               = useState({ base: "", age: "" });
+  const [errors, setErrors]               = useState({ base: "", age: "", fica: "" });
   const [isCalculating, setIsCalculating] = useState(false);
   const [calculated, setCalculated]       = useState(false);
   const [isDirty, setIsDirty]             = useState(false);
@@ -400,6 +619,10 @@ export default function App() {
   const baseRef    = useRef(null);
   const ageRef     = useRef(null);
   const resultsRef = useRef(null);
+  const ytd401kPreRef  = useRef(null);
+  const ytd401kRothRef = useRef(null);
+  const ytdEsopPreRef  = useRef(null);
+  const ytdEsopRothRef = useRef(null);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 1024);
@@ -416,6 +639,20 @@ export default function App() {
 
   function markDirty() { if (calculated) setIsDirty(true); }
 
+  // ── FICA question visibility ──────────────────────────────────────────────
+  const parsedAge  = parseInt(age) || 0;
+  const parsedBase = parse(baseSalary) + parse(incentive);
+  const catchUpAge = parsedAge >= 50;
+  const ficaVisible = catchUpAge && parsedBase >= FICA_CATCHUP_THRESHOLD;
+
+  // Reset fica if it no longer applies
+  useEffect(() => {
+    if (!ficaVisible && fica !== null) {
+      setFica(null);
+      setErrors((e) => ({ ...e, fica: "" }));
+    }
+  }, [ficaVisible, fica]);
+
   // ── Live budget values ────────────────────────────────────────────────────
   const p401kPre  = parsePct(r401kPre);
   const p401kRoth = parsePct(r401kRoth);
@@ -431,18 +668,31 @@ export default function App() {
   const usedTotal = usedQual + usedSsep;
 
   // ── Live dollar preview ─────────────────────────────────────────────────
-  const liveComp       = parse(baseSalary) + parse(incentive);
-  const liveQualDollars = liveComp > 0 ? liveComp * (usedQual / 100) : 0;
+  const liveComp        = parse(baseSalary) + parse(incentive);
   const liveSsepDollars = liveComp > 0 ? liveComp * (usedSsep / 100) : 0;
-  const liveCatchUp    = parseInt(age) >= 50 ? getCatchUp(parseInt(age)) : 0;
+  const liveCatchUp     = parseInt(age) >= 50 ? getCatchUp(parseInt(age)) : 0;
   const liveElectiveLimit = LIMIT_402G + liveCatchUp;
-  const liveElectiveDollars = liveComp > 0 ? liveComp * (usedQual / 100) : 0;
-  const liveOver402g   = liveElectiveDollars > liveElectiveLimit && liveElectiveDollars > 0;
 
-  const lock401kPre  = (used401k >= MAX_401K_PCT) || (usedQual >= MAX_QUALIFIED_PCT) || (usedTotal >= MAX_TOTAL_PCT);
-  const lock401kRoth = (used401k >= MAX_401K_PCT) || (usedQual >= MAX_QUALIFIED_PCT) || (usedTotal >= MAX_TOTAL_PCT);
-  const lockEsopPre  = (usedEsop >= MAX_ESOP_PCT) || (usedQual >= MAX_QUALIFIED_PCT) || (usedTotal >= MAX_TOTAL_PCT);
-  const lockEsopRoth = (usedEsop >= MAX_ESOP_PCT) || (usedQual >= MAX_QUALIFIED_PCT) || (usedTotal >= MAX_TOTAL_PCT);
+  // YTD parsed amounts
+  const ytd401kPreAmt  = parse(ytd401kPre);
+  const ytd401kRothAmt = parse(ytd401kRoth);
+  const ytdEsopPreAmt  = parse(ytdEsopPre);
+  const ytdEsopRothAmt = parse(ytdEsopRoth);
+  const ytdQualTotal   = ytd401kPreAmt + ytd401kRothAmt + ytdEsopPreAmt + ytdEsopRothAmt;
+
+  // Remaining room under 402(g) after YTD, expressed as a percentage ceiling
+  const effectiveElectiveLimit = Math.max(liveElectiveLimit - ytdQualTotal, 0);
+
+  // 402(g) dollar ceiling expressed as a percentage of total comp.
+  // When comp is zero or not entered, set to a large number so it never blocks input.
+  const maxQualPct = liveComp > 0
+    ? Math.floor((effectiveElectiveLimit / liveComp) * 10000) / 100
+    : 9999;
+
+  const lock401kPre  = (used401k >= MAX_401K_PCT) || (usedQual >= MAX_QUALIFIED_PCT) || (usedTotal >= MAX_TOTAL_PCT) || (usedQual >= maxQualPct);
+  const lock401kRoth = (used401k >= MAX_401K_PCT) || (usedQual >= MAX_QUALIFIED_PCT) || (usedTotal >= MAX_TOTAL_PCT) || (usedQual >= maxQualPct);
+  const lockEsopPre  = (usedEsop >= MAX_ESOP_PCT) || (usedQual >= MAX_QUALIFIED_PCT) || (usedTotal >= MAX_TOTAL_PCT) || (usedQual >= maxQualPct);
+  const lockEsopRoth = (usedEsop >= MAX_ESOP_PCT) || (usedQual >= MAX_QUALIFIED_PCT) || (usedTotal >= MAX_TOTAL_PCT) || (usedQual >= maxQualPct);
   const lockSsepPre  = (usedSsep >= MAX_SSEP_PCT) || (usedTotal >= MAX_TOTAL_PCT);
   const lockSsepEsop = (usedSsep >= MAX_SSEP_PCT) || (usedTotal >= MAX_TOTAL_PCT);
 
@@ -452,7 +702,9 @@ export default function App() {
       const otherContrib = bucketUsed - fieldUsed;
       if (raw + otherContrib > bucketMax) {
         const maxAllowed = Math.max(bucketMax - otherContrib, 0);
-        setter(maxAllowed === 0 ? "" : String(parseFloat(maxAllowed.toFixed(2))));
+        // Round up to next whole integer so the plan system can accept the value
+        const rounded = maxAllowed === 0 ? 0 : Math.ceil(maxAllowed);
+        setter(rounded === 0 ? "" : String(rounded));
         return;
       }
     }
@@ -478,7 +730,7 @@ export default function App() {
 
   // ── Calculate ─────────────────────────────────────────────────────────────
   function calculate() {
-    const errs = { base: "", age: "" };
+    const errs = { base: "", age: "", fica: "", ytd401kPre: "", ytd401kRoth: "", ytdEsopPre: "", ytdEsopRoth: "" };
     let bad = false;
     const base = parse(baseSalary);
     const incv = parse(incentive);
@@ -487,6 +739,11 @@ export default function App() {
     if (!base || base <= 0) { errs.base = "Enter your base compensation."; bad = true; }
     if (base > 0 && base < 10000) { errs.base = "This looks low — did you mean to enter an hourly rate?"; bad = true; }
     if (!a || a < 18 || a > 100) { errs.age = "Enter a valid age (18–100)."; bad = true; }
+    if (ficaVisible && fica === null) { errs.fica = "Please select one."; bad = true; }
+    if (ytd401kPreAmt < 0)  { errs.ytd401kPre  = "Cannot be negative."; bad = true; }
+    if (ytd401kRothAmt < 0) { errs.ytd401kRoth = "Cannot be negative."; bad = true; }
+    if (ytdEsopPreAmt < 0)  { errs.ytdEsopPre  = "Cannot be negative."; bad = true; }
+    if (ytdEsopRothAmt < 0) { errs.ytdEsopRoth = "Cannot be negative."; bad = true; }
 
     setErrors(errs);
     setCalculated(true);
@@ -495,8 +752,12 @@ export default function App() {
     if (bad) {
       setResult(null);
       setTimeout(() => {
-        if (errs.base) { baseRef.current?.focus(); return; }
-        if (errs.age)  { ageRef.current?.focus(); return; }
+        if (errs.base)       { baseRef.current?.focus(); return; }
+        if (errs.age)        { ageRef.current?.focus(); return; }
+        if (errs.ytd401kPre) { ytd401kPreRef.current?.focus(); return; }
+        if (errs.ytd401kRoth){ ytd401kRothRef.current?.focus(); return; }
+        if (errs.ytdEsopPre) { ytdEsopPreRef.current?.focus(); return; }
+        if (errs.ytdEsopRoth){ ytdEsopRothRef.current?.focus(); return; }
       }, 50);
       return;
     }
@@ -528,14 +789,28 @@ export default function App() {
       const d401kRoth     = totalComp * (el401kRoth / 100);
       const dEsopPre      = totalComp * (elEsopPre  / 100);
       const dEsopRoth     = totalComp * (elEsopRoth / 100);
-      const dQualEmployee = d401kPre + d401kRoth + dEsopPre + dEsopRoth;
+      const dQualRaw      = d401kPre + d401kRoth + dEsopPre + dEsopRoth;
+      // Remaining room under 402(g) after YTD already contributed
+      const effectiveQualLimit = Math.max(electiveLimit - ytdQualTotal, 0);
+      const dQualEmployee = Math.min(dQualRaw, effectiveQualLimit);
+      // Scale individual field dollars proportionally if cap trims the total
+      const qualScale     = dQualRaw > 0 ? dQualEmployee / dQualRaw : 1;
+      const d401kPreFinal  = d401kPre  * qualScale;
+      const d401kRothFinal = d401kRoth * qualScale;
+      const dEsopPreFinal  = dEsopPre  * qualScale;
+      const dEsopRothFinal = dEsopRoth * qualScale;
       const dSsepPre      = totalComp * (elSsepPre  / 100);
       const dSsepEsop     = totalComp * (elSsepEsop / 100);
       const dSsepTotal    = dSsepPre + dSsepEsop;
       const dEmployeeTotal = dQualEmployee + dSsepTotal;
 
+      // SSEP YTD — informational only
+      const ytdSsepPreAmt  = parse(ytdSsepPre);
+      const ytdSsepEsopAmt = parse(ytdSsepEsop);
+      const ytdSsepTotal   = ytdSsepPreAmt + ytdSsepEsopAmt;
+
       const electiveEmployee = dQualEmployee;
-      const electiveOver402g = Math.max(electiveEmployee - electiveLimit, 0);
+      const electiveOver402g = Math.max(electiveEmployee - effectiveQualLimit, 0);
 
       const dMatchQual  = dQualEmployee;
       const dMatchSsep  = dSsepTotal;
@@ -547,20 +822,41 @@ export default function App() {
       const qualMatchNet         = Math.max(dMatchQual - over415c, 0);
       const grandTotalSaved      = dEmployeeTotal + dMatchTotal;
 
+      // ── FICA / Roth catch-up note ────────────────────────────────────────
+      const d401kTotal        = d401kPreFinal + d401kRothFinal;
+      const ficaRothRequired  = catchUp > 0 && fica === true;
+      // Catch-up is in play when FICA requires Roth AND projected 401(k) dollars
+      // (including what's already been contributed) exceed the standard limit
+      const total401kWithYtd  = d401kTotal + ytd401kPreAmt + ytd401kRothAmt;
+      const catchUpInPlay     = ficaRothRequired && total401kWithYtd > LIMIT_402G;
+      const catchUpRemaining  = Math.max(catchUp - (ytd401kRothAmt), 0);
+      const rothCatchUpPct    = totalComp > 0
+        ? Math.ceil((catchUpRemaining / totalComp) * 10000) / 100
+        : 0;
+
       setResult({
         base, incv, totalComp, age: a, catchUp, is6063, electiveLimit,
         el401kPre, el401kRoth, elEsopPre, elEsopRoth,
         el401kCombined, elEsopCombined, elQualTotal,
         elSsepPre, elSsepEsop, elSsepTotal, elGrandTotal,
-        d401kPre, d401kRoth, dEsopPre, dEsopRoth,
+        d401kPre: d401kPreFinal, d401kRoth: d401kRothFinal,
+        dEsopPre: dEsopPreFinal, dEsopRoth: dEsopRothFinal,
         dQualEmployee, dSsepPre, dSsepEsop, dSsepTotal, dEmployeeTotal,
         dMatchQual, dMatchSsep, dMatchTotal, qualMatchNet,
         electiveEmployee, electiveOver402g,
         total415cQual, over415c, spilloverExcessBenefit,
         grandTotalSaved,
+        // YTD values passed through for results display
+        ytd401kPre: ytd401kPreAmt, ytd401kRoth: ytd401kRothAmt,
+        ytdEsopPre: ytdEsopPreAmt, ytdEsopRoth: ytdEsopRothAmt,
+        ytdQualTotal, ytdSsepPre: ytdSsepPreAmt, ytdSsepEsop: ytdSsepEsopAmt, ytdSsepTotal,
+        effectiveQualLimit,
         has415cSpillover: over415c > 0,
         hasQualContribs: dQualEmployee > 0,
         hasSsepContribs: dSsepTotal > 0,
+        fica,
+        catchUpInPlay,
+        rothCatchUpPct,
       });
 
       if (isMobile && resultsRef.current) {
@@ -571,16 +867,23 @@ export default function App() {
 
   function clearAll() {
     setBaseSalary(""); setIncentive(""); setAge("");
+    setFica(null);
     setR401kPre(""); setR401kRoth(""); setREsopPre(""); setREsopRoth("");
     setRSsepPre(""); setRSsepEsop("");
-    setResult(null); setErrors({ base: "", age: "" });
+    setYtd401kPre(""); setYtd401kRoth(""); setYtdEsopPre(""); setYtdEsopRoth("");
+    setYtdSsepPre(""); setYtdSsepEsop("");
+    setResult(null); setErrors({ base: "", age: "", fica: "", ytd401kPre: "", ytd401kRoth: "", ytdEsopPre: "", ytdEsopRoth: "" });
     setCalculated(false); setIsDirty(false); setIsCalculating(false);
     setShowQualDetail(false); setShowSsepDetail(false);
     setShow415cDetail(false); setShowTotalSummary(false);
     setShowLimitsGuide(false);
+    setShow401k(false); setShowEsop(false); setShowSsep(false);
   }
 
   const anyRateEntered = usedTotal > 0;
+  const has401kData  = p401kPre > 0 || p401kRoth > 0 || ytd401kPreAmt > 0 || ytd401kRothAmt > 0;
+  const hasEsopData  = pEsopPre > 0 || pEsopRoth > 0 || ytdEsopPreAmt > 0 || ytdEsopRothAmt > 0;
+  const hasSsepData  = pSsepPre > 0 || pSsepEsop > 0 || parse(ytdSsepPre) > 0 || parse(ytdSsepEsop) > 0;
 
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: T.bg, fontFamily: T.font, overflow: "auto", position: "relative" }}>
@@ -839,144 +1142,192 @@ export default function App() {
               )}
             </div>
 
-            {/* ── 401(k)/ESOP Plan ── */}
-            <Divider label="401(k)/ESOP Plan" />
-
-            {/* 401(k) card */}
-            <div style={{ border: `1.5px solid ${T.skyBorder}`, borderRadius: T.radius, overflow: "hidden", marginBottom: 10 }}>
-              <div style={{ background: T.skyLight, borderBottom: `1px solid ${T.skyBorder}`, padding: "7px 12px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <span style={{ fontSize: "0.8rem", fontWeight: 700, color: T.sky, fontFamily: T.font, display: "flex", alignItems: "center", gap: 4 }}>
-                  401(k) Savings
-                  <InfoTooltip text="Your 401(k)/ESOP Plan is a qualified plan subject to IRS limits. Your 401(k) pre-tax and Roth after-tax contributions combined cannot exceed 10% of your compensation." />
-                </span>
-                {anyRateEntered && <BudgetPill used={used401k} max={MAX_401K_PCT} />}
-              </div>
-              <div style={{ padding: "10px 12px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }} className="mobile-stack">
-                <PctInput
-                  label="Pre-tax"
-                  value={r401kPre}
-                  accentColor={T.sky}
-                  disabled={lock401kPre && p401kPre === 0}
-                  disabledReason={usedQual >= MAX_QUALIFIED_PCT ? "Qualified plan limit reached" : usedTotal >= MAX_TOTAL_PCT ? "Overall 20% limit reached" : "401(k) 10% limit reached"}
-                  onChange={(v) => handleRateChange(setR401kPre, p401kPre, [
-                    [used401k, MAX_401K_PCT], [usedQual, MAX_QUALIFIED_PCT], [usedTotal, MAX_TOTAL_PCT],
-                  ], v)}
-                  tooltip="Reduces your taxable income now; pay taxes later when withdrawn as ordinary income."
+            {/* FICA question — 50+ and salary at or above $150,000 only */}
+            {ficaVisible && (
+              <div style={{ marginBottom: 10 }}>
+                <Label tooltip={`Your prior-year FICA wages determine whether catch-up contributions must be Roth after-tax under IRS rules. You can find this amount in Box 3 of your ${PLAN_YEAR - 1} W-2.`}>
+                  Were your {PLAN_YEAR - 1} FICA wages more than {FICA_THRESHOLD_DISPLAY}?
+                </Label>
+                <TogglePair
+                  options={[
+                    { label: `Yes — more than ${FICA_THRESHOLD_DISPLAY}`, val: true },
+                    { label: `No — ${FICA_THRESHOLD_DISPLAY} or less`, val: false },
+                  ]}
+                  value={fica}
+                  onChange={(v) => { setFica(v); markDirty(); }}
+                  err={!!errors.fica}
                 />
-                <PctInput
-                  label="Roth after-tax"
-                  value={r401kRoth}
-                  accentColor={T.sky}
-                  disabled={lock401kRoth && p401kRoth === 0}
-                  disabledReason={usedQual >= MAX_QUALIFIED_PCT ? "Qualified plan limit reached" : usedTotal >= MAX_TOTAL_PCT ? "Overall 20% limit reached" : "401(k) 10% limit reached"}
-                  onChange={(v) => handleRateChange(setR401kRoth, p401kRoth, [
-                    [used401k, MAX_401K_PCT], [usedQual, MAX_QUALIFIED_PCT], [usedTotal, MAX_TOTAL_PCT],
-                  ], v)}
-                  tooltip="Pay taxes now; earnings are tax-free if Roth account open for at least 5 years AND withdrawn after age 59½ or due to death or disability."
-                />
-              </div>
-            </div>
-
-            {/* ESOP card */}
-            <div style={{ border: `1.5px solid ${T.greenBorder}`, borderRadius: T.radius, overflow: "hidden", marginBottom: 10 }}>
-              <div style={{ background: T.greenLight, borderBottom: `1px solid ${T.greenBorder}`, padding: "7px 12px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <span style={{ fontSize: "0.8rem", fontWeight: 700, color: T.green, fontFamily: T.font, display: "flex", alignItems: "center", gap: 4 }}>
-                  ESOP Savings
-                  <InfoTooltip text="Your ESOP pre-tax and Roth after-tax contributions combined cannot exceed 10% of your compensation. Your 401(k) and ESOP contributions also share an overall 10% combined limit for the 401(k)/ESOP Plan." />
-                </span>
-                {anyRateEntered && <BudgetPill used={usedEsop} max={MAX_ESOP_PCT} />}
-              </div>
-              <div style={{ padding: "10px 12px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }} className="mobile-stack">
-                <PctInput
-                  label="Pre-tax"
-                  value={rEsopPre}
-                  accentColor={T.green}
-                  disabled={lockEsopPre && pEsopPre === 0}
-                  disabledReason={usedQual >= MAX_QUALIFIED_PCT ? "Qualified plan limit reached" : usedTotal >= MAX_TOTAL_PCT ? "Overall 20% limit reached" : "ESOP 10% limit reached"}
-                  onChange={(v) => handleRateChange(setREsopPre, pEsopPre, [
-                    [usedEsop, MAX_ESOP_PCT], [usedQual, MAX_QUALIFIED_PCT], [usedTotal, MAX_TOTAL_PCT],
-                  ], v)}
-                  tooltip="Reduces your taxable income now; pay taxes later when withdrawn as ordinary income."
-                />
-                <PctInput
-                  label="Roth after-tax"
-                  value={rEsopRoth}
-                  accentColor={T.green}
-                  disabled={lockEsopRoth && pEsopRoth === 0}
-                  disabledReason={usedQual >= MAX_QUALIFIED_PCT ? "Qualified plan limit reached" : usedTotal >= MAX_TOTAL_PCT ? "Overall 20% limit reached" : "ESOP 10% limit reached"}
-                  onChange={(v) => handleRateChange(setREsopRoth, pEsopRoth, [
-                    [usedEsop, MAX_ESOP_PCT], [usedQual, MAX_QUALIFIED_PCT], [usedTotal, MAX_TOTAL_PCT],
-                  ], v)}
-                  tooltip="Pay taxes now; earnings are tax-free if Roth account open for at least 5 years AND withdrawn after age 59½ or due to death or disability."
-                />
-              </div>
-            </div>
-
-
-
-            {/* Live dollar preview — qualified plan */}
-            {liveComp > 0 && usedQual > 0 && (
-              <div style={{ marginBottom: 6, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "4px 2px" }}>
-                <span style={{ fontSize: "0.7rem", color: T.textSub, fontFamily: T.font }}>
-                  Qualified plan contributions
-                </span>
-                <span style={{ fontSize: "0.7rem", fontFamily: T.font, fontWeight: 600,
-                  color: liveOver402g ? T.red : T.navy }}>
-                  ≈ {fc(liveQualDollars)}/yr
-                  {liveOver402g && <span style={{ fontWeight: 400, color: T.red }}> — exceeds {fc(liveElectiveLimit)} IRS limit</span>}
-                </span>
+                <FieldErr msg={errors.fica} />
               </div>
             )}
 
-            {/* ── Supplemental Savings Plan (SSEP) ── */}
-            <Divider label="Supplemental Savings and ESOP Plan (SSEP)" />
+            {/* ── Plan Accordions ── */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
 
-            {/* SSEP card */}
-            <div style={{ border: `1.5px solid ${T.ssepBorder}`, borderRadius: T.radius, overflow: "hidden", marginBottom: 4 }}>
-              <div style={{ background: T.ssepLight, borderBottom: `1px solid ${T.ssepBorder}`, padding: "7px 12px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <span style={{ fontSize: "0.8rem", fontWeight: 700, color: T.ssep, fontFamily: T.font, display: "flex", alignItems: "center", gap: 4 }}>
-                  SSEP
-                  <InfoTooltip text="The SSEP is a non-qualified plan that only allows for pre-tax contributions. There are no IRS limits. Your SSEP pre-tax and ESOP pre-tax contributions combined cannot exceed 10% of compensation. Your total deferral across all plans cannot exceed 20%." />
-                </span>
-                {anyRateEntered && <BudgetPill used={usedSsep} max={MAX_SSEP_PCT} />}
-              </div>
-              <div style={{ padding: "10px 12px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }} className="mobile-stack">
-                <PctInput
-                  label="Pre-tax"
-                  value={rSsepPre}
-                  accentColor={T.ssep}
-                  disabled={lockSsepPre && pSsepPre === 0}
-                  disabledReason={usedSsep >= MAX_SSEP_PCT ? "SSEP 10% limit reached" : "Overall 20% limit reached"}
-                  onChange={(v) => handleRateChange(setRSsepPre, pSsepPre, [
-                    [usedSsep, MAX_SSEP_PCT], [usedTotal, MAX_TOTAL_PCT],
-                  ], v)}
-                  tooltip="Reduces your taxable income now; pay taxes later when withdrawn as ordinary income."
+              {/* 401(k) accordion */}
+              <div>
+                <ExpandRow
+                  label="401(k) Savings"
+                  tooltip="Your 401(k)/ESOP Plan is a qualified plan subject to IRS limits. Your 401(k) pre-tax and Roth after-tax contributions combined cannot exceed 10% of your compensation."
+                  isOpen={show401k}
+                  onToggle={() => setShow401k(v => !v)}
+                  hasData={has401kData && !show401k}
+                  onClear={() => {
+                    setR401kPre(""); setR401kRoth("");
+                    setYtd401kPre(""); setYtd401kRoth("");
+                    markDirty();
+                  }}
+                  colors={{ active: T.sky, activeBg: T.skyLight, activeBorder: T.skyBorder }}
+                  alwaysColor={true}
                 />
-                <PctInput
-                  label="ESOP"
-                  value={rSsepEsop}
-                  accentColor={T.ssep}
-                  disabled={lockSsepEsop && pSsepEsop === 0}
-                  disabledReason={usedSsep >= MAX_SSEP_PCT ? "SSEP 10% limit reached" : "Overall 20% limit reached"}
-                  onChange={(v) => handleRateChange(setRSsepEsop, pSsepEsop, [
-                    [usedSsep, MAX_SSEP_PCT], [usedTotal, MAX_TOTAL_PCT],
-                  ], v)}
-                  tooltip="Reduces your taxable income now; pay taxes later when withdrawn as ordinary income."
-                />
+                {show401k && (
+                  <div style={{ border: `1.5px solid ${T.skyBorder}`, borderTop: "none", borderRadius: `0 0 ${T.radius} ${T.radius}`, padding: "10px 12px", background: T.surface }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }} className="mobile-stack">
+                      <PctInput label="Pre-tax" value={r401kPre} accentColor={T.sky}
+                        disabled={lock401kPre && p401kPre === 0}
+                        disabledReason={usedQual >= maxQualPct ? "IRS deferral limit reached" : usedQual >= MAX_QUALIFIED_PCT ? "Qualified plan limit reached" : usedTotal >= MAX_TOTAL_PCT ? "Overall 20% limit reached" : "401(k) 10% limit reached"}
+                        onChange={(v) => handleRateChange(setR401kPre, p401kPre, [[used401k, MAX_401K_PCT], [usedQual, MAX_QUALIFIED_PCT], [usedTotal, MAX_TOTAL_PCT], [usedQual, maxQualPct]], v)}
+                        tooltip="Reduces your taxable income now; pay taxes later when withdrawn as ordinary income."
+                      />
+                      <PctInput label="Roth after-tax" value={r401kRoth} accentColor={T.sky}
+                        disabled={lock401kRoth && p401kRoth === 0}
+                        disabledReason={usedQual >= maxQualPct ? "IRS deferral limit reached" : usedQual >= MAX_QUALIFIED_PCT ? "Qualified plan limit reached" : usedTotal >= MAX_TOTAL_PCT ? "Overall 20% limit reached" : "401(k) 10% limit reached"}
+                        onChange={(v) => handleRateChange(setR401kRoth, p401kRoth, [[used401k, MAX_401K_PCT], [usedQual, MAX_QUALIFIED_PCT], [usedTotal, MAX_TOTAL_PCT], [usedQual, maxQualPct]], v)}
+                        tooltip="Pay taxes now; earnings are tax-free if Roth account open for at least 5 years AND withdrawn after age 59½ or due to death or disability."
+                      />
+                    </div>
+                    {liveComp > 0 && used401k > 0 && (
+                      <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 2px", marginBottom: 8 }}>
+                        <span style={{ fontSize: "0.7rem", color: T.textSub, fontFamily: T.font }}>401(k) contributions</span>
+                        <span style={{ fontSize: "0.7rem", fontFamily: T.font, fontWeight: 600, color: T.sky }}>≈ {fc(liveComp * (used401k / 100))}/yr</span>
+                      </div>
+                    )}
+                    <Divider label="Year-to-date contributed" />
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }} className="mobile-stack">
+                      <div>
+                        <div style={{ marginBottom: 4, fontSize: "0.78rem", fontWeight: 600, color: T.sky, fontFamily: T.font }}>Pre-tax</div>
+                        <Input value={ytd401kPre} onChange={(v) => { setYtd401kPre(v); markDirty(); }} prefix="$" type="number" err={errors.ytd401kPre} inputRef={ytd401kPreRef} placeholder="0" />
+                        <FieldErr msg={errors.ytd401kPre} />
+                      </div>
+                      <div>
+                        <div style={{ marginBottom: 4, fontSize: "0.78rem", fontWeight: 600, color: T.sky, fontFamily: T.font }}>Roth after-tax</div>
+                        <Input value={ytd401kRoth} onChange={(v) => { setYtd401kRoth(v); markDirty(); }} prefix="$" type="number" err={errors.ytd401kRoth} inputRef={ytd401kRothRef} placeholder="0" />
+                        <FieldErr msg={errors.ytd401kRoth} />
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
+
+              {/* ESOP accordion */}
+              <div>
+                <ExpandRow
+                  label="ESOP Savings"
+                  tooltip="Your ESOP pre-tax and Roth after-tax contributions combined cannot exceed 10% of your compensation. Your 401(k) and ESOP contributions also share an overall 10% combined limit for the 401(k)/ESOP Plan."
+                  isOpen={showEsop}
+                  onToggle={() => setShowEsop(v => !v)}
+                  hasData={hasEsopData && !showEsop}
+                  onClear={() => {
+                    setREsopPre(""); setREsopRoth("");
+                    setYtdEsopPre(""); setYtdEsopRoth("");
+                    markDirty();
+                  }}
+                  colors={{ active: T.green, activeBg: T.greenLight, activeBorder: T.greenBorder }}
+                  alwaysColor={true}
+                />
+                {showEsop && (
+                  <div style={{ border: `1.5px solid ${T.greenBorder}`, borderTop: "none", borderRadius: `0 0 ${T.radius} ${T.radius}`, padding: "10px 12px", background: T.surface }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }} className="mobile-stack">
+                      <PctInput label="Pre-tax" value={rEsopPre} accentColor={T.green}
+                        disabled={lockEsopPre && pEsopPre === 0}
+                        disabledReason={usedQual >= maxQualPct ? "IRS deferral limit reached" : usedQual >= MAX_QUALIFIED_PCT ? "Qualified plan limit reached" : usedTotal >= MAX_TOTAL_PCT ? "Overall 20% limit reached" : "ESOP 10% limit reached"}
+                        onChange={(v) => handleRateChange(setREsopPre, pEsopPre, [[usedEsop, MAX_ESOP_PCT], [usedQual, MAX_QUALIFIED_PCT], [usedTotal, MAX_TOTAL_PCT], [usedQual, maxQualPct]], v)}
+                        tooltip="Reduces your taxable income now; pay taxes later when withdrawn as ordinary income."
+                      />
+                      <PctInput label="Roth after-tax" value={rEsopRoth} accentColor={T.green}
+                        disabled={lockEsopRoth && pEsopRoth === 0}
+                        disabledReason={usedQual >= maxQualPct ? "IRS deferral limit reached" : usedQual >= MAX_QUALIFIED_PCT ? "Qualified plan limit reached" : usedTotal >= MAX_TOTAL_PCT ? "Overall 20% limit reached" : "ESOP 10% limit reached"}
+                        onChange={(v) => handleRateChange(setREsopRoth, pEsopRoth, [[usedEsop, MAX_ESOP_PCT], [usedQual, MAX_QUALIFIED_PCT], [usedTotal, MAX_TOTAL_PCT], [usedQual, maxQualPct]], v)}
+                        tooltip="Pay taxes now; earnings are tax-free if Roth account open for at least 5 years AND withdrawn after age 59½ or due to death or disability."
+                      />
+                    </div>
+                    {liveComp > 0 && usedEsop > 0 && (
+                      <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 2px", marginBottom: 8 }}>
+                        <span style={{ fontSize: "0.7rem", color: T.textSub, fontFamily: T.font }}>ESOP contributions</span>
+                        <span style={{ fontSize: "0.7rem", fontFamily: T.font, fontWeight: 600, color: T.green }}>≈ {fc(liveComp * (usedEsop / 100))}/yr</span>
+                      </div>
+                    )}
+                    <Divider label="Year-to-date contributed" />
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }} className="mobile-stack">
+                      <div>
+                        <div style={{ marginBottom: 4, fontSize: "0.78rem", fontWeight: 600, color: T.green, fontFamily: T.font }}>Pre-tax</div>
+                        <Input value={ytdEsopPre} onChange={(v) => { setYtdEsopPre(v); markDirty(); }} prefix="$" type="number" err={errors.ytdEsopPre} inputRef={ytdEsopPreRef} placeholder="0" />
+                        <FieldErr msg={errors.ytdEsopPre} />
+                      </div>
+                      <div>
+                        <div style={{ marginBottom: 4, fontSize: "0.78rem", fontWeight: 600, color: T.green, fontFamily: T.font }}>Roth after-tax</div>
+                        <Input value={ytdEsopRoth} onChange={(v) => { setYtdEsopRoth(v); markDirty(); }} prefix="$" type="number" err={errors.ytdEsopRoth} inputRef={ytdEsopRothRef} placeholder="0" />
+                        <FieldErr msg={errors.ytdEsopRoth} />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* SSEP accordion */}
+              <div>
+                <ExpandRow
+                  label="Supplemental Savings and ESOP Plan (SSEP)"
+                  tooltip="The SSEP is a non-qualified plan with no IRS limits. Your SSEP pre-tax and ESOP contributions combined cannot exceed 10% of compensation. Total deferral across all plans cannot exceed 20%."
+                  isOpen={showSsep}
+                  onToggle={() => setShowSsep(v => !v)}
+                  hasData={hasSsepData && !showSsep}
+                  onClear={() => {
+                    setRSsepPre(""); setRSsepEsop("");
+                    setYtdSsepPre(""); setYtdSsepEsop("");
+                    markDirty();
+                  }}
+                  colors={{ active: T.ssep, activeBg: T.ssepLight, activeBorder: T.ssepBorder }}
+                  alwaysColor={true}
+                />
+                {showSsep && (
+                  <div style={{ border: `1.5px solid ${T.ssepBorder}`, borderTop: "none", borderRadius: `0 0 ${T.radius} ${T.radius}`, padding: "10px 12px", background: T.surface }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }} className="mobile-stack">
+                      <PctInput label="Pre-tax" value={rSsepPre} accentColor={T.ssep}
+                        disabled={lockSsepPre && pSsepPre === 0}
+                        disabledReason={usedSsep >= MAX_SSEP_PCT ? "SSEP 10% limit reached" : "Overall 20% limit reached"}
+                        onChange={(v) => handleRateChange(setRSsepPre, pSsepPre, [[usedSsep, MAX_SSEP_PCT], [usedTotal, MAX_TOTAL_PCT]], v)}
+                        tooltip="Reduces your taxable income now; pay taxes later when withdrawn as ordinary income."
+                      />
+                      <PctInput label="ESOP" value={rSsepEsop} accentColor={T.ssep}
+                        disabled={lockSsepEsop && pSsepEsop === 0}
+                        disabledReason={usedSsep >= MAX_SSEP_PCT ? "SSEP 10% limit reached" : "Overall 20% limit reached"}
+                        onChange={(v) => handleRateChange(setRSsepEsop, pSsepEsop, [[usedSsep, MAX_SSEP_PCT], [usedTotal, MAX_TOTAL_PCT]], v)}
+                        tooltip="Reduces your taxable income now; pay taxes later when withdrawn as ordinary income."
+                      />
+                    </div>
+                    {liveComp > 0 && usedSsep > 0 && (
+                      <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 2px", marginBottom: 8 }}>
+                        <span style={{ fontSize: "0.7rem", color: T.textSub, fontFamily: T.font }}>SSEP contributions</span>
+                        <span style={{ fontSize: "0.7rem", fontFamily: T.font, fontWeight: 600, color: T.ssep }}>≈ {fc(liveSsepDollars)}/yr</span>
+                      </div>
+                    )}
+                    <Divider label="Year-to-date contributed" />
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }} className="mobile-stack">
+                      <div>
+                        <div style={{ marginBottom: 4, fontSize: "0.78rem", fontWeight: 600, color: T.ssep, fontFamily: T.font }}>Pre-tax</div>
+                        <Input value={ytdSsepPre} onChange={(v) => { setYtdSsepPre(v); markDirty(); }} prefix="$" type="number" placeholder="0" />
+                      </div>
+                      <div>
+                        <div style={{ marginBottom: 4, fontSize: "0.78rem", fontWeight: 600, color: T.ssep, fontFamily: T.font }}>ESOP</div>
+                        <Input value={ytdSsepEsop} onChange={(v) => { setYtdSsepEsop(v); markDirty(); }} prefix="$" type="number" placeholder="0" />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
             </div>
-
-            {/* Live dollar preview — SSEP */}
-            {liveComp > 0 && usedSsep > 0 && (
-              <div style={{ marginBottom: 6, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "4px 2px" }}>
-                <span style={{ fontSize: "0.7rem", color: T.textSub, fontFamily: T.font }}>
-                  SSEP contributions
-                </span>
-                <span style={{ fontSize: "0.7rem", fontFamily: T.font, fontWeight: 600, color: T.ssep }}>
-                  ≈ {fc(liveSsepDollars)}/yr
-                </span>
-              </div>
-            )}
 
             {/* Qualified combined + grand total status lines */}
             {anyRateEntered && (
@@ -1056,6 +1407,43 @@ export default function App() {
             </div>
           )}
 
+          {/* Pay Schedule card */}
+          <div style={{ marginBottom: 8 }}>
+            <div style={{ background: T.surface, borderRadius: T.radius, border: `1px solid ${T.border}`, boxShadow: T.shadow, overflow: "hidden" }}>
+              <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, padding: "7px 16px 6px", borderBottom: `1px solid ${T.border}` }}>
+                Pay Schedule
+              </div>
+              <div style={{ padding: "7px 16px 8px", display: "flex", flexDirection: "column", gap: 4 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontFamily: T.font }}>
+                  <span style={{ fontSize: "0.78rem", color: T.textSub }}>Paychecks remaining</span>
+                  <span style={{ fontSize: "0.78rem", fontWeight: 700, color: T.text }}>{periodsLeft} of {periodsTotal}</span>
+                </div>
+                {nextPayday && (
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontFamily: T.font }}>
+                    <span style={{ fontSize: "0.78rem", color: T.textSub }}>Next payday</span>
+                    <span style={{ fontSize: "0.78rem", fontWeight: cutoffPassed ? 400 : 600, color: cutoffPassed ? T.textMuted : T.text }}>
+                      {cutoffPassed
+                        ? <>{fmtPayday(nextPayday)} <span style={{ fontWeight: 400, color: T.textMuted }}>— deadline passed</span></>
+                        : fmtPayday(nextPayday)}
+                    </span>
+                  </div>
+                )}
+                {cutoffPassed && firstEligiblePayday && (
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontFamily: T.font }}>
+                    <span style={{ fontSize: "0.78rem", color: T.textSub }}>Next available payday</span>
+                    <span style={{ fontSize: "0.78rem", fontWeight: 700, color: T.text }}>{fmtPayday(firstEligiblePayday)}</span>
+                  </div>
+                )}
+                {(cutoffPassed ? firstEligibleCutoff : cutoffDate) && (
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontFamily: T.font }}>
+                    <span style={{ fontSize: "0.78rem", color: T.textSub }}>Change deadline</span>
+                    <span style={{ fontSize: "0.78rem", fontWeight: 600, color: T.text }}>{fmtCutoff(cutoffPassed ? firstEligibleCutoff : cutoffDate)}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
           <div style={{ background: T.surface, borderRadius: T.radiusLg, border: `1px solid ${T.border}`, boxShadow: T.shadowMd, padding: "12px 16px" }}>
 
             {!result || isCalculating ? (
@@ -1115,6 +1503,15 @@ export default function App() {
                       ))}
                     </div>
 
+                    {/* Roth catch-up required NoteBox — only when FICA > $150k and catch-up is in play */}
+                    {result.catchUpInPlay && (
+                      <div style={{ padding: "10px 12px 0" }}>
+                        <NoteBox color={T.sky} bg={T.skyLight} border={T.skyBorder}>
+                          <strong>Catch-up contributions are required to be Roth after-tax.</strong> Because your prior-year FICA wages exceeded {FICA_THRESHOLD_DISPLAY}, IRS rules require that your {PLAN_YEAR} catch-up contributions be made as Roth after-tax. To reach your {result.is6063 ? "enhanced " : ""}catch-up limit of {fc(result.catchUp)}, your 401(k) Roth after-tax rate would need to be approximately <strong>{result.rothCatchUpPct}%</strong> of your total compensation.
+                        </NoteBox>
+                      </div>
+                    )}
+
                     <DetailPanel
                       label="View Calculation Details"
                       isOpen={showQualDetail} onToggle={() => setShowQualDetail(v => !v)}
@@ -1127,9 +1524,23 @@ export default function App() {
                           <SummaryLine label="Total elective deferral limit" value={fc(result.electiveLimit)} bold />
                         </>
                       )}
+                      {result.ytdQualTotal > 0 && (
+                        <>
+                          <SummaryLine label="Already contributed (YTD)" value={fc(result.ytdQualTotal)} color={T.textSub} />
+                          <SummaryLine label="Remaining room" value={fc(result.effectiveQualLimit)} bold />
+                        </>
+                      )}
                       <SummaryLine label="415(c) annual additions limit" value={fc(LIMIT_415C)} />
 
                       <Divider label="Employee Contributions" />
+                      {result.ytdQualTotal > 0 && (
+                        <>
+                          <SummaryLine label="401(k) pre-tax (YTD)" value={fc(result.ytd401kPre)} indent dimmed />
+                          <SummaryLine label="401(k) Roth after-tax (YTD)" value={fc(result.ytd401kRoth)} indent dimmed />
+                          <SummaryLine label="ESOP pre-tax (YTD)" value={fc(result.ytdEsopPre)} indent dimmed />
+                          <SummaryLine label="ESOP Roth after-tax (YTD)" value={fc(result.ytdEsopRoth)} indent dimmed />
+                        </>
+                      )}
                       <SummaryLine label="401(k) pre-tax" value={fc(result.d401kPre)} indent />
                       <SummaryLine label="401(k) Roth after-tax" value={fc(result.d401kRoth)} indent />
                       <SummaryLine label="ESOP pre-tax" value={fc(result.dEsopPre)} indent />
@@ -1182,6 +1593,12 @@ export default function App() {
                       isOpen={showSsepDetail} onToggle={() => setShowSsepDetail(v => !v)}
                     >
                       <div>
+                        {result.ytdSsepTotal > 0 && (
+                          <>
+                            <SummaryLine label="SSEP pre-tax (YTD)" value={fc(result.ytdSsepPre)} indent dimmed />
+                            <SummaryLine label="SSEP ESOP (YTD)" value={fc(result.ytdSsepEsop)} indent dimmed />
+                          </>
+                        )}
                         <SummaryLine label="SSEP pre-tax" value={fc(result.dSsepPre)} indent />
                         <SummaryLine label="SSEP ESOP" value={fc(result.dSsepEsop)} indent />
                         <SummaryLine label="Total SSEP (employee)" value={fc(result.dSsepTotal)} bold />
