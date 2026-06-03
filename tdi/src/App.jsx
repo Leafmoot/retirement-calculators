@@ -696,6 +696,21 @@ export default function App() {
   const lockSsepPre  = (usedSsep >= MAX_SSEP_PCT) || (usedTotal >= MAX_TOTAL_PCT);
   const lockSsepEsop = (usedSsep >= MAX_SSEP_PCT) || (usedTotal >= MAX_TOTAL_PCT);
 
+  // ── FICA pre-tax sub-cap ─────────────────────────────────────────────────
+  // When FICA is Yes and catch-up applies, combined qualified pre-tax dollars
+  // (401k pre-tax + ESOP pre-tax) cannot exceed the standard $24,500 limit.
+  // The catch-up dollars above $24,500 must be Roth. This cap does not apply
+  // when FICA is No or unanswered.
+  const ficaPreTaxCapActive = fica === true && liveCatchUp > 0;
+  // Pre-tax dollars already consumed by YTD (only pre-tax YTD buckets count here)
+  const ytdPreTaxOnly = ytd401kPreAmt + ytdEsopPreAmt;
+  // Remaining room for pre-tax elections under $24,500 after YTD
+  const effectivePreTaxLimit = Math.max(LIMIT_402G - ytdPreTaxOnly, 0);
+  // As a percentage — floor so we never allow even one cent over $24,500
+  const maxPreTaxPct = ficaPreTaxCapActive && liveComp > 0
+    ? Math.floor((effectivePreTaxLimit / liveComp) * 10000) / 100
+    : 9999;
+
   function handleRateChange(setter, fieldUsed, bucketChecks, newVal) {
     const raw = newVal === "" ? 0 : parsePct(newVal);
     for (const [bucketUsed, bucketMax] of bucketChecks) {
@@ -709,6 +724,58 @@ export default function App() {
       }
     }
     setter(newVal);
+    markDirty();
+  }
+
+  // Handler for qualified pre-tax fields when FICA cap is active.
+  // otherPreTaxPct: the current pre-tax percentage in the OTHER qualified pre-tax field.
+  // rothSetter: setter for the Roth field of the SAME plan.
+  // currentRothPct: current value of the Roth field of the same plan (used to compute spill).
+  // bucketChecks: the standard plan/total limit checks passed through to handleRateChange.
+  function handlePreTaxWithFicaCap(setter, fieldUsed, bucketChecks, newVal, otherPreTaxPct, rothSetter) {
+    if (!ficaPreTaxCapActive) {
+      // No FICA restriction — behave exactly like a normal rate change
+      handleRateChange(setter, fieldUsed, bucketChecks, newVal);
+      return;
+    }
+
+    const raw = newVal === "" ? 0 : parsePct(newVal);
+
+    // How much pre-tax room is left after the other pre-tax field has its share?
+    const otherPreTaxDollars = liveComp > 0 ? liveComp * (otherPreTaxPct / 100) : 0;
+    const remainingPreTaxRoom = Math.max(effectivePreTaxLimit - otherPreTaxDollars, 0);
+    // Max this field can hold as a percentage — floor so we stay under $24,500
+    const fieldPreTaxMaxPct = liveComp > 0
+      ? Math.floor((remainingPreTaxRoom / liveComp) * 10000) / 100
+      : 9999;
+
+    // What the user actually typed, capped at the pre-tax ceiling for this field
+    const snappedPreTax = Math.min(raw, fieldPreTaxMaxPct);
+    // Also enforce the standard plan/total bucket checks on the snapped value
+    let finalPreTax = snappedPreTax;
+    for (const [bucketUsed, bucketMax] of bucketChecks) {
+      const otherContrib = bucketUsed - fieldUsed;
+      if (finalPreTax + otherContrib > bucketMax) {
+        const maxAllowed = Math.max(bucketMax - otherContrib, 0);
+        finalPreTax = Math.min(finalPreTax, Math.ceil(maxAllowed));
+      }
+    }
+
+    setter(finalPreTax === 0 && newVal === "" ? "" : String(Math.floor(finalPreTax)));
+
+    // If the user typed more than the snapped value, the overflow must go to Roth
+    if (raw > snappedPreTax && liveComp > 0) {
+      const overflowDollars = (raw - snappedPreTax) * (liveComp / 100);
+      // The Roth field can hold up to the remaining room under the full catch-up ceiling
+      // Room under full ceiling = effectiveElectiveLimit minus pre-tax dollars in both fields
+      // after snap, minus what's already in the other plan's Roth
+      const snappedPreTaxDollars = finalPreTax * (liveComp / 100);
+      const rothSpillDollars = Math.min(overflowDollars, effectiveElectiveLimit - snappedPreTaxDollars - otherPreTaxDollars);
+      const rothSpillPct = Math.ceil((Math.max(rothSpillDollars, 0) / liveComp) * 10000) / 100;
+      // Write the minimum required Roth — replace whatever was there
+      rothSetter(rothSpillPct <= 0 ? "" : String(Math.ceil(rothSpillPct)));
+    }
+
     markDirty();
   }
 
@@ -1186,7 +1253,7 @@ export default function App() {
                       <PctInput label="Pre-tax" value={r401kPre} accentColor={T.sky}
                         disabled={lock401kPre && p401kPre === 0}
                         disabledReason={usedQual >= maxQualPct ? "IRS deferral limit reached" : usedQual >= MAX_QUALIFIED_PCT ? "Qualified plan limit reached" : usedTotal >= MAX_TOTAL_PCT ? "Overall 20% limit reached" : "401(k) 10% limit reached"}
-                        onChange={(v) => handleRateChange(setR401kPre, p401kPre, [[used401k, MAX_401K_PCT], [usedQual, MAX_QUALIFIED_PCT], [usedTotal, MAX_TOTAL_PCT], [usedQual, maxQualPct]], v)}
+                        onChange={(v) => handlePreTaxWithFicaCap(setR401kPre, p401kPre, [[used401k, MAX_401K_PCT], [usedQual, MAX_QUALIFIED_PCT], [usedTotal, MAX_TOTAL_PCT], [usedQual, maxQualPct]], v, pEsopPre, setR401kRoth)}
                         tooltip="Reduces your taxable income now; pay taxes later when withdrawn as ordinary income."
                       />
                       <PctInput label="Roth after-tax" value={r401kRoth} accentColor={T.sky}
@@ -1241,7 +1308,7 @@ export default function App() {
                       <PctInput label="Pre-tax" value={rEsopPre} accentColor={T.green}
                         disabled={lockEsopPre && pEsopPre === 0}
                         disabledReason={usedQual >= maxQualPct ? "IRS deferral limit reached" : usedQual >= MAX_QUALIFIED_PCT ? "Qualified plan limit reached" : usedTotal >= MAX_TOTAL_PCT ? "Overall 20% limit reached" : "ESOP 10% limit reached"}
-                        onChange={(v) => handleRateChange(setREsopPre, pEsopPre, [[usedEsop, MAX_ESOP_PCT], [usedQual, MAX_QUALIFIED_PCT], [usedTotal, MAX_TOTAL_PCT], [usedQual, maxQualPct]], v)}
+                        onChange={(v) => handlePreTaxWithFicaCap(setREsopPre, pEsopPre, [[usedEsop, MAX_ESOP_PCT], [usedQual, MAX_QUALIFIED_PCT], [usedTotal, MAX_TOTAL_PCT], [usedQual, maxQualPct]], v, p401kPre, setREsopRoth)}
                         tooltip="Reduces your taxable income now; pay taxes later when withdrawn as ordinary income."
                       />
                       <PctInput label="Roth after-tax" value={rEsopRoth} accentColor={T.green}
