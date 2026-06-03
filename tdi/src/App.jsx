@@ -1563,21 +1563,20 @@ export default function App() {
                       label="View Calculation Details"
                       isOpen={showQualDetail} onToggle={() => setShowQualDetail(v => !v)}
                     >
-                      <Divider label="IRS Limits" />
-                      <SummaryLine label="Standard deferral limit (402(g))" value={fc(LIMIT_402G)} />
+                      <Divider label="Contribution Limits" />
+                      <SummaryLine label="Annual limit" value={fc(LIMIT_402G)} />
                       {result.catchUp > 0 && (
                         <>
-                          <SummaryLine label={`Catch-up contribution (${result.is6063 ? "ages 60–63" : "age 50+"})`} value={fc(result.catchUp)} indent />
-                          <SummaryLine label="Total elective deferral limit" value={fc(result.electiveLimit)} bold />
+                          <SummaryLine label={`Catch-up (${result.is6063 ? "ages 60–63" : "age 50+"})`} value={fc(result.catchUp)} indent dimmed />
+                          <SummaryLine label="Total limit" value={fc(result.electiveLimit)} bold />
                         </>
                       )}
                       {result.ytdQualTotal > 0 && (
                         <>
-                          <SummaryLine label="Already contributed (YTD)" value={fc(result.ytdQualTotal)} color={T.textSub} />
-                          <SummaryLine label="Remaining room" value={fc(result.effectiveQualLimit)} bold />
+                          <SummaryLine label="Contributed (YTD)" value={fc(result.ytdQualTotal)} dimmed />
+                          <SummaryLine label="Remaining this year" value={fc(result.effectiveQualLimit)} bold />
                         </>
                       )}
-                      <SummaryLine label="415(c) annual additions limit" value={fc(LIMIT_415C)} />
 
                       <Divider label="Employee Contributions" />
                       {result.ytdQualTotal > 0 && (
@@ -1592,21 +1591,28 @@ export default function App() {
                       <SummaryLine label="401(k) Roth after-tax" value={fc(result.d401kRoth)} indent />
                       <SummaryLine label="ESOP pre-tax" value={fc(result.dEsopPre)} indent />
                       <SummaryLine label="ESOP Roth after-tax" value={fc(result.dEsopRoth)} indent />
-                      <SummaryLine label="Total employee (qualified plan)" value={fc(result.dQualEmployee)} bold />
+                      <SummaryLine label="Total employee" value={fc(result.dQualEmployee)} bold />
 
                       <Divider label="Employer Match" />
                       <SummaryLine label="Dollar-for-dollar match" value={fc(result.dMatchQual)}
                         tooltip="TDIndustries matches 100% of your qualified plan contributions with no cap on the match rate." />
-
-                      <Divider label="415(c) Analysis" />
-                      <SummaryLine label="Employee contributions" value={fc(result.dQualEmployee)} indent />
-                      <SummaryLine label="Employer match" value={fc(result.dMatchQual)} indent />
-                      <SummaryLine label="Total annual additions" value={fc(result.total415cQual)} bold color={result.has415cSpillover ? T.amber : T.text} />
-                      <SummaryLine label="415(c) limit" value={fc(LIMIT_415C)} />
+                      <SummaryLine label="Total contributions (employee + employer)" value={fc(result.total415cQual)} bold color={result.has415cSpillover ? T.amber : T.text} />
+                      <SummaryLine label="Total contributions allowed" value={fc(LIMIT_415C)} dimmed />
                       {result.has415cSpillover
                         ? <SummaryLine label="Spillover to Excess Benefit Plan" value={fc(result.over415c)} bold color={T.amber} />
-                        : <SummaryLine label="Room remaining under 415(c)" value={fc(LIMIT_415C - result.total415cQual)} dimmed />
+                        : <SummaryLine label="Room remaining" value={fc(LIMIT_415C - result.total415cQual)} dimmed />
                       }
+
+                      {periodsLeft > 0 && result.dQualEmployee > 0 && (
+                        <>
+                          <Divider label="Per Paycheck" />
+                          {result.d401kPre > 0 && <SummaryLine label="401(k) pre-tax" value={fc(Math.max(result.d401kPre - result.ytd401kPre, 0) / periodsLeft)} indent />}
+                          {result.d401kRoth > 0 && <SummaryLine label="401(k) Roth after-tax" value={fc(Math.max(result.d401kRoth - result.ytd401kRoth, 0) / periodsLeft)} indent />}
+                          {result.dEsopPre > 0 && <SummaryLine label="ESOP pre-tax" value={fc(Math.max(result.dEsopPre - result.ytdEsopPre, 0) / periodsLeft)} indent />}
+                          {result.dEsopRoth > 0 && <SummaryLine label="ESOP Roth after-tax" value={fc(Math.max(result.dEsopRoth - result.ytdEsopRoth, 0) / periodsLeft)} indent />}
+                          <SummaryLine label="Total per paycheck" value={fc(Math.max(result.dQualEmployee - result.ytdQualTotal, 0) / periodsLeft)} bold />
+                        </>
+                      )}
                     </DetailPanel>
                   </div>
                 )}
@@ -1630,17 +1636,17 @@ export default function App() {
                       label="View Calculation Details"
                       isOpen={showSsepDetail} onToggle={() => setShowSsepDetail(v => !v)}
                     >
-                      <div>
-                        {result.ytdSsepTotal > 0 && (
-                          <>
-                            <SummaryLine label="SSEP pre-tax (YTD)" value={fc(result.ytdSsepPre)} indent dimmed />
-                            <SummaryLine label="SSEP ESOP (YTD)" value={fc(result.ytdSsepEsop)} indent dimmed />
-                          </>
-                        )}
-                        <SummaryLine label="SSEP pre-tax" value={fc(result.dSsepPre)} indent />
-                        <SummaryLine label="SSEP ESOP" value={fc(result.dSsepEsop)} indent />
-                        <SummaryLine label="Total SSEP (employee)" value={fc(result.dSsepTotal)} bold />
-                      </div>
+                      <Divider label="Employee Contributions" />
+                      {result.ytdSsepTotal > 0 && (
+                        <>
+                          <SummaryLine label="SSEP pre-tax (YTD)" value={fc(result.ytdSsepPre)} indent dimmed />
+                          <SummaryLine label="SSEP ESOP (YTD)" value={fc(result.ytdSsepEsop)} indent dimmed />
+                        </>
+                      )}
+                      <SummaryLine label="SSEP pre-tax" value={fc(result.dSsepPre)} indent />
+                      <SummaryLine label="SSEP ESOP" value={fc(result.dSsepEsop)} indent />
+                      <SummaryLine label="Total employee" value={fc(result.dSsepTotal)} bold />
+
                       <Divider label="Employer Match" />
                       <SummaryLine label="Dollar-for-dollar match" value={fc(result.dMatchSsep)}
                         tooltip="TDIndustries matches SSEP contributions dollar-for-dollar. SSEP match amounts may be subject to different vesting schedules or discretionary treatment than the qualified plan match — confirm details with your plan administrator." />
@@ -1649,6 +1655,15 @@ export default function App() {
                           <strong>Note:</strong> The SSEP employer match shown is an estimate based on the dollar-for-dollar match rate. SSEP match contributions may be subject to vesting schedules or discretionary provisions that differ from the qualified plan. Confirm the terms with your plan administrator before making elections.
                         </NoteBox>
                       </div>
+
+                      {periodsLeft > 0 && result.dSsepTotal > 0 && (
+                        <>
+                          <Divider label="Per Paycheck" />
+                          {result.dSsepPre > 0 && <SummaryLine label="SSEP pre-tax" value={fc(Math.max(result.dSsepPre - result.ytdSsepPre, 0) / periodsLeft)} indent />}
+                          {result.dSsepEsop > 0 && <SummaryLine label="SSEP ESOP" value={fc(Math.max(result.dSsepEsop - result.ytdSsepEsop, 0) / periodsLeft)} indent />}
+                          <SummaryLine label="Total per paycheck" value={fc(Math.max(result.dSsepTotal - result.ytdSsepTotal, 0) / periodsLeft)} bold />
+                        </>
+                      )}
                     </DetailPanel>
                   </div>
                 )}
