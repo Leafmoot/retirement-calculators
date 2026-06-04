@@ -142,6 +142,81 @@ function getCatchUp(age) {
   if (age >= 50) return LIMIT_CATCHUP_50;
   return 0;
 }
+function ceilPct(val) { return Math.ceil(val); }
+
+// ── Next-year projection ──────────────────────────────────────────────────────
+// Projects rates and dollars to max out the 401(k)/ESOP plan over a full
+// 52-period year at the user's next age. Always recommends pre-tax unless
+// FICA requires Roth catch-up.
+function computeNextYearProjection(totalComp, age, fica) {
+  const nextAge = age + 1;
+  const currCatchUp = getCatchUp(age);
+  const nextCatchUp = getCatchUp(nextAge);
+  const currMax = LIMIT_402G + currCatchUp;
+  const nextMax = LIMIT_402G + nextCatchUp;
+  const limitDiff = nextMax - currMax;
+  const limitChanged = limitDiff !== 0;
+  const limitDirection = limitDiff > 0 ? "increases" : "decreases";
+  const crossingCatchUpThreshold = currCatchUp === 0 && nextCatchUp > 0;
+  const ficaUnknown = crossingCatchUpThreshold && fica === null;
+  const nextIs6063 = nextAge >= 60 && nextAge <= 63;
+  const nextCatchUpLabel = nextIs6063 ? "ages 60–63" : "age 50+";
+  const rothRequired = nextCatchUp > 0 && fica === true;
+
+  const fullPeriods = 52;
+  const perCheck = totalComp / fullPeriods;
+  if (perCheck <= 0) return null;
+
+  if (rothRequired) {
+    // Split: pre-tax up to base limit, Roth for catch-up portion
+    const prePct = ceilPct(LIMIT_402G / fullPeriods / perCheck * 100);
+    const rothPct = ceilPct(nextCatchUp / fullPeriods / perCheck * 100);
+    return {
+      split: true, nextAge, nextMax, nextCatchUp, nextCatchUpLabel,
+      limitChanged, limitDirection, ficaUnknown,
+      prePct, rothPct,
+    };
+  } else {
+    const pct = ceilPct(nextMax / fullPeriods / perCheck * 100);
+    return {
+      split: false, nextAge, nextMax, nextCatchUp, nextCatchUpLabel,
+      limitChanged, limitDirection, ficaUnknown,
+      pct,
+    };
+  }
+}
+
+function ProjectionBlock({ totalComp, age, fica }) {
+  const proj = computeNextYearProjection(totalComp, parseInt(age), fica);
+  if (!proj) return null;
+  return (
+    <>
+      <Divider label="Next Year Projection" />
+      {proj.split ? (
+        <>
+          <SummaryLine label="Pre-tax" value={`${proj.prePct}%`} indent />
+          <SummaryLine label={`Roth after-tax catch-up (${proj.nextCatchUpLabel})`} value={`${proj.rothPct}%`} indent />
+        </>
+      ) : (
+        <SummaryLine label="Recommended pre-tax rate" value={`${proj.pct}%`} bold />
+      )}
+      <div style={{ fontSize: "0.72rem", color: T.textSub, fontFamily: T.font, lineHeight: 1.5, marginTop: 8, paddingLeft: 12 }}>
+        Estimated rates to maximize the 401(k)/ESOP plan at age {proj.nextAge} over a full 52-period year, assuming current compensation and next year's IRS limits carry forward.
+        {proj.limitChanged && (
+          <span style={{ color: T.amber, fontWeight: 600 }}>
+            {" "}The annual limit {proj.limitDirection} to {fc(proj.nextMax)} at age {proj.nextAge}.
+          </span>
+        )}
+        {proj.ficaUnknown && (
+          <span style={{ color: T.amber, fontWeight: 600 }}>
+            {" "}You'll be catch-up eligible at age {proj.nextAge} — whether the catch-up must be Roth will depend on your {PLAN_YEAR} FICA wages.
+          </span>
+        )}
+      </div>
+    </>
+  );
+}
+
 function fc(val, decimals = 0) {
   return val.toLocaleString("en-US", {
     style: "currency", currency: "USD",
@@ -168,11 +243,8 @@ const T = {
   // TDI Navy — primary brand color; used for Qualified ESOP plan
   navy: "#1B3A6B", navyLight: "#EAF2FB", navyBorder: "#B8D4F0",
 
-  // TDI Sky Blue — used for 401(k) plan
+  // TDI Sky Blue — FICA NoteBox only
   sky: "#07A3DA", skyLight: "#DBF4FF", skyBorder: "#7DD3F0",
-
-  // TDI Green — used for ESOP plan & totals
-  green: "#3A8A4E", greenLight: "#E8F5EB", greenBorder: "#A3CFAe",
 
   // TDI Amber/Gold — warnings, spillover
   amber: "#E8A020", amberLight: "#FFF8E6", amberBorder: "#F5CE80",
@@ -182,9 +254,6 @@ const T = {
 
   // Button — TDI navy
   btn: "#1B3A6B", btnHover: "#152D55", btnLight: "#EAF2FB", btnBorder: "#B8D4F0",
-
-  // SSEP supplemental — TDI amber/gold for clear differentiation from sky blue and green
-  ssep: "#B8630A", ssepLight: "#FFF4E6", ssepBorder: "#F5C87A",
 
   shadow: "0 1px 3px rgba(27,58,107,0.08)",
   shadowMd: "0 4px 12px rgba(27,58,107,0.10)",
@@ -251,7 +320,7 @@ function InfoTooltip({ text }) {
 
 function Label({ children, tooltip }) {
   return (
-    <div style={{ marginBottom: 4, minHeight: 20, display: "flex", alignItems: "center" }}>
+    <div style={{ marginBottom: 4, display: "flex", alignItems: "center" }}>
       <span style={{ fontSize: "0.82rem", fontWeight: 600, color: T.text, fontFamily: T.font, letterSpacing: "-0.01em" }}>
         {children}{tooltip && <InfoTooltip text={tooltip} />}
       </span>
@@ -307,9 +376,9 @@ function Input({ value, onChange, placeholder, type = "text", prefix, suffix, er
   );
 }
 
-function Divider({ label }) {
+function Divider({ label, tight }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "14px 0 10px" }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 10, margin: `${tight ? 8 : 14}px 0 10px` }}>
       {label && <span style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textMuted, fontFamily: T.font, whiteSpace: "nowrap" }}>{label}</span>}
       <div style={{ flex: 1, height: 1, background: T.border }} />
     </div>
@@ -359,11 +428,11 @@ function EmptyResults({ isCalculating }) {
           </svg>
         </div>
         <div style={{ fontSize: "0.9rem", fontWeight: 700, color: T.text, fontFamily: T.font, textAlign: "center" }}>
-          {isCalculating ? "Calculating…" : "See Your Contribution Limits"}
+          {isCalculating ? "Calculating…" : "Calculate Your Path to the Limit"}
         </div>
         {!isCalculating && (
           <div style={{ fontSize: "0.78rem", color: T.textSub, fontFamily: T.font, textAlign: "center", lineHeight: 1.55 }}>
-            Enter your compensation and contribution rates to see how much you can save across both plans.
+            Enter your compensation and age to see your contribution limits and next-year projections.
           </div>
         )}
       </div>
@@ -376,7 +445,7 @@ function PctInput({ value, onChange, label, tooltip, disabled, disabledReason, e
   const color = accentColor || T.text;
   return (
     <div>
-      <div style={{ marginBottom: 4, minHeight: 20, display: "flex", alignItems: "center" }}>
+      <div style={{ marginBottom: 4, display: "flex", alignItems: "center" }}>
         <span style={{ fontSize: "0.78rem", fontWeight: 600, color: disabled ? T.textMuted : color, fontFamily: T.font, display: "flex", alignItems: "center" }}>
           {label}{tooltip && <InfoTooltip text={tooltip} />}
         </span>
@@ -672,11 +741,31 @@ export default function App() {
 
   // ── Live budget values ────────────────────────────────────────────────────
   const p401kPre  = parsePct(r401kPre);
-  const p401kRoth = parsePct(r401kRoth);
   const pEsopPre  = parsePct(rEsopPre);
-  const pEsopRoth = parsePct(rEsopRoth);
   const pSsepPre  = parsePct(rSsepPre);
   const pSsepEsop = parsePct(rSsepEsop);
+
+  // When FICA requires Roth catch-up, derive the Roth percentages directly
+  // from pre-tax so they're always consistent — no state setter timing issues.
+  const liveComp        = parse(baseSalary) + parse(incentive);
+  const liveCatchUp     = parseInt(age) >= 50 ? getCatchUp(parseInt(age)) : 0;
+  const liveElectiveLimit = LIMIT_402G + liveCatchUp;
+  const ficaActive      = fica === true && liveCatchUp > 0;
+
+  const p401kRoth = ficaActive && liveComp > 0 && p401kPre > 0
+    ? (() => {
+        const ytdRoth = parse(ytd401kRoth) + parse(ytdEsopRoth);
+        const catchUpRemaining = Math.max(liveCatchUp - ytdRoth, 0);
+        return catchUpRemaining > 0 ? Math.ceil(Math.round((catchUpRemaining / liveComp) * 10000) / 100) : 0;
+      })()
+    : parsePct(r401kRoth);
+  const pEsopRoth = ficaActive && liveComp > 0 && pEsopPre > 0
+    ? (() => {
+        const ytdRoth = parse(ytd401kRoth) + parse(ytdEsopRoth);
+        const catchUpRemaining = Math.max(liveCatchUp - ytdRoth, 0);
+        return catchUpRemaining > 0 ? Math.ceil(Math.round((catchUpRemaining / liveComp) * 10000) / 100) : 0;
+      })()
+    : parsePct(rEsopRoth);
 
   const used401k  = p401kPre + p401kRoth;
   const usedEsop  = pEsopPre + pEsopRoth;
@@ -685,10 +774,7 @@ export default function App() {
   const usedTotal = usedQual + usedSsep;
 
   // ── Live dollar preview ─────────────────────────────────────────────────
-  const liveComp        = parse(baseSalary) + parse(incentive);
   const liveSsepDollars = liveComp > 0 ? liveComp * (usedSsep / 100) : 0;
-  const liveCatchUp     = parseInt(age) >= 50 ? getCatchUp(parseInt(age)) : 0;
-  const liveElectiveLimit = LIMIT_402G + liveCatchUp;
 
   // YTD parsed amounts
   const ytd401kPreAmt  = parse(ytd401kPre);
@@ -748,9 +834,10 @@ export default function App() {
     // How much pre-tax room remains after the other pre-tax field's share?
     const otherPreTaxDollars = liveComp > 0 ? liveComp * (otherPreTaxPct / 100) : 0;
     const remainingPreTaxRoom = Math.max(effectivePreTaxLimit - otherPreTaxDollars, 0);
-    // Floor — cannot let even one cent of catch-up go pre-tax
+    // Ceil to whole percent — smallest whole percent that reaches the base limit
+    // Round to 2dp first to avoid floating point artifacts (e.g. 7.0000000001 → 8)
     const fieldPreTaxMaxPct = liveComp > 0
-      ? Math.floor((remainingPreTaxRoom / liveComp) * 10000) / 100
+      ? Math.ceil(Math.round((remainingPreTaxRoom / liveComp) * 10000) / 100)
       : 9999;
 
     let snappedPreTax = Math.min(raw, fieldPreTaxMaxPct);
@@ -765,14 +852,13 @@ export default function App() {
 
     setter(snappedPreTax === 0 && newVal === "" ? "" : String(Math.floor(snappedPreTax)));
 
-    // Overflow must go to Roth for the same plan
+    // Roth catch-up: set to exactly what's needed to reach the full elective limit
     if (raw > snappedPreTax && liveComp > 0) {
-      const overflowDollars = (raw - snappedPreTax) * (liveComp / 100);
       const snappedPreTaxDollars = snappedPreTax * (liveComp / 100);
       const effectiveElectiveLimit = Math.max(liveElectiveLimit - ytdQualTotal, 0);
-      const rothSpillDollars = Math.min(overflowDollars, effectiveElectiveLimit - snappedPreTaxDollars - otherPreTaxDollars);
-      const rothSpillPct = Math.ceil((Math.max(rothSpillDollars, 0) / liveComp) * 10000) / 100;
-      rothSetter(rothSpillPct <= 0 ? "" : String(Math.ceil(rothSpillPct)));
+      const rothNeededDollars = Math.max(effectiveElectiveLimit - snappedPreTaxDollars - otherPreTaxDollars, 0);
+      const rothSpillPct = Math.ceil((rothNeededDollars / liveComp) * 100);
+      rothSetter(rothSpillPct <= 0 ? "" : String(rothSpillPct));
     }
 
     markDirty();
@@ -785,7 +871,7 @@ export default function App() {
     return (
       <span style={{
         fontSize: "0.68rem", fontFamily: T.font,
-        color: full ? T.green : T.textMuted,
+        color: full ? T.navy : T.textMuted,
         fontWeight: full ? 700 : 400,
         whiteSpace: "nowrap",
       }}>
@@ -839,10 +925,21 @@ export default function App() {
       const is6063        = a >= 60 && a <= 63;
       const electiveLimit = LIMIT_402G + catchUp;
 
-      const el401kPre  = Math.min(p401kPre,  MAX_401K_PCT);
-      const el401kRoth = Math.min(p401kRoth, Math.max(MAX_401K_PCT - el401kPre, 0));
-      const elEsopPre  = Math.min(pEsopPre,  MAX_ESOP_PCT);
-      const elEsopRoth = Math.min(pEsopRoth, Math.max(MAX_ESOP_PCT - elEsopPre, 0));
+      // When FICA requires Roth catch-up the 401(k) percentage cap is raised to
+      // accommodate both the base limit and catch-up portion — the IRS dollar limit
+      // governs what actually counts, not the plan percentage guardrail.
+      const ficaRothRequired = catchUp > 0 && fica === true;
+      const effective401kCap = ficaRothRequired
+        ? Math.ceil((electiveLimit / totalComp) * 100)
+        : MAX_401K_PCT;
+      const effectiveEsopCap = ficaRothRequired
+        ? Math.ceil((electiveLimit / totalComp) * 100)
+        : MAX_ESOP_PCT;
+
+      const el401kPre  = Math.min(p401kPre,  effective401kCap);
+      const el401kRoth = Math.min(p401kRoth, Math.max(effective401kCap - el401kPre, 0));
+      const elEsopPre  = Math.min(pEsopPre,  effectiveEsopCap);
+      const elEsopRoth = Math.min(pEsopRoth, Math.max(effectiveEsopCap - elEsopPre, 0));
       const el401kCombined = el401kPre + el401kRoth;
       const elEsopCombined = elEsopPre + elEsopRoth;
       const elQualTotal    = el401kCombined + elEsopCombined;
@@ -859,12 +956,28 @@ export default function App() {
       // Remaining room under 402(g) after YTD already contributed
       const effectiveQualLimit = Math.max(electiveLimit - ytdQualTotal, 0);
       const dQualEmployee = Math.min(dQualRaw, effectiveQualLimit);
-      // Scale individual field dollars proportionally if cap trims the total
-      const qualScale     = dQualRaw > 0 ? dQualEmployee / dQualRaw : 1;
-      const d401kPreFinal  = d401kPre  * qualScale;
-      const d401kRothFinal = d401kRoth * qualScale;
-      const dEsopPreFinal  = dEsopPre  * qualScale;
-      const dEsopRothFinal = dEsopRoth * qualScale;
+
+      // When FICA requires Roth catch-up, pre-tax is hard-capped at LIMIT_402G
+      let d401kPreFinal, d401kRothFinal, dEsopPreFinal, dEsopRothFinal;
+      if (ficaRothRequired && dQualRaw > effectiveQualLimit) {
+        const preTaxCap = Math.max(LIMIT_402G - (ytdQualTotal - ytd401kRothAmt - ytdEsopRothAmt), 0);
+        const preTaxRaw = d401kPre + dEsopPre;
+        const preTaxActual = Math.min(preTaxRaw, preTaxCap);
+        const preTaxScale = preTaxRaw > 0 ? preTaxActual / preTaxRaw : 1;
+        d401kPreFinal  = d401kPre  * preTaxScale;
+        dEsopPreFinal  = dEsopPre  * preTaxScale;
+        const rothActual = dQualEmployee - preTaxActual;
+        const rothRaw  = d401kRoth + dEsopRoth;
+        const rothScale = rothRaw > 0 ? rothActual / rothRaw : 1;
+        d401kRothFinal = d401kRoth * rothScale;
+        dEsopRothFinal = dEsopRoth * rothScale;
+      } else {
+        const qualScale = dQualRaw > 0 ? dQualEmployee / dQualRaw : 1;
+        d401kPreFinal  = d401kPre  * qualScale;
+        d401kRothFinal = d401kRoth * qualScale;
+        dEsopPreFinal  = dEsopPre  * qualScale;
+        dEsopRothFinal = dEsopRoth * qualScale;
+      }
       const dSsepPre      = totalComp * (elSsepPre  / 100);
       const dSsepEsop     = totalComp * (elSsepEsop / 100);
       const dSsepTotal    = dSsepPre + dSsepEsop;
@@ -876,7 +989,7 @@ export default function App() {
       const ytdSsepTotal   = ytdSsepPreAmt + ytdSsepEsopAmt;
 
       const electiveEmployee = dQualEmployee;
-      const electiveOver402g = Math.max(electiveEmployee - effectiveQualLimit, 0);
+      const electiveOver402g = Math.max(electiveEmployee + ytdQualTotal - electiveLimit, 0);
 
       const dMatchQual  = dQualEmployee;
       const dMatchSsep  = dSsepTotal;
@@ -890,19 +1003,26 @@ export default function App() {
 
       // ── FICA / Roth catch-up note ────────────────────────────────────────
       const d401kTotal        = d401kPreFinal + d401kRothFinal;
-      const ficaRothRequired  = catchUp > 0 && fica === true;
       // Catch-up is in play when FICA requires Roth AND projected 401(k) dollars
       // (including what's already been contributed) exceed the standard limit
       const total401kWithYtd  = d401kTotal + ytd401kPreAmt + ytd401kRothAmt;
       const catchUpInPlay     = ficaRothRequired && total401kWithYtd > LIMIT_402G;
       const catchUpRemaining  = Math.max(catchUp - (ytd401kRothAmt), 0);
       const rothCatchUpPct    = totalComp > 0
-        ? Math.ceil((catchUpRemaining / totalComp) * 10000) / 100
+        ? Math.ceil((catchUpRemaining / totalComp) * 100)
         : 0;
+
+      // Effective display percentages — derived from final dollars, not raw input
+      // These keep plan card % consistent with dollar amounts after FICA scaling
+      const eff401kPre  = totalComp > 0 ? Math.round(d401kPreFinal  / totalComp * 100) : 0;
+      const eff401kRoth = totalComp > 0 ? Math.round(d401kRothFinal / totalComp * 100) : 0;
+      const effEsopPre  = totalComp > 0 ? Math.round(dEsopPreFinal  / totalComp * 100) : 0;
+      const effEsopRoth = totalComp > 0 ? Math.round(dEsopRothFinal / totalComp * 100) : 0;
 
       setResult({
         base, incv, totalComp, age: a, catchUp, is6063, electiveLimit,
         el401kPre, el401kRoth, elEsopPre, elEsopRoth,
+        eff401kPre, eff401kRoth, effEsopPre, effEsopRoth,
         el401kCombined, elEsopCombined, elQualTotal,
         elSsepPre, elSsepEsop, elSsepTotal, elGrandTotal,
         d401kPre: d401kPreFinal, d401kRoth: d401kRothFinal,
@@ -917,7 +1037,7 @@ export default function App() {
         ytdEsopPre: ytdEsopPreAmt, ytdEsopRoth: ytdEsopRothAmt,
         ytdQualTotal, ytdSsepPre: ytdSsepPreAmt, ytdSsepEsop: ytdSsepEsopAmt, ytdSsepTotal,
         effectiveQualLimit,
-        has415cSpillover: over415c > 0,
+        has415cSpillover: over415c > 0.01,
         hasQualContribs: dQualEmployee > 0,
         hasSsepContribs: dSsepTotal > 0,
         fica,
@@ -957,7 +1077,7 @@ export default function App() {
       <style>{`
         input::-webkit-inner-spin-button,input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0;}
         input[type=number]{-moz-appearance:textfield;appearance:textfield;}
-        @media(max-width:640px){.mobile-stack{grid-template-columns:1fr!important}}
+        @media(max-width:1023px){.mobile-stack{grid-template-columns:1fr!important}}
       `}</style>
 
       {/* Subtle noise */}
@@ -1168,11 +1288,14 @@ export default function App() {
       }}>
 
         {/* ── LEFT: Inputs ─────────────────────────────────────────────────── */}
-        <div style={{ background: T.surface, borderRadius: T.radiusLg, border: `1px solid ${T.border}`, boxShadow: T.shadowMd }}>
-          <div style={{ padding: "12px 16px" }}>
+        <div style={{ background: T.surface, borderRadius: T.radiusLg, border: `1px solid ${T.border}`, boxShadow: T.shadowMd, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+          <div style={{ flex: 1, overflowY: isMobile ? "visible" : "auto", padding: "12px 16px 12px" }}>
 
             {/* Compensation */}
-            <Divider label="Compensation" />
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+              <span style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textMuted, fontFamily: T.font, whiteSpace: "nowrap" }}>Compensation</span>
+              <div style={{ flex: 1, height: 1, background: T.border }} />
+            </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }} className="mobile-stack">
               <div>
                 <Label tooltip="Your annual base compensation, not including bonuses or incentive pay.">Base Compensation</Label>
@@ -1245,7 +1368,7 @@ export default function App() {
                         onChange={(v) => handlePreTaxWithFicaCap(setR401kPre, p401kPre, [[used401k, MAX_401K_PCT], [usedQual, MAX_QUALIFIED_PCT], [usedTotal, MAX_TOTAL_PCT], [usedQual, maxQualPct]], v, pEsopPre, setR401kRoth)}
                         tooltip="Reduces your taxable income now; pay taxes later when withdrawn as ordinary income."
                       />
-                      <PctInput label="Roth after-tax" value={r401kRoth} accentColor={T.navy}
+                      <PctInput label="Roth after-tax" value={ficaActive && p401kPre > 0 ? String(p401kRoth) : r401kRoth} accentColor={T.navy}
                         disabled={lock401kRoth && p401kRoth === 0}
                         disabledReason={usedQual >= maxQualPct ? "IRS deferral limit reached" : usedQual >= MAX_QUALIFIED_PCT ? "Qualified plan limit reached" : usedTotal >= MAX_TOTAL_PCT ? "Overall 20% limit reached" : "401(k) 10% limit reached"}
                         onChange={(v) => handleRateChange(setR401kRoth, p401kRoth, [[used401k, MAX_401K_PCT], [usedQual, MAX_QUALIFIED_PCT], [usedTotal, MAX_TOTAL_PCT], [usedQual, maxQualPct]], v)}
@@ -1258,7 +1381,7 @@ export default function App() {
                         <span style={{ fontSize: "0.7rem", fontFamily: T.font, fontWeight: 600, color: T.navy }}>≈ {fc(liveComp * (used401k / 100))}/yr</span>
                       </div>
                     )}
-                    <Divider label="Year-to-date contributed" />
+                    <Divider label="Year-to-date contributed" tight />
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }} className="mobile-stack">
                       <div>
                         <div style={{ marginBottom: 4, fontSize: "0.78rem", fontWeight: 600, color: T.navy, fontFamily: T.font }}>Pre-tax</div>
@@ -1300,7 +1423,7 @@ export default function App() {
                         onChange={(v) => handlePreTaxWithFicaCap(setREsopPre, pEsopPre, [[usedEsop, MAX_ESOP_PCT], [usedQual, MAX_QUALIFIED_PCT], [usedTotal, MAX_TOTAL_PCT], [usedQual, maxQualPct]], v, p401kPre, setREsopRoth)}
                         tooltip="Reduces your taxable income now; pay taxes later when withdrawn as ordinary income."
                       />
-                      <PctInput label="Roth after-tax" value={rEsopRoth} accentColor={T.navy}
+                      <PctInput label="Roth after-tax" value={ficaActive && pEsopPre > 0 ? String(pEsopRoth) : rEsopRoth} accentColor={T.navy}
                         disabled={lockEsopRoth && pEsopRoth === 0}
                         disabledReason={usedQual >= maxQualPct ? "IRS deferral limit reached" : usedQual >= MAX_QUALIFIED_PCT ? "Qualified plan limit reached" : usedTotal >= MAX_TOTAL_PCT ? "Overall 20% limit reached" : "ESOP 10% limit reached"}
                         onChange={(v) => handleRateChange(setREsopRoth, pEsopRoth, [[usedEsop, MAX_ESOP_PCT], [usedQual, MAX_QUALIFIED_PCT], [usedTotal, MAX_TOTAL_PCT], [usedQual, maxQualPct]], v)}
@@ -1313,7 +1436,7 @@ export default function App() {
                         <span style={{ fontSize: "0.7rem", fontFamily: T.font, fontWeight: 600, color: T.navy }}>≈ {fc(liveComp * (usedEsop / 100))}/yr</span>
                       </div>
                     )}
-                    <Divider label="Year-to-date contributed" />
+                    <Divider label="Year-to-date contributed" tight />
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }} className="mobile-stack">
                       <div>
                         <div style={{ marginBottom: 4, fontSize: "0.78rem", fontWeight: 600, color: T.navy, fontFamily: T.font }}>Pre-tax</div>
@@ -1368,7 +1491,7 @@ export default function App() {
                         <span style={{ fontSize: "0.7rem", fontFamily: T.font, fontWeight: 600, color: T.navy }}>≈ {fc(liveSsepDollars)}/yr</span>
                       </div>
                     )}
-                    <Divider label="Year-to-date contributed" />
+                    <Divider label="Year-to-date contributed" tight />
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }} className="mobile-stack">
                       <div>
                         <div style={{ marginBottom: 4, fontSize: "0.78rem", fontWeight: 600, color: T.navy, fontFamily: T.font }}>Pre-tax</div>
@@ -1399,38 +1522,34 @@ export default function App() {
               </div>
             )}
 
-            {/* Calculate */}
+          </div>{/* end scrollable padding div */}
+
+          {/* Sticky Actions Footer */}
+          <div style={{ flexShrink: 0, padding: "12px 16px", borderTop: `1px solid ${T.border}`, background: T.surface, display: "flex", gap: 6 }}>
             <button
               type="button" onClick={calculate}
               style={{
-                width: "100%", marginTop: 14, padding: "11px 16px",
-                fontSize: "0.875rem", fontWeight: 700, fontFamily: T.font,
-                color: "#FFFFFF", background: T.btn,
-                border: "none", borderRadius: T.radius,
-                cursor: "pointer", transition: "background 0.15s",
-                letterSpacing: "-0.01em",
+                flex: 1, padding: "10px 14px",
+                background: isDirty ? "#6B7280" : T.btn, color: "#FFF",
+                border: "none", borderRadius: T.radius, fontSize: "0.85rem",
+                fontWeight: 700, fontFamily: T.font, cursor: "pointer",
+                transition: "background 0.2s",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = T.btnHover)}
-              onMouseLeave={(e) => (e.currentTarget.style.background = T.btn)}
+              onMouseEnter={(e) => (e.currentTarget.style.background = isDirty ? "#4B5563" : T.btnHover)}
+              onMouseLeave={(e) => (e.currentTarget.style.background = isDirty ? "#6B7280" : T.btn)}
             >
-              Calculate
+              {isDirty
+                ? (<><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="6.5" r="5.5" stroke="rgba(255,255,255,0.7)" strokeWidth="1.2" /><path d="M6.5 3.5v3.2l2 1.2" stroke="rgba(255,255,255,0.7)" strokeWidth="1.2" strokeLinecap="round" /></svg> Recalculate</>)
+                : "Calculate →"}
             </button>
-
             {calculated && (
               <button
                 type="button" onClick={clearAll}
-                style={{
-                  width: "100%", marginTop: 6, padding: "8px 16px",
-                  fontSize: "0.8rem", fontWeight: 500, fontFamily: T.font,
-                  color: T.textSub, background: "transparent",
-                  border: `1px solid ${T.border}`, borderRadius: T.radius,
-                  cursor: "pointer", transition: "all 0.15s",
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = T.surfaceAlt; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
-              >
-                Clear
-              </button>
+                style={{ padding: "10px 16px", background: T.surfaceAlt, color: T.textSub, border: `1.5px solid ${T.border}`, borderRadius: T.radius, fontSize: "0.8rem", fontWeight: 600, fontFamily: T.font, cursor: "pointer", transition: "all 0.15s" }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = T.border; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = T.surfaceAlt; }}
+              >Clear</button>
             )}
           </div>
         </div>
@@ -1517,7 +1636,7 @@ export default function App() {
                   <div style={{ background: T.navyLight, border: `1px solid ${T.navyBorder}`, borderRadius: T.radius, padding: "10px 12px" }}>
                     <div style={{ fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: T.navy, fontFamily: T.font, marginBottom: 4 }}>Employer Match</div>
                     <div style={{ fontSize: "1.5rem", fontWeight: 800, color: T.navy, fontFamily: T.font, letterSpacing: "-0.03em", lineHeight: 1 }}>{fc(result.dMatchTotal)}</div>
-                    <div style={{ fontSize: "0.7rem", color: T.textSub, fontFamily: T.font, marginTop: 3 }}>Dollar-for-dollar</div>
+                    <div style={{ fontSize: "0.7rem", color: result.has415cSpillover ? T.amber : T.textSub, fontFamily: T.font, marginTop: 3 }}>{result.has415cSpillover ? "Includes Excess Benefit Plan" : "Dollar-for-dollar"}</div>
                   </div>
                   <div style={{ background: T.navyLight, border: `1px solid ${T.navyBorder}`, borderRadius: T.radius, padding: "10px 12px" }}>
                     <div style={{ fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: T.navy, fontFamily: T.font, marginBottom: 4 }}>Total Saved</div>
@@ -1529,16 +1648,17 @@ export default function App() {
                 {/* 402(g) warning */}
                 {result.electiveOver402g > 0 && (
                   <NoteBox color={T.amber} bg={T.amberLight} border={T.amberBorder}>
-                    <strong>IRS elective deferral limit:</strong> Your elected qualified plan contributions of {fc(result.electiveEmployee)} exceed the {result.catchUp > 0 ? `${fc(result.electiveLimit)} limit (${fc(LIMIT_402G)} + ${fc(result.catchUp)} catch-up)` : `${fc(LIMIT_402G)} limit`} for {PLAN_YEAR} by {fc(result.electiveOver402g)}. Please adjust your rates to stay within the IRS limit.
+                    <strong>Annual contribution limit exceeded:</strong> Your elected qualified plan contributions of {fc(result.electiveEmployee + result.ytdQualTotal)} exceed the {result.catchUp > 0 ? `${fc(result.electiveLimit)} limit (${fc(LIMIT_402G)} base + ${fc(result.catchUp)} catch-up)` : `${fc(LIMIT_402G)} annual limit`} for {PLAN_YEAR} by {fc(result.electiveOver402g)}. Please adjust your rates to stay within the limit.
                   </NoteBox>
                 )}
 
-                {/* Qualified ESOP card */}
-                {result.hasQualContribs && (
-                  <div style={{ border: `1px solid ${T.navyBorder}`, borderRadius: T.radius, overflow: "hidden" }}>
-                    <div style={{ padding: "8px 14px 6px", background: T.navyLight, borderBottom: `1px solid ${T.navyBorder}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                      <span style={{ fontSize: "0.82rem", fontWeight: 700, color: T.navy, fontFamily: T.font }}>401(k)/ESOP Plan</span>
-                    </div>
+                {/* Qualified ESOP card — always shown after calculation */}
+                <div style={{ border: `1px solid ${T.navyBorder}`, borderRadius: T.radius, overflow: "hidden" }}>
+                  <div style={{ padding: "8px 14px 6px", background: T.navyLight, borderBottom: `1px solid ${T.navyBorder}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <span style={{ fontSize: "0.82rem", fontWeight: 700, color: T.navy, fontFamily: T.font }}>401(k)/ESOP Plan</span>
+                  </div>
+
+                  {result.hasQualContribs && (
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 1, background: T.navyBorder }}>
                       {[
                         { label: "401(k) Pre-tax", pct: result.el401kPre, dollars: result.d401kPre, ytd: result.ytd401kPre },
@@ -1549,20 +1669,21 @@ export default function App() {
                         <PlanCell key={cell.label} {...cell} periodsLeft={periodsLeft} />
                       ))}
                     </div>
+                  )}
 
-                    {/* Roth catch-up required NoteBox - only when FICA catchup is in play */}
-                    {result.catchUpInPlay && (
-                      <div style={{ padding: "10px 12px" }}>
-                        <NoteBox color={T.sky} bg={T.skyLight} border={T.skyBorder}>
-                          <strong>Catch-up contributions must be Roth after-tax.</strong> Because your prior-year FICA wages exceeded {FICA_THRESHOLD_DISPLAY}, your {PLAN_YEAR} catch-up contributions of {fc(result.catchUp)} must be Roth. Your {fc(LIMIT_402G)} base limit may be any mix of pre-tax and Roth.
-                        </NoteBox>
-                      </div>
-                    )}
+                  {/* Roth catch-up required NoteBox - only when FICA catchup is in play */}
+                  {result.catchUpInPlay && (
+                    <div style={{ padding: "10px 12px" }}>
+                      <NoteBox color={T.sky} bg={T.skyLight} border={T.skyBorder}>
+                        <strong>Catch-up contributions must be Roth after-tax.</strong> Because your prior-year FICA wages exceeded {FICA_THRESHOLD_DISPLAY}, your {PLAN_YEAR} catch-up contributions of {fc(result.catchUp)} must be Roth. Your {fc(LIMIT_402G)} base limit may be any mix of pre-tax and Roth.
+                      </NoteBox>
+                    </div>
+                  )}
 
-                    <DetailPanel
-                      label="View Calculation Details"
-                      isOpen={showQualDetail} onToggle={() => setShowQualDetail(v => !v)}
-                    >
+                  <DetailPanel
+                    label="View Calculation Details"
+                    isOpen={showQualDetail} onToggle={() => setShowQualDetail(v => !v)}
+                  >
                       <Divider label="Contribution Limits" />
                       <SummaryLine label="Annual limit" value={fc(LIMIT_402G)} />
                       {result.catchUp > 0 && (
@@ -1587,21 +1708,33 @@ export default function App() {
                           <SummaryLine label="ESOP Roth after-tax (YTD)" value={fc(result.ytdEsopRoth)} indent dimmed />
                         </>
                       )}
-                      <SummaryLine label="401(k) pre-tax" value={fc(result.d401kPre)} indent />
-                      <SummaryLine label="401(k) Roth after-tax" value={fc(result.d401kRoth)} indent />
-                      <SummaryLine label="ESOP pre-tax" value={fc(result.dEsopPre)} indent />
-                      <SummaryLine label="ESOP Roth after-tax" value={fc(result.dEsopRoth)} indent />
-                      <SummaryLine label="Total employee" value={fc(result.dQualEmployee)} bold />
+                      {result.hasQualContribs ? (
+                        <>
+                          {result.d401kPre > 0 && <SummaryLine label="401(k) pre-tax" value={fc(result.d401kPre)} indent />}
+                          {result.d401kRoth > 0 && <SummaryLine label="401(k) Roth after-tax" value={fc(result.d401kRoth)} indent />}
+                          {result.dEsopPre > 0 && <SummaryLine label="ESOP pre-tax" value={fc(result.dEsopPre)} indent />}
+                          {result.dEsopRoth > 0 && <SummaryLine label="ESOP Roth after-tax" value={fc(result.dEsopRoth)} indent />}
+                          <SummaryLine label="Total employee" value={fc(result.dQualEmployee)} bold />
+                        </>
+                      ) : (
+                        <div style={{ fontSize: "0.72rem", color: T.textMuted, fontFamily: T.font, paddingLeft: 12, paddingBottom: 4 }}>
+                          No contribution rates entered.
+                        </div>
+                      )}
 
-                      <Divider label="Employer Match" />
-                      <SummaryLine label="Dollar-for-dollar match" value={fc(result.dMatchQual)}
-                        tooltip="TDIndustries matches 100% of your qualified plan contributions with no cap on the match rate." />
-                      <SummaryLine label="Total contributions (employee + employer)" value={fc(result.total415cQual)} bold color={result.has415cSpillover ? T.amber : T.text} />
-                      <SummaryLine label="Total contributions allowed" value={fc(LIMIT_415C)} dimmed />
-                      {result.has415cSpillover
-                        ? <SummaryLine label="Spillover to Excess Benefit Plan" value={fc(result.over415c)} bold color={T.amber} />
-                        : <SummaryLine label="Room remaining" value={fc(LIMIT_415C - result.total415cQual)} dimmed />
-                      }
+                      {result.hasQualContribs && (
+                        <>
+                          <Divider label="Employer Match" />
+                          <SummaryLine label="Dollar-for-dollar match" value={fc(result.dMatchQual)}
+                            tooltip="TDIndustries matches 100% of your qualified plan contributions with no cap on the match rate." />
+                          <SummaryLine label="Total contributions (employee + employer)" value={fc(result.total415cQual)} bold color={result.has415cSpillover ? T.amber : T.text} />
+                          <SummaryLine label="Total contributions allowed" value={fc(LIMIT_415C)} dimmed />
+                          {result.has415cSpillover
+                            ? <SummaryLine label="Spillover to Excess Benefit Plan" value={fc(result.over415c)} bold color={T.amber} />
+                            : <SummaryLine label="Room remaining" value={fc(LIMIT_415C - result.total415cQual)} dimmed />
+                          }
+                        </>
+                      )}
 
                       {periodsLeft > 0 && result.dQualEmployee > 0 && (
                         <>
@@ -1613,9 +1746,10 @@ export default function App() {
                           <SummaryLine label="Total per paycheck" value={fc(Math.max(result.dQualEmployee - result.ytdQualTotal, 0) / periodsLeft)} bold />
                         </>
                       )}
+
+                      <ProjectionBlock totalComp={result.totalComp} age={result.age} fica={fica} />
                     </DetailPanel>
-                  </div>
-                )}
+                </div>
 
                 {/* SSEP card */}
                 {result.hasSsepContribs && (
@@ -1678,7 +1812,7 @@ export default function App() {
                       <div style={{ fontSize: "0.78rem", color: T.amber, fontFamily: T.font, lineHeight: 1.55, marginBottom: 8 }}>
                         Your qualified plan contributions exceed the {PLAN_YEAR} IRS 415(c) limit of {fc(LIMIT_415C)}. The employer match that would have exceeded this limit is redirected here — a non-qualified plan with no IRS limits.
                       </div>
-                      <SummaryLine label="415(c) limit" value={fc(LIMIT_415C)} />
+                      <SummaryLine label="Total contributions allowed" value={fc(LIMIT_415C)} />
                       <SummaryLine label="Qualified plan total" value={fc(result.total415cQual)} />
                       <SummaryLine label="Employer match redirected" value={fc(result.spilloverExcessBenefit)} bold color={T.amber} />
 
@@ -1689,7 +1823,7 @@ export default function App() {
                         <SummaryLine label="Employee contributions (qualified)" value={fc(result.dQualEmployee)} indent />
                         <SummaryLine label="Employer match (qualified)" value={fc(result.dMatchQual)} indent />
                         <SummaryLine label="Combined before cap" value={fc(result.total415cQual)} bold />
-                        <SummaryLine label="415(c) annual additions limit" value={fc(LIMIT_415C)} />
+                        <SummaryLine label="Total contributions allowed" value={fc(LIMIT_415C)} />
                         <SummaryLine label="Employer match redirected to Excess Benefit Plan" value={fc(result.spilloverExcessBenefit)} bold color={T.amber} />
                       </DetailPanel>
                     </div>
@@ -1699,16 +1833,16 @@ export default function App() {
                 {/* Collapsible total summary */}
                 <SummaryPanel isOpen={showTotalSummary} onToggle={() => setShowTotalSummary(v => !v)}>
                   <SummaryLine label="Total compensation" value={fc(result.totalComp)} />
-                  <SummaryLine label="Employee — 401(k)/ESOP" value={result.hasQualContribs ? fc(result.dQualEmployee) : "—"} indent />
-                  <SummaryLine label="Employee — SSEP" value={result.hasSsepContribs ? fc(result.dSsepTotal) : "—"} indent />
-                  <SummaryLine label="Total employee contributions" value={fc(result.dEmployeeTotal)} bold />
-                  <SummaryLine label="Employer match — 401(k)/ESOP" value={result.hasQualContribs ? fc(result.qualMatchNet) : "—"} indent />
+                  {result.hasQualContribs && <SummaryLine label="Employee — 401(k)/ESOP" value={fc(result.dQualEmployee)} indent />}
+                  {result.hasSsepContribs && <SummaryLine label="Employee — SSEP" value={fc(result.dSsepTotal)} indent />}
+                  {result.dEmployeeTotal > 0 && <SummaryLine label="Total employee contributions" value={fc(result.dEmployeeTotal)} bold />}
+                  {result.hasQualContribs && <SummaryLine label="Employer match — 401(k)/ESOP" value={fc(result.qualMatchNet)} indent />}
                   {result.has415cSpillover && (
                     <SummaryLine label="Employer match — Excess Benefit Plan" value={fc(result.spilloverExcessBenefit)} indent color={T.amber} />
                   )}
-                  <SummaryLine label="Employer match — SSEP" value={result.hasSsepContribs ? fc(result.dMatchSsep) : "—"} indent />
-                  <SummaryLine label="Total employer contributions" value={fc(result.dMatchTotal)} bold color={T.navy} />
-                  <SummaryLine label="Grand total saved" value={fc(result.grandTotalSaved)} bold color={T.navy} />
+                  {result.hasSsepContribs && <SummaryLine label="Employer match — SSEP" value={fc(result.dMatchSsep)} indent />}
+                  {result.dMatchTotal > 0 && <SummaryLine label="Total employer contributions" value={fc(result.dMatchTotal)} bold color={T.navy} />}
+                  {result.grandTotalSaved > 0 && <SummaryLine label="Grand total saved" value={fc(result.grandTotalSaved)} bold color={T.navy} />}
                   <div style={{ marginTop: 8, fontSize: "0.68rem", color: T.textMuted, fontFamily: T.font, lineHeight: 1.5 }}>
                     Annual estimates based on {fc(result.base)} base compensation{result.incv > 0 ? ` plus ${fc(result.incv)} estimated incentive` : ""}. Actual contributions may vary.
                   </div>
@@ -1716,6 +1850,13 @@ export default function App() {
 
               </div>
             )}
+          </div>
+
+          {/* Disclaimer footer */}
+          <div style={{ flexShrink: 0, padding: "8px 16px", borderTop: `1px solid ${T.border}`, background: T.surfaceAlt }}>
+            <div style={{ fontSize: "0.64rem", color: T.textMuted, lineHeight: 1.55, fontFamily: T.font }}>
+              Pay schedule from the TDIndustries {PLAN_YEAR} weekly payroll calendar. Contribution amounts rounded to the nearest dollar. Rates rounded up to nearest whole %. Based on {PLAN_YEAR} IRS limits. Employer contributions estimated from plan design — actual amounts may vary. For educational use only — not financial or tax advice.
+            </div>
           </div>
         </div>
       </div>
