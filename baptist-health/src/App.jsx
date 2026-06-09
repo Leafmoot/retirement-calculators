@@ -231,21 +231,29 @@ function FieldErr({ msg }) {
 }
 
 function Input({ value, onChange, placeholder, type = "text", prefix, suffix, err, inputRef, integersOnly = false }) {
-  const handleChange = (e) => {
-    const v = e.target.value;
-    if (type === "number") {
-      if (v === "") { onChange(""); return; }
-      if (integersOnly && !/^\d*$/.test(v)) return;
-      if (!integersOnly && !/^\d*\.?\d*$/.test(v)) return;
-    }
-    onChange(v);
+  const addCommas = (raw) => {
+    if (raw === "" || raw === undefined) return "";
+    const str = String(raw).replace(/,/g, "");
+    const parts = str.split(".");
+    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    return parts.join(".");
   };
+  const handleChange = (e) => {
+    const raw = e.target.value.replace(/,/g, "");
+    if (type === "number") {
+      if (raw === "") { onChange(""); return; }
+      if (integersOnly && !/^\d*$/.test(raw)) return;
+      if (!integersOnly && !/^\d*\.?\d*$/.test(raw)) return;
+    }
+    onChange(raw);
+  };
+  const displayValue = (type === "number" && prefix === "$") ? addCommas(value) : value;
   return (
     <div style={{ position: "relative" }} className={err ? "field-shake" : ""}>
       {prefix && <span style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", fontSize: "0.85rem", color: err ? T.red : T.textSub, fontFamily: T.font, pointerEvents: "none" }}>{prefix}</span>}
       {suffix && <span style={{ position: "absolute", right: 11, top: "50%", transform: "translateY(-50%)", fontSize: "0.85rem", color: T.textSub, fontFamily: T.font, pointerEvents: "none" }}>{suffix}</span>}
       <input ref={inputRef} type="text" inputMode={type === "number" ? "numeric" : "text"}
-        value={value} placeholder={placeholder} onChange={handleChange}
+        value={displayValue} placeholder={placeholder} onChange={handleChange}
         onFocus={(e) => (e.target.style.boxShadow = `0 0 0 3px ${err ? "#FCA5A544" : "#F59E0B33"}`)}
         onBlur={(e) => (e.target.style.boxShadow = "none")}
         style={{
@@ -512,7 +520,7 @@ export default function App() {
 
       const catchUp = getCatchUp(a);
       const is6063 = a >= 60 && a <= 63;
-      const catchUpType = is6063 ? "Ages 60–63" : "Age 50+";
+      const catchUpType = is6063 ? "ages 60–63" : "Age 50+";
       const rothRequired = catchUp > 0 && fica === true;
       const compBasis = Math.min(w, COMP_LIMIT);
       const perCheck = w / periodsTotal;
@@ -798,7 +806,7 @@ export default function App() {
                 </Label>
                 <TogglePair
                   options={[
-                    { label: "Pre-Tax / Roth Catch-Up", val: "flexible" },
+                    { label: "Pre-Tax/Roth Catch-Up", val: "flexible" },
                     { label: "All Roth", val: "roth-only" },
                   ]}
                   value={strategy}
@@ -891,12 +899,12 @@ export default function App() {
                   {show401aYtd && (
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 8, marginBottom: 4 }} className="mobile-stack">
                       <div>
-                        <div style={{ fontSize: "0.71rem", fontWeight: 600, color: T.textSub, marginBottom: 3, fontFamily: T.font }}>After-Tax (employee)</div>
+                        <div style={{ fontSize: "0.71rem", fontWeight: 600, color: T.textSub, marginBottom: 3, fontFamily: T.font }}>After-Tax (Employee)</div>
                         <Input value={ytd401aAfterTax} onChange={(v) => { setYtd401aAfterTax(v); markDirty(); }} prefix="$" type="number" err={errors.ytd401aAfterTax} />
                         <FieldErr msg={errors.ytd401aAfterTax} />
                       </div>
                       <div>
-                        <div style={{ fontSize: "0.71rem", fontWeight: 600, color: T.textSub, marginBottom: 3, fontFamily: T.font }}>Employer contributions</div>
+                        <div style={{ fontSize: "0.71rem", fontWeight: 600, color: T.textSub, marginBottom: 3, fontFamily: T.font }}>Employer Contributions</div>
                         <Input value={ytd401aEmployer} onChange={(v) => { setYtd401aEmployer(v); markDirty(); }} prefix="$" type="number" err={errors.ytd401aEmployer} />
                         <FieldErr msg={errors.ytd401aEmployer} />
                       </div>
@@ -1130,7 +1138,7 @@ export default function App() {
                             : result.strategy === "roth-only"
                             ? "Elective — Roth"
                             : result.catchUp > 0
-                            ? "Elective — Pre-Tax / Roth"
+                            ? "Elective — Pre-Tax/Roth"
                             : "Elective — Pre-Tax"}
                         </div>
                         {result.electiveNotNeeded
@@ -1175,7 +1183,7 @@ export default function App() {
                         </div>
                       ) : (
                         <div style={{ background: T.greenLight, padding: "0 14px 8px" }}>
-                          <div style={{ fontSize: "0.72rem", fontWeight: 600, color: T.textSub, fontFamily: T.font, marginBottom: 3 }}>After-tax (Mega Roth)</div>
+                          <div style={{ fontSize: "0.72rem", fontWeight: 600, color: T.textSub, fontFamily: T.font, marginBottom: 3 }}>After-Tax (Mega Roth)</div>
                           {result.afterTax403bNotNeeded
                             ? <div style={{ fontSize: "0.82rem", fontWeight: 600, color: T.textMuted, fontFamily: T.font, lineHeight: 1.4 }}>Not needed — goal met</div>
                             : result.afterTax403bRem <= 0 && !result.afterTax403bSalaryCapped
@@ -1199,7 +1207,7 @@ export default function App() {
                       {/* ── Col 3: After-tax (split mode only) ── */}
                       {result.rothRequired && (
                         <div style={{ background: T.greenLight, padding: "0 14px 8px" }}>
-                          <div style={{ fontSize: "0.72rem", fontWeight: 600, color: T.textSub, fontFamily: T.font, marginBottom: 3 }}>After-tax (Mega Roth)</div>
+                          <div style={{ fontSize: "0.72rem", fontWeight: 600, color: T.textSub, fontFamily: T.font, marginBottom: 3 }}>After-Tax (Mega Roth)</div>
                           {result.afterTax403bNotNeeded
                             ? <div style={{ fontSize: "0.82rem", fontWeight: 600, color: T.textMuted, fontFamily: T.font, lineHeight: 1.4 }}>Not needed — goal met</div>
                             : result.afterTax403bRem <= 0 && !result.afterTax403bSalaryCapped
@@ -1301,7 +1309,7 @@ export default function App() {
                         ) : (
                           <>
                             <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>
-                              {result.strategy === "roth-only" ? "Elective — Roth" : result.catchUp > 0 ? "Elective — Pre-Tax / Roth" : "Elective — Pre-Tax"}
+                              {result.strategy === "roth-only" ? "Elective — Roth" : result.catchUp > 0 ? "Elective — Pre-Tax/Roth" : "Elective — Pre-Tax"}
                             </div>
                             <SummaryLine label="Base limit" value={fc(LIMIT_402G)} indent dimmed />
                             {result.catchUp > 0 && <SummaryLine label="Catch-up limit" value={fc(result.catchUp)} indent dimmed />}
@@ -1311,8 +1319,8 @@ export default function App() {
                         )}
 
                         {/* After-tax section */}
-                        <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>After-Tax (Mega Roth)</div>
-                        <SummaryLine label="After-tax limit" value={fc(result.afterTax403bLimit)} indent dimmed />
+                        <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>After-Tax (mega Roth)</div>
+                        <SummaryLine label="After-Tax limit" value={fc(result.afterTax403bLimit)} indent dimmed />
                         {result.ytd403bAfterTaxAmt > 0 && <SummaryLine label="Contributed (YTD)" value={fc(result.ytd403bAfterTaxAmt)} indent dimmed />}
                         <SummaryLine label="Remaining" value={fc(result.afterTax403bRem)} indent bold />
 
@@ -1323,20 +1331,20 @@ export default function App() {
                             {result.electiveSplit ? (
                               <>
                                 {result.electivePreDpc > 0 && <SummaryLine label="Pre-Tax" value={fc(ceilDollar(result.electivePreDpc))} indent />}
-                                {result.electiveCatchUpDpc > 0 && <SummaryLine label={`Roth Catch-Up (${result.catchUpType})`} value={fc(ceilDollar(result.electiveCatchUpDpc))} indent />}
-                                {result.afterTax403bDpc > 0 && <SummaryLine label="After-tax (Mega Roth)" value={fc(ceilDollar(result.afterTax403bDpc))} indent />}
+                                {result.electiveCatchUpDpc > 0 && <SummaryLine label={`Roth catch-up (${result.catchUpType.toLowerCase()})`} value={fc(ceilDollar(result.electiveCatchUpDpc))} indent />}
+                                {result.afterTax403bDpc > 0 && <SummaryLine label="After-Tax (mega Roth)" value={fc(ceilDollar(result.afterTax403bDpc))} indent />}
                                 <SummaryLine label="Total per paycheck" value={fc(ceilDollar(result.electivePreDpc) + ceilDollar(result.electiveCatchUpDpc) + ceilDollar(result.afterTax403bDpc))} indent bold />
                               </>
                             ) : (
                               <>
                                 {result.electiveDpc > 0 && (
                                   <SummaryLine
-                                    label={result.strategy === "roth-only" ? "Elective — Roth" : result.catchUp > 0 ? "Elective — Pre-Tax / Roth" : "Elective — Pre-Tax"}
+                                    label={result.strategy === "roth-only" ? "Elective — Roth" : result.catchUp > 0 ? "Elective — Pre-Tax/Roth" : "Elective — Pre-Tax"}
                                     value={fc(ceilDollar(result.electiveDpc))}
                                     indent
                                   />
                                 )}
-                                {result.afterTax403bDpc > 0 && <SummaryLine label="After-tax (Mega Roth)" value={fc(ceilDollar(result.afterTax403bDpc))} indent />}
+                                {result.afterTax403bDpc > 0 && <SummaryLine label="After-Tax (mega Roth)" value={fc(ceilDollar(result.afterTax403bDpc))} indent />}
                                 {result.electiveDpc > 0 && result.afterTax403bDpc > 0 && (
                                   <SummaryLine label="Total per paycheck" value={fc(ceilDollar(result.electiveDpc) + ceilDollar(result.afterTax403bDpc))} indent bold />
                                 )}
@@ -1357,7 +1365,7 @@ export default function App() {
                       </div>
                     </div>
                     <div style={{ padding: "0 14px 8px" }}>
-                        <div style={{ fontSize: "0.72rem", fontWeight: 600, color: T.textSub, fontFamily: T.font, marginBottom: 3 }}>After-tax employee (Mega Roth)</div>
+                        <div style={{ fontSize: "0.72rem", fontWeight: 600, color: T.textSub, fontFamily: T.font, marginBottom: 3 }}>After-Tax Employee (Mega Roth)</div>
                         {result.afterTax401aNotNeeded
                           ? <div style={{ fontSize: "0.82rem", fontWeight: 600, color: T.textMuted, fontFamily: T.font, lineHeight: 1.4 }}>Not needed — goal met by 403(b)</div>
                           : result.afterTax401aRem <= 0 && !result.afterTax401aSalaryCapped
@@ -1400,7 +1408,7 @@ export default function App() {
                         </div>
 
                         {/* After-tax math */}
-                        <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>After-Tax (Mega Roth)</div>
+                        <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>After-Tax (mega Roth)</div>
                         <SummaryLine label="Total contributions allowed" value={fc(LIMIT_415C)} indent dimmed />
                         <SummaryLine label="Employer match (projected)" value={`− ${fc(result.empMatchAmt)}`} indent dimmed />
                         <SummaryLine label="Employer discretionary (projected)" value={`− ${fc(result.empDiscAmt)}`} indent dimmed />
@@ -1413,7 +1421,7 @@ export default function App() {
                         {result.afterTax401aDpc > 0 && (
                           <>
                             <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>Per Paycheck</div>
-                            <SummaryLine label="After-tax (Mega Roth)" value={fc(ceilDollar(result.afterTax401aDpc))} indent bold />
+                            <SummaryLine label="After-Tax (mega Roth)" value={fc(ceilDollar(result.afterTax401aDpc))} indent bold />
                           </>
                         )}
                       </div>
@@ -1431,7 +1439,7 @@ export default function App() {
                     </div>
                     {result.include457b && (
                       <div style={{ padding: "0 14px 8px" }}>
-                        <div style={{ fontSize: "0.72rem", fontWeight: 600, color: T.textSub, fontFamily: T.font, marginBottom: 3 }}>Pre-tax — dollar amount election</div>
+                        <div style={{ fontSize: "0.72rem", fontWeight: 600, color: T.textSub, fontFamily: T.font, marginBottom: 3 }}>Pre-Tax — Dollar Amount Election</div>
                         {result.notNeeded457b
                           ? <div style={{ fontSize: "0.82rem", fontWeight: 600, color: T.textMuted, fontFamily: T.font, lineHeight: 1.4 }}>Not needed — goal met by higher-priority plans</div>
                           : result.rem457b <= 0 && !result.salary457bCapped
@@ -1483,7 +1491,7 @@ export default function App() {
                         {result.dpc457b > 0 && (
                           <>
                             <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>Per Paycheck</div>
-                            <SummaryLine label="Pre-tax" value={fc(ceilDollar(result.dpc457b))} indent bold />
+                            <SummaryLine label="Pre-Tax" value={fc(ceilDollar(result.dpc457b))} indent bold />
                           </>
                         )}
                       </div>
@@ -1516,13 +1524,13 @@ export default function App() {
                               {result.electiveSplit ? (
                                 <>
                                   {result.electivePreDpc > 0 && <SummaryLine label="403(b) pre-tax" value={fc(ceilDollar(result.electivePreDpc))} indent />}
-                                  {result.electiveCatchUpDpc > 0 && <SummaryLine label={`403(b) Roth catch-up (${result.catchUpType})`} value={fc(ceilDollar(result.electiveCatchUpDpc))} indent />}
+                                  {result.electiveCatchUpDpc > 0 && <SummaryLine label={`403(b) Roth catch-up (${result.catchUpType.toLowerCase()})`} value={fc(ceilDollar(result.electiveCatchUpDpc))} indent />}
                                 </>
                               ) : (
-                                result.electiveDpc > 0 && <SummaryLine label={`403(b) ${result.strategy === "roth-only" ? "Roth" : result.catchUp > 0 ? "pre-tax / Roth" : "pre-tax"}`} value={fc(ceilDollar(result.electiveDpc))} indent />
+                                result.electiveDpc > 0 && <SummaryLine label={`403(b) ${result.strategy === "roth-only" ? "Roth" : result.catchUp > 0 ? "pre-tax/Roth" : "pre-tax"}`} value={fc(ceilDollar(result.electiveDpc))} indent />
                               )}
-                              {result.afterTax403bDpc > 0 && <SummaryLine label="403(b) after-tax (Mega Roth)" value={fc(ceilDollar(result.afterTax403bDpc))} indent />}
-                              {result.afterTax401aDpc > 0 && <SummaryLine label="401(a) after-tax (Mega Roth)" value={fc(ceilDollar(result.afterTax401aDpc))} indent />}
+                              {result.afterTax403bDpc > 0 && <SummaryLine label="403(b) after-tax (mega Roth)" value={fc(ceilDollar(result.afterTax403bDpc))} indent />}
+                              {result.afterTax401aDpc > 0 && <SummaryLine label="401(a) after-tax (mega Roth)" value={fc(ceilDollar(result.afterTax401aDpc))} indent />}
                               {result.dpc457b > 0 && <SummaryLine label="457(b) pre-tax" value={fc(ceilDollar(result.dpc457b))} indent />}
                               <SummaryLine label="Total per paycheck" value={fc(ceilDollar(result.electivePreDpc || result.electiveDpc || 0) + ceilDollar(result.electiveCatchUpDpc || 0) + ceilDollar(result.afterTax403bDpc || 0) + ceilDollar(result.afterTax401aDpc || 0) + ceilDollar(result.dpc457b || 0))} indent bold />
                             </>
@@ -1534,9 +1542,9 @@ export default function App() {
                             <strong>403(b) after-tax reclassification:</strong> Your reported 403(b) after-tax YTD of {fc(result.ytd403bAfterTaxRaw)} exceeds the 403(b) after-tax limit of {fc(result.ytd403bAfterTaxCeiling)}. The {fc(result.ytd403bReclassifiedTo401a)} above that limit has been applied to your 401(a) after-tax — this reflects how Baptist Health currently reports these contributions on your 403(b) statement.
                           </div>
                         )}
-                        {proj403bElective > 0 && <SummaryLine label={`403(b) ${result.strategy === "roth-only" ? "Roth" : result.catchUp > 0 ? "pre-tax / Roth" : "pre-tax"}`} value={fc(proj403bElective)} indent />}
-                        {proj403bAfterTax > 0 && <SummaryLine label="403(b) after-tax (Mega Roth)" value={fc(proj403bAfterTax)} indent />}
-                        {proj401aAfterTax > 0 && <SummaryLine label="401(a) after-tax (Mega Roth)" value={fc(proj401aAfterTax)} indent />}
+                        {proj403bElective > 0 && <SummaryLine label={`403(b) ${result.strategy === "roth-only" ? "Roth" : result.catchUp > 0 ? "pre-tax/Roth" : "pre-tax"}`} value={fc(proj403bElective)} indent />}
+                        {proj403bAfterTax > 0 && <SummaryLine label="403(b) after-tax (mega Roth)" value={fc(proj403bAfterTax)} indent />}
+                        {proj401aAfterTax > 0 && <SummaryLine label="401(a) after-tax (mega Roth)" value={fc(proj401aAfterTax)} indent />}
                         {proj457b > 0 && <SummaryLine label="457(b) pre-tax" value={fc(proj457b)} indent />}
                         <SummaryLine label="Total employee contributions" value={fc(totalEmployee)} indent bold />
                         <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>Annual Employer Contributions</div>
