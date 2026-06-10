@@ -1553,6 +1553,73 @@ export default function App() {
                         <SummaryLine label="Total employer contributions" value={fc(result.totalEmployer401a)} indent bold />
                         <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>Total Annual Contributions</div>
                         <SummaryLine label="Employee + Employer" value={fc(totalAll)} indent bold color={T.total} />
+
+                        {/* ── Next Year Projection ── */}
+                        {(() => {
+                          const nyAge = result.age + 1;
+                          const currCatchUpAmt = getCatchUp(result.age);
+                          const currMaxAllowed = LIMIT_402G + currCatchUpAmt;
+                          const nextCatchUpAmt = getCatchUp(nyAge);
+                          const nextMaxAllowed = LIMIT_402G + nextCatchUpAmt;
+                          const nyIs6063 = nyAge >= 60 && nyAge <= 63;
+                          const nyCatchUpType = nyIs6063 ? "Ages 60–63" : "Age 50+";
+
+                          const limitDiff = nextMaxAllowed - currMaxAllowed;
+                          const limitChanged = limitDiff !== 0;
+                          const limitDirection = limitDiff > 0 ? "increases" : "decreases";
+
+                          const crossingCatchUpThreshold = currCatchUpAmt === 0 && nextCatchUpAmt > 0;
+                          const ficaUnknown = crossingCatchUpThreshold && result.fica === null;
+                          const nextRothRequired = nextCatchUpAmt > 0 && result.fica === true;
+
+                          const fullPeriods = periodsTotal;
+                          const nyPerCheck = result.salary / fullPeriods;
+                          if (nyPerCheck <= 0) return null;
+
+                          let nyProj;
+                          if (nextRothRequired && result.strategy !== "roth-only") {
+                            const prePct = ceilPct(LIMIT_402G / fullPeriods / nyPerCheck);
+                            const rPct = ceilPct(nextCatchUpAmt / fullPeriods / nyPerCheck);
+                            nyProj = { split: true, prePct, rPct, nyCatchUpType, nyAge, nextMaxAllowed, limitChanged, limitDirection, ficaUnknown };
+                          } else {
+                            const pct = ceilPct(nextMaxAllowed / fullPeriods / nyPerCheck);
+                            nyProj = { split: false, pct, rothOnly: result.strategy === "roth-only", nyCatchUpType, nyAge, nextMaxAllowed, nextCatchUpAmt, limitChanged, limitDirection, ficaUnknown };
+                          }
+
+                          return (
+                            <div style={{ marginTop: 16 }}>
+                              <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>Next Year Projection</div>
+                              {nyProj.split ? (
+                                <>
+                                  <SummaryLine label="Pre-Tax (Traditional)" value={`${nyProj.prePct}%`} indent bold />
+                                  <SummaryLine label={`Roth Catch-Up (${nyProj.nyCatchUpType})`} value={`${nyProj.rPct}%`} indent bold />
+                                </>
+                              ) : (
+                                <SummaryLine
+                                  label={nyProj.rothOnly ? "Roth (After-Tax)" : "Pre-Tax (Traditional)"}
+                                  value={`${nyProj.pct}%`}
+                                  indent
+                                  bold
+                                  color={T.total}
+                                />
+                              )}
+                              <div style={{ fontSize: "0.72rem", color: T.textSub, fontFamily: T.font, lineHeight: 1.5, marginTop: 8, paddingLeft: 12 }}>
+                                Estimated rates at age {nyProj.nyAge} over a full {fullPeriods}-period year, assuming current salary and this year's IRS limits carry forward.
+                                {nyProj.limitChanged && (
+                                  <span style={{ color: nyProj.limitDirection === "increases" ? T.green : T.amber, fontWeight: 600 }}>
+                                    {" "}Your annual limit {nyProj.limitDirection} to {fc(nyProj.nextMaxAllowed)} at age {nyProj.nyAge}.
+                                  </span>
+                                )}
+                                {nyProj.ficaUnknown && (
+                                  <span style={{ color: T.amber, fontWeight: 600 }}>
+                                    {" "}Note: you'll be catch-up eligible at {nyProj.nyAge} — your Roth requirement will depend on your prior-year FICA wages.
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })()}
+
                       </div>
                     </details>
                   );
