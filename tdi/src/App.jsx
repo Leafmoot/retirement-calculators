@@ -1132,7 +1132,7 @@ export default function App() {
 
               {/* ── Column headers ── */}
               <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "152px 1fr 1fr", border: `1.5px solid ${T.border}`, borderRadius: `${T.radius} ${T.radius} 0 0`, overflow: "hidden", margin: "0 8px" }}>
-                <div style={{ background: T.surfaceAlt, borderRight: `1px solid ${T.border}` }} />
+                <div style={{ background: T.bg }} />
                 <div style={{ padding: "9px 14px", textAlign: "center", borderRight: `1px solid ${T.border}`, background: "#DCEEFF", display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
                   <span style={{ fontSize: "0.72rem", fontWeight: 700, color: T.navy, fontFamily: T.font, letterSpacing: "0.05em", textTransform: "uppercase" }}>Non-ESOP</span>
                   <InfoTooltip text="Includes 401(k) Pre-tax, 401(k) Roth, and SSEP Pre-tax. All three count toward a single combined limit of 10% — regardless of how elections are split across them." />
@@ -1219,9 +1219,7 @@ export default function App() {
 
               {/* ── Category totals ── */}
               <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "152px 1fr 1fr", border: `1.5px solid ${T.border}`, borderRadius: `0 0 ${T.radius} ${T.radius}`, overflow: "hidden", margin: "0 8px" }}>
-                <div style={{ background: T.surfaceAlt, borderRight: `1px solid ${T.border}`, padding: "10px 12px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <span style={{ fontSize: "0.65rem", fontWeight: 600, color: T.textMuted, fontFamily: T.font, textAlign: "center", letterSpacing: "0.04em", textTransform: "uppercase", lineHeight: 1.4 }}>Category<br/>Totals</span>
-                </div>
+                <div style={{ background: T.bg }} />
                 <div style={{ padding: "10px 14px", textAlign: "center", borderRight: `1px solid ${T.border}`, background: "#DCEEFF" }}>
                   <div style={{ fontSize: "0.72rem", fontWeight: 700, color: T.navy, fontFamily: T.font, marginBottom: 3 }}>Non-ESOP Total = 10%</div>
                   <div style={{ fontSize: "0.65rem", fontWeight: 400, color: T.textSub, fontFamily: T.font, lineHeight: 1.5 }}>401(k) Pre-tax + 401(k) Roth + SSEP Pre-tax</div>
