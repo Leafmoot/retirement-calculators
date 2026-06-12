@@ -668,7 +668,6 @@ export default function App() {
   const { periodsLeft, periodsTotal, nextPayday, cutoffDate, cutoffPassed, firstEligiblePayday, firstEligibleCutoff } = computeTDIPeriods();
 
   const [baseSalary, setBaseSalary] = useState("");
-  const [incentive, setIncentive]   = useState("");
   const [age, setAge]               = useState("");
 
   const [r401kPre,  setR401kPre]   = useState("");
@@ -700,7 +699,8 @@ export default function App() {
   const [showSsepDetail, setShowSsepDetail]   = useState(false);
   const [show415cDetail, setShow415cDetail]   = useState(false);
   const [showTotalSummary, setShowTotalSummary] = useState(false);
-  const [showLimitsGuide, setShowLimitsGuide] = useState(false);
+  const [showLimitsGuide, setShowLimitsGuide] = useState(true);
+  const [showExample, setShowExample] = useState(false);
 
   const baseRef    = useRef(null);
   const ageRef     = useRef(null);
@@ -727,7 +727,7 @@ export default function App() {
 
   // ── FICA question visibility ──────────────────────────────────────────────
   const parsedAge  = parseInt(age) || 0;
-  const parsedBase = parse(baseSalary) + parse(incentive);
+  const parsedBase = parse(baseSalary);
   const catchUpAge = parsedAge >= 50;
   const ficaVisible = catchUpAge && parsedBase >= FICA_CATCHUP_THRESHOLD;
 
@@ -747,7 +747,7 @@ export default function App() {
 
   // When FICA requires Roth catch-up, derive the Roth percentages directly
   // from pre-tax so they're always consistent — no state setter timing issues.
-  const liveComp        = parse(baseSalary) + parse(incentive);
+  const liveComp        = parse(baseSalary);
   const liveCatchUp     = parseInt(age) >= 50 ? getCatchUp(parseInt(age)) : 0;
   const liveElectiveLimit = LIMIT_402G + liveCatchUp;
   const ficaActive      = fica === true && liveCatchUp > 0;
@@ -885,7 +885,6 @@ export default function App() {
     const errs = { base: "", age: "", fica: "", ytd401kPre: "", ytd401kRoth: "", ytdEsopPre: "", ytdEsopRoth: "" };
     let bad = false;
     const base = parse(baseSalary);
-    const incv = parse(incentive);
     const a    = parseInt(age);
 
     if (!base || base <= 0) { errs.base = "Enter your base compensation."; bad = true; }
@@ -920,7 +919,7 @@ export default function App() {
     setTimeout(() => {
       setIsCalculating(false);
 
-      const totalComp     = base + incv;
+      const totalComp     = base;
       const catchUp       = getCatchUp(a);
       const is6063        = a >= 60 && a <= 63;
       const electiveLimit = LIMIT_402G + catchUp;
@@ -1020,7 +1019,7 @@ export default function App() {
       const effEsopRoth = totalComp > 0 ? Math.round(dEsopRothFinal / totalComp * 100) : 0;
 
       setResult({
-        base, incv, totalComp, age: a, catchUp, is6063, electiveLimit,
+        base, totalComp, age: a, catchUp, is6063, electiveLimit,
         el401kPre, el401kRoth, elEsopPre, elEsopRoth,
         eff401kPre, eff401kRoth, effEsopPre, effEsopRoth,
         el401kCombined, elEsopCombined, elQualTotal,
@@ -1052,7 +1051,7 @@ export default function App() {
   }
 
   function clearAll() {
-    setBaseSalary(""); setIncentive(""); setAge("");
+    setBaseSalary(""); setAge("");
     setFica(null);
     setR401kPre(""); setR401kRoth(""); setREsopPre(""); setREsopRoth("");
     setRSsepPre(""); setRSsepEsop("");
@@ -1084,11 +1083,10 @@ export default function App() {
       <div style={{ position: "fixed", inset: 0, opacity: 0.02, pointerEvents: "none", zIndex: 0, backgroundImage: "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")" }} />
 
       {/* Header */}
-      <div style={{ position: "relative", zIndex: 1, flexShrink: 0, padding: "10px 20px 8px", borderBottom: `1px solid ${T.border}`, background: T.navy, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <div style={{ position: "relative", zIndex: 1, flexShrink: 0, padding: "10px 20px 8px", borderBottom: `1px solid ${T.border}`, background: T.navy, display: "flex", alignItems: "center" }}>
         <h1 style={{ margin: 0, fontSize: isMobile ? "1rem" : "1.1rem", fontWeight: 800, color: "#FFFFFF", letterSpacing: "-0.02em" }}>
           TDIndustries Contribution Assistant
         </h1>
-        <span style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.55)", fontFamily: T.font }}>{PLAN_YEAR}</span>
       </div>
 
       {/* ── How the Limits Work — collapsible guide ── */}
@@ -1099,36 +1097,38 @@ export default function App() {
           aria-expanded={showLimitsGuide}
           aria-label="How the Contribution Limits Work"
           style={{
-            width: "100%", padding: "9px 14px",
+            width: "100%", padding: "10px 14px",
             display: "flex", alignItems: "center", justifyContent: "space-between",
-            background: showLimitsGuide ? T.navy : T.surface,
-            border: `1px solid ${showLimitsGuide ? T.navy : T.border}`,
+            background: T.surface,
+            border: `1px solid ${T.border}`,
             borderRadius: showLimitsGuide ? `${T.radius} ${T.radius} 0 0` : T.radius,
             cursor: "pointer", fontFamily: T.font, outline: "none",
-            transition: "all 0.2s",
+            transition: "all 0.15s",
             boxShadow: showLimitsGuide ? "none" : T.shadow,
           }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = T.surfaceAlt; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = T.surface; }}
         >
           <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <rect x="1" y="4" width="4" height="8" rx="1" fill={showLimitsGuide ? "rgba(255,255,255,0.5)" : T.navyBorder} />
-              <rect x="6" y="4" width="4" height="8" rx="1" fill={showLimitsGuide ? "rgba(255,255,255,0.7)" : T.borderStrong} />
-              <rect x="11" y="4" width="4" height="8" rx="1" fill={showLimitsGuide ? "rgba(255,255,255,0.9)" : T.navy} />
+              <rect x="1" y="4" width="4" height="8" rx="1" fill={T.navyBorder} />
+              <rect x="6" y="4" width="4" height="8" rx="1" fill={T.borderStrong} />
+              <rect x="11" y="4" width="4" height="8" rx="1" fill={T.navy} />
             </svg>
-            <span style={{ fontSize: "0.82rem", fontWeight: 700, color: showLimitsGuide ? "#FFFFFF" : T.navy, letterSpacing: "-0.01em" }}>
+            <span style={{ fontSize: "0.82rem", fontWeight: 700, color: T.navy, letterSpacing: "-0.01em" }}>
               How the Contribution Limits Work
             </span>
           </span>
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none"
             style={{ flexShrink: 0, transform: showLimitsGuide ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}>
-            <path d="M2 4l4 4 4-4" stroke={showLimitsGuide ? "#FFFFFF" : T.navy} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M2 4l4 4 4-4" stroke={T.textSub} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </button>
 
         {showLimitsGuide && (
           <div style={{
-            background: T.navy,
-            border: `1px solid ${T.navy}`,
+            background: T.surface,
+            border: `1px solid ${T.border}`,
             borderTop: "none",
             borderRadius: `0 0 ${T.radiusLg} ${T.radiusLg}`,
             padding: isMobile ? "16px 14px 20px" : "20px 24px 24px",
@@ -1136,140 +1136,219 @@ export default function App() {
           }}>
 
             {/* Title */}
-            <div style={{ textAlign: "center", marginBottom: 20 }}>
-              <div style={{ fontSize: isMobile ? "0.95rem" : "1.05rem", fontWeight: 800, color: "#FFFFFF", fontFamily: T.font, letterSpacing: "-0.02em" }}>
-                {PLAN_YEAR} Maximum Contribution Rates: Highly Compensated Employees
+            <div style={{ textAlign: "center", marginBottom: 16 }}>
+              <div style={{ fontSize: isMobile ? "0.95rem" : "1.05rem", fontWeight: 800, color: T.navy, fontFamily: T.font, letterSpacing: "-0.02em" }}>
+                Maximum Contribution Rates: Highly Compensated Employees
               </div>
-              <div style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.55)", fontFamily: T.font, marginTop: 4 }}>
-                All limits expressed as a percentage of total compensation (W-2 wages)
+              <div style={{ fontSize: "0.72rem", color: T.textMuted, fontFamily: T.font, marginTop: 4 }}>
+                Read by row for plan limits, by column for category limits, then confirm the overall total.
               </div>
             </div>
 
-            {/* Two-zone plan layout + full-width 20% bar below */}
-            <div style={{ border: `1.5px solid ${T.border}`, borderRadius: T.radiusLg, overflow: "hidden" }}>
+            {/* Matrix grid */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
 
-              {/* Plan cards row */}
-              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "2fr 1fr", gap: 0, background: T.navyBorder }}>
-
-              {/* LEFT ZONE: 401(k)/ESOP Plan card */}
-              <div style={{ border: "none", borderRadius: 0, overflow: "hidden", display: "flex", flexDirection: "column" }}>
-                <div style={{ background: T.navyLight, borderBottom: `1px solid ${T.navyBorder}`, padding: "8px 14px", textAlign: "center" }}>
-                  <div style={{ fontSize: "0.92rem", fontWeight: 800, color: T.navy, fontFamily: T.font, letterSpacing: "-0.01em" }}>401(k)/ESOP Plan</div>
-                  <div style={{ fontSize: "0.62rem", color: T.textSub, fontFamily: T.font, marginTop: 3 }}>Subject to IRS dollar limits</div>
+              {/* ── Column headers ── */}
+              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "152px 1fr 1fr", border: `1.5px solid ${T.border}`, borderRadius: `${T.radius} ${T.radius} 0 0`, overflow: "hidden", margin: "0 8px" }}>
+                <div style={{ background: T.surfaceAlt, borderRight: `1px solid ${T.border}` }} />
+                <div style={{ padding: "9px 14px", textAlign: "center", borderRight: `1px solid ${T.border}`, background: "#DCEEFF", display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
+                  <span style={{ fontSize: "0.72rem", fontWeight: 700, color: T.navy, fontFamily: T.font, letterSpacing: "0.05em", textTransform: "uppercase" }}>Non-ESOP</span>
+                  <InfoTooltip text="Includes 401(k) Pre-tax, 401(k) Roth, and SSEP Pre-tax. All three count toward a single combined limit of 10% — regardless of how elections are split across them." />
                 </div>
-
-                {/* 401(k) and ESOP side by side */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1, background: T.navyBorder, flex: 1 }}>
-
-                  {/* 401(k) column */}
-                  <div style={{ background: T.surface, padding: "10px 12px 10px", display: "flex", flexDirection: "column", gap: 8 }}>
-                    <div style={{ background: T.navyLight, border: `1px solid ${T.navyBorder}`, borderRadius: 6, padding: "8px 10px", textAlign: "center" }}>
-                      <div style={{ fontSize: "0.92rem", fontWeight: 800, color: T.navy, fontFamily: T.font, letterSpacing: "-0.01em" }}>401(k) Savings</div>
-                    </div>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
-                      <div style={{ background: T.navyLight, border: `1px solid ${T.navyBorder}`, borderRadius: 6, padding: "8px 6px", textAlign: "center" }}>
-                        <div style={{ fontSize: "0.6rem", color: T.navy, fontFamily: T.font, marginBottom: 3 }}>Pre-tax</div>
-                        <div style={{ fontSize: "1.25rem", fontWeight: 800, color: T.navy, fontFamily: T.font, lineHeight: 1 }}>10%</div>
-                        <div style={{ fontSize: "0.55rem", color: T.textMuted, fontFamily: T.font, marginTop: 1 }}>max</div>
-                      </div>
-                      <div style={{ background: T.navyLight, border: `1px solid ${T.navyBorder}`, borderRadius: 6, padding: "8px 6px", textAlign: "center" }}>
-                        <div style={{ fontSize: "0.6rem", color: T.navy, fontFamily: T.font, marginBottom: 3 }}>Roth after-tax</div>
-                        <div style={{ fontSize: "1.25rem", fontWeight: 800, color: T.navy, fontFamily: T.font, lineHeight: 1 }}>10%</div>
-                        <div style={{ fontSize: "0.55rem", color: T.textMuted, fontFamily: T.font, marginTop: 1 }}>max</div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* ESOP column */}
-                  <div style={{ background: T.surface, padding: "10px 12px 10px", display: "flex", flexDirection: "column", gap: 8 }}>
-                    <div style={{ background: T.surfaceAlt, border: `1px solid ${T.border}`, borderRadius: 6, padding: "8px 10px", textAlign: "center" }}>
-                      <div style={{ fontSize: "0.92rem", fontWeight: 800, color: T.navy, fontFamily: T.font, letterSpacing: "-0.01em" }}>ESOP Savings</div>
-                    </div>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
-                      <div style={{ background: T.surfaceAlt, border: `1px solid ${T.border}`, borderRadius: 6, padding: "8px 6px", textAlign: "center" }}>
-                        <div style={{ fontSize: "0.6rem", color: T.navy, fontFamily: T.font, marginBottom: 3 }}>Pre-tax</div>
-                        <div style={{ fontSize: "1.25rem", fontWeight: 800, color: T.navy, fontFamily: T.font, lineHeight: 1 }}>10%</div>
-                        <div style={{ fontSize: "0.55rem", color: T.textMuted, fontFamily: T.font, marginTop: 1 }}>max</div>
-                      </div>
-                      <div style={{ background: T.surfaceAlt, border: `1px solid ${T.border}`, borderRadius: 6, padding: "8px 6px", textAlign: "center" }}>
-                        <div style={{ fontSize: "0.6rem", color: T.navy, fontFamily: T.font, marginBottom: 3 }}>Roth after-tax</div>
-                        <div style={{ fontSize: "1.25rem", fontWeight: 800, color: T.navy, fontFamily: T.font, lineHeight: 1 }}>10%</div>
-                        <div style={{ fontSize: "0.55rem", color: T.textMuted, fontFamily: T.font, marginTop: 1 }}>max</div>
-                      </div>
-                    </div>
-                  </div>
-
+                <div style={{ padding: "9px 14px", textAlign: "center", background: "#D4F5E4", display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
+                  <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "#1A6640", fontFamily: T.font, letterSpacing: "0.05em", textTransform: "uppercase" }}>ESOP</span>
+                  <InfoTooltip text="ESOP contributions are invested in TDIndustries company stock. Includes ESOP Pre-tax, ESOP Roth, and SSEP ESOP. All three count toward a single combined limit of 10% across both plans." />
                 </div>
+              </div>
 
-                {/* Qualified combined footer — inside the card, ties both plans together */}
-                <div style={{ background: T.navyLight, borderTop: `1px solid ${T.navyBorder}`, padding: "10px 14px", textAlign: "center" }}>
-                  <div style={{ fontSize: "0.63rem", color: T.textSub, fontFamily: T.font, marginBottom: 3 }}>
-                    401(k)/ESOP combined: cannot exceed
+              {/* ── Row 1: 401(k)/ESOP Plan — full amber outline ── */}
+              <div style={{ margin: "6px 8px 3px", border: `2px solid ${T.amberBorder}`, borderRadius: 7, overflow: "hidden" }}>
+                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "152px 1fr 1fr" }}>
+                  <div style={{ padding: "12px 10px", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", textAlign: "center", borderRight: `1px solid ${T.amberBorder}`, background: T.amberLight }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4, marginBottom: 4 }}>
+                      <span style={{ fontSize: "0.75rem", fontWeight: 700, color: T.navy, fontFamily: T.font }}>401(k)/ESOP Plan</span>
+                      <InfoTooltip text="A qualified plan subject to IRS dollar limits. All four buckets in this row share a single 10% plan cap — 401(k) elections and ESOP elections each have a 10% sub-limit, but the combined total across all four cannot exceed 10%." />
+                    </div>
+                    <div style={{ fontSize: "0.72rem", color: T.textMuted, fontFamily: T.font, marginBottom: 6 }}>Plan Maximum</div>
+                    <div style={{ fontSize: "1.25rem", fontWeight: 800, color: T.navy, fontFamily: T.font, letterSpacing: "-0.02em", lineHeight: 1 }}>10%</div>
                   </div>
-                  <div style={{ fontSize: "1.35rem", fontWeight: 800, color: T.navy, fontFamily: T.font, letterSpacing: "-0.02em", lineHeight: 1 }}>
-                    10% maximum
+                  <div style={{ padding: "10px 10px", borderRight: `1px solid ${T.amberBorder}`, background: "#EEF6FF" }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 6 }}>
+                      {[{ label: "401(k) Pre-tax" }, { label: "401(k) Roth" }].map(b => (
+                        <div key={b.label} style={{ background: "#DCEEFF", border: `1px solid #B8D8F8`, borderRadius: 6, padding: "8px 6px", textAlign: "center" }}>
+                          <div style={{ fontSize: "0.72rem", color: T.navy, fontFamily: T.font, marginBottom: 4 }}>{b.label}</div>
+                          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "center", gap: 3 }}>
+                            <span style={{ fontSize: "1.2rem", fontWeight: 800, color: T.navy, fontFamily: T.font, lineHeight: 1 }}>10%</span>
+                            <span style={{ fontSize: "0.72rem", fontWeight: 400, color: T.textMuted, fontFamily: T.font }}>max</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ textAlign: "center", fontSize: "0.72rem", fontWeight: 600, color: T.navy, fontFamily: T.font }}>401(k) combined = 10%</div>
+                  </div>
+                  <div style={{ padding: "10px 10px", background: "#EDFAF3" }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 6 }}>
+                      {[{ label: "ESOP Pre-tax" }, { label: "ESOP Roth" }].map(b => (
+                        <div key={b.label} style={{ background: "#D4F5E4", border: `1px solid #A8E6C4`, borderRadius: 6, padding: "8px 6px", textAlign: "center" }}>
+                          <div style={{ fontSize: "0.72rem", color: "#1A6640", fontFamily: T.font, marginBottom: 4 }}>{b.label}</div>
+                          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "center", gap: 3 }}>
+                            <span style={{ fontSize: "1.2rem", fontWeight: 800, color: "#1A6640", fontFamily: T.font, lineHeight: 1 }}>10%</span>
+                            <span style={{ fontSize: "0.72rem", fontWeight: 400, color: "#4A9968", fontFamily: T.font }}>max</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ textAlign: "center", fontSize: "0.72rem", fontWeight: 600, color: "#1A6640", fontFamily: T.font }}>ESOP combined = 10%</div>
                   </div>
                 </div>
               </div>
 
-              {/* RIGHT ZONE: SSEP card */}
-              <div style={{ border: "none", borderLeft: `1px solid ${T.navyBorder}`, borderRadius: 0, overflow: "hidden", display: "flex", flexDirection: "column" }}>
-                <div style={{ background: T.border, borderBottom: `1px solid ${T.borderStrong}`, padding: "8px 14px", textAlign: "center" }}>
-                  <div style={{ fontSize: "0.92rem", fontWeight: 800, color: T.navy, fontFamily: T.font, letterSpacing: "-0.01em" }}>SSEP</div>
-                  <div style={{ fontSize: "0.62rem", color: T.textSub, fontFamily: T.font, marginTop: 3 }}>No IRS dollar limits</div>
-                </div>
-                {/* SSEP cells side by side — matching the 401(k)/ESOP layout above */}
-                <div style={{ background: T.surface, padding: "10px 12px 10px", flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
-                    <div style={{ background: T.border, border: `1px solid ${T.borderStrong}`, borderRadius: 6, padding: "8px 6px", textAlign: "center" }}>
-                      <div style={{ fontSize: "0.6rem", color: T.navy, fontFamily: T.font, marginBottom: 3 }}>Pre-tax</div>
-                      <div style={{ fontSize: "1.25rem", fontWeight: 800, color: T.navy, fontFamily: T.font, lineHeight: 1 }}>10%</div>
-                      <div style={{ fontSize: "0.55rem", color: T.textMuted, fontFamily: T.font, marginTop: 1 }}>max</div>
+              {/* ── Row 2: SSEP — full sky outline ── */}
+              <div style={{ margin: "3px 8px 6px", border: `2px solid ${T.skyBorder}`, borderRadius: 7, overflow: "hidden" }}>
+                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "152px 1fr 1fr" }}>
+                  <div style={{ padding: "12px 10px", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", textAlign: "center", borderRight: `1px solid ${T.skyBorder}`, background: T.skyLight }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4, marginBottom: 4 }}>
+                      <span style={{ fontSize: "0.75rem", fontWeight: 700, color: T.navy, fontFamily: T.font }}>SSEP</span>
+                      <InfoTooltip text="A supplemental plan with no IRS dollar limits — only the plan's own percentage caps apply. SSEP Pre-tax and SSEP ESOP combined cannot exceed 10%. Note that SSEP elections also count toward the column totals: SSEP Pre-tax feeds the Non-ESOP column, and SSEP ESOP feeds the ESOP column." />
                     </div>
-                    <div style={{ background: T.border, border: `1px solid ${T.borderStrong}`, borderRadius: 6, padding: "8px 6px", textAlign: "center" }}>
-                      <div style={{ fontSize: "0.6rem", color: T.navy, fontFamily: T.font, marginBottom: 3 }}>ESOP</div>
-                      <div style={{ fontSize: "1.25rem", fontWeight: 800, color: T.navy, fontFamily: T.font, lineHeight: 1 }}>10%</div>
-                      <div style={{ fontSize: "0.55rem", color: T.textMuted, fontFamily: T.font, marginTop: 1 }}>max</div>
+                    <div style={{ fontSize: "0.72rem", color: T.textMuted, fontFamily: T.font, marginBottom: 6 }}>Plan Maximum</div>
+                    <div style={{ fontSize: "1.25rem", fontWeight: 800, color: T.navy, fontFamily: T.font, letterSpacing: "-0.02em", lineHeight: 1 }}>10%</div>
+                  </div>
+                  <div style={{ padding: "10px 10px", borderRight: `1px solid ${T.skyBorder}`, background: "#EEF6FF", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <div style={{ background: "#DCEEFF", border: `1px solid #B8D8F8`, borderRadius: 6, padding: "10px", textAlign: "center", width: "100%" }}>
+                      <div style={{ fontSize: "0.72rem", color: T.navy, fontFamily: T.font, marginBottom: 4 }}>SSEP Pre-tax</div>
+                      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "center", gap: 3 }}>
+                        <span style={{ fontSize: "1.2rem", fontWeight: 800, color: T.navy, fontFamily: T.font, lineHeight: 1 }}>10%</span>
+                        <span style={{ fontSize: "0.72rem", fontWeight: 400, color: T.textMuted, fontFamily: T.font }}>max</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div style={{ background: T.border, borderTop: `1px solid ${T.borderStrong}`, padding: "10px 14px", textAlign: "center" }}>
-                  <div style={{ fontSize: "0.63rem", color: T.textSub, fontFamily: T.font, marginBottom: 3 }}>
-                    Pre-tax + ESOP combined
-                  </div>
-                  <div style={{ fontSize: "1.35rem", fontWeight: 800, color: T.navy, fontFamily: T.font, letterSpacing: "-0.02em", lineHeight: 1 }}>
-                    10% maximum
+                  <div style={{ padding: "10px 10px", background: "#EDFAF3", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <div style={{ background: "#D4F5E4", border: `1px solid #A8E6C4`, borderRadius: 6, padding: "10px", textAlign: "center", width: "100%" }}>
+                      <div style={{ fontSize: "0.72rem", color: "#1A6640", fontFamily: T.font, marginBottom: 4 }}>SSEP ESOP</div>
+                      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "center", gap: 3 }}>
+                        <span style={{ fontSize: "1.2rem", fontWeight: 800, color: "#1A6640", fontFamily: T.font, lineHeight: 1 }}>10%</span>
+                        <span style={{ fontSize: "0.72rem", fontWeight: 400, color: "#4A9968", fontFamily: T.font }}>max</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              </div>{/* end plan cards row */}
-
-              {/* 20% total bar — single navy stripe */}
-              <div style={{ background: T.surface }}>
-                <div style={{ height: 5, background: T.navy, opacity: 0.18 }} />
-                <div style={{
-                  padding: "12px 20px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  gap: 16,
-                }}>
-                  <div style={{ fontSize: "0.78rem", fontWeight: 700, color: T.navy, fontFamily: T.font, letterSpacing: "0.01em" }}>
-                    401(k)/ESOP Plan + SSEP Combined: cannot exceed
-                  </div>
-                  <div style={{ fontSize: "2.2rem", fontWeight: 800, color: T.navy, fontFamily: T.font, letterSpacing: "-0.04em", lineHeight: 1, flexShrink: 0 }}>
-                    20%
-                  </div>
+              {/* ── Category totals ── */}
+              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "152px 1fr 1fr", border: `1.5px solid ${T.border}`, borderRadius: `0 0 ${T.radius} ${T.radius}`, overflow: "hidden", margin: "0 8px" }}>
+                <div style={{ background: T.surfaceAlt, borderRight: `1px solid ${T.border}`, padding: "10px 12px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <span style={{ fontSize: "0.65rem", fontWeight: 600, color: T.textMuted, fontFamily: T.font, textAlign: "center", letterSpacing: "0.04em", textTransform: "uppercase", lineHeight: 1.4 }}>Category<br/>Totals</span>
+                </div>
+                <div style={{ padding: "10px 14px", textAlign: "center", borderRight: `1px solid ${T.border}`, background: "#DCEEFF" }}>
+                  <div style={{ fontSize: "0.72rem", fontWeight: 700, color: T.navy, fontFamily: T.font, marginBottom: 3 }}>Non-ESOP Total = 10%</div>
+                  <div style={{ fontSize: "0.65rem", fontWeight: 400, color: T.textSub, fontFamily: T.font, lineHeight: 1.5 }}>401(k) Pre-tax + 401(k) Roth + SSEP Pre-tax</div>
+                </div>
+                <div style={{ padding: "10px 14px", textAlign: "center", background: "#D4F5E4" }}>
+                  <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#1A6640", fontFamily: T.font, marginBottom: 3 }}>ESOP Total = 10%</div>
+                  <div style={{ fontSize: "0.65rem", fontWeight: 400, color: "#4A9968", fontFamily: T.font, lineHeight: 1.5 }}>ESOP Pre-tax + ESOP Roth + SSEP ESOP</div>
                 </div>
               </div>
 
+            </div>{/* end matrix grid */}
+
+            {/* Overall 20% bar */}
+            <div style={{ marginTop: 8, background: T.navy, borderRadius: T.radius, padding: "12px 24px", textAlign: "center" }}>
+              <div style={{ fontSize: "0.68rem", fontWeight: 600, color: "rgba(255,255,255,0.55)", fontFamily: T.font, letterSpacing: "0.04em", textTransform: "uppercase", marginBottom: 4 }}>
+                401(k)/ESOP Plan + SSEP combined
+              </div>
+              <div style={{ fontSize: "1.35rem", fontWeight: 800, color: "#FFFFFF", fontFamily: T.font, letterSpacing: "-0.03em", lineHeight: 1 }}>
+                Overall Maximum = 20%
+              </div>
+            </div>
+
+            {/* Collapsible example */}
+            <div style={{ marginTop: 8 }}>
+              <button
+                type="button"
+                onClick={() => setShowExample(v => !v)}
+                style={{
+                  width: "100%", padding: "10px 14px",
+                  display: "flex", alignItems: "center", justifyContent: "space-between",
+                  background: T.surfaceAlt,
+                  border: `1px solid ${T.border}`,
+                  borderRadius: showExample ? `${T.radius} ${T.radius} 0 0` : T.radius,
+                  cursor: "pointer", fontFamily: T.font, outline: "none",
+                  transition: "all 0.15s",
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = T.border; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = T.surfaceAlt; }}
+              >
+                <span style={{ fontSize: "0.78rem", fontWeight: 700, color: T.textSub, fontFamily: T.font }}>
+                  See an Example
+                </span>
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none"
+                  style={{ flexShrink: 0, transform: showExample ? "rotate(180deg)" : "none", transition: "transform 0.15s" }}>
+                  <path d="M2 4l4 4 4-4" stroke={T.textSub} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+
+              {showExample && (
+                <div style={{ background: "#F9FAFB", border: `1px solid ${T.border}`, borderTop: "none", borderRadius: `0 0 ${T.radius} ${T.radius}`, padding: "14px 16px" }}>
+
+                  {/* What this example teaches */}
+                  <div style={{ fontSize: "0.74rem", color: T.textMuted, fontFamily: T.font, lineHeight: 1.65, marginBottom: 10, fontStyle: "italic" }}>
+                    This example shows how a column limit can be reached even when a plan row still has availability remaining.
+                  </div>
+
+                  {/* Scenario */}
+                  <div style={{ fontSize: "0.74rem", color: T.textSub, fontFamily: T.font, lineHeight: 1.65, marginBottom: 14 }}>
+                    An employee elects <strong style={{ color: T.text }}>6% to 401(k) Pre-tax</strong>, <strong style={{ color: T.text }}>4% to SSEP Pre-tax</strong>, and <strong style={{ color: T.text }}>5% to SSEP ESOP</strong>. Each limit is then checked independently.
+                  </div>
+
+                  {/* Check rows */}
+                  <div style={{ display: "flex", flexDirection: "column" }}>
+                    {[
+                      { label: "401(k)/ESOP Plan row", used: 6, limit: 10, detail: "401(k) Pre-tax only", pass: true },
+                      { label: "SSEP row", used: 9, limit: 10, detail: "SSEP Pre-tax (4%) + SSEP ESOP (5%)", pass: true },
+                      { label: "Non-ESOP column", used: 10, limit: 10, detail: "401(k) Pre-tax (6%) + SSEP Pre-tax (4%)", pass: false },
+                      { label: "ESOP column", used: 5, limit: 10, detail: "SSEP ESOP only", pass: true },
+                      { label: "Overall total", used: 15, limit: 20, detail: "All elections combined", pass: true },
+                    ].map((row, i, arr) => (
+                      <div key={row.label} style={{
+                        display: "flex", alignItems: "flex-start", gap: 10,
+                        padding: "9px 0",
+                        borderBottom: i < arr.length - 1 ? `1px solid ${T.border}` : "none",
+                      }}>
+                        <div style={{ flexShrink: 0, marginTop: 2, width: 14, height: 14, borderRadius: "50%", background: row.pass ? "rgba(26,102,64,0.1)" : "rgba(232,160,32,0.15)", border: `1.5px solid ${row.pass ? "#4A9968" : T.amber}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          {row.pass
+                            ? <svg width="7" height="7" viewBox="0 0 8 8" fill="none"><path d="M1.5 4L3.5 6L6.5 2" stroke="#1A6640" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                            : <svg width="7" height="7" viewBox="0 0 8 8" fill="none"><path d="M2 2L6 6M6 2L2 6" stroke={T.amber} strokeWidth="1.5" strokeLinecap="round"/></svg>
+                          }
+                        </div>
+                        <div style={{ fontSize: "0.72rem", color: T.textSub, fontFamily: T.font, lineHeight: 1.6 }}>
+                          <strong style={{ color: T.text }}>{row.label}:</strong>{" "}
+                          {row.detail} — {row.used}% used of {row.limit}% allowed.{" "}
+                          {row.pass
+                            ? <span style={{ color: "#1A6640", fontWeight: 600 }}>{row.limit - row.used}% availability remains.</span>
+                            : <span style={{ color: T.amber, fontWeight: 600 }}>Limit reached.</span>
+                          }
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Conclusion callout */}
+                  <div style={{ marginTop: 12, padding: "11px 13px", background: T.amberLight, border: `1px solid ${T.amberBorder}`, borderRadius: T.radius }}>
+                    <div style={{ fontSize: "0.72rem", color: T.textSub, fontFamily: T.font, lineHeight: 1.65 }}>
+                      The SSEP row shows 1% of availability remaining — but that 1% cannot be used for SSEP Pre-tax, because SSEP Pre-tax is a Non-ESOP bucket and the Non-ESOP column is already at its limit.{" "}
+                      <strong style={{ color: T.text }}>A row having availability does not mean you can use it. Column limits apply across both plans simultaneously.</strong>
+                    </div>
+                  </div>
+
+                </div>
+              )}
             </div>
 
             {/* IRS dollar limit note */}
-            <div style={{ marginTop: 10, padding: "9px 13px", background: "rgba(255,255,255,0.05)", border: `1px solid rgba(255,255,255,0.10)`, borderRadius: T.radius }}>
-              <div style={{ fontSize: "0.71rem", color: "rgba(255,255,255,0.6)", fontFamily: T.font, lineHeight: 1.6 }}>
-                The 401(k)/ESOP Plan is also subject to IRS dollar limits: <strong style={{ color: "rgba(255,255,255,0.85)" }}>{fc(LIMIT_402G)} in elective deferrals</strong> for {PLAN_YEAR}{parseInt(age) >= 50 ? `, plus a ${parseInt(age) >= 60 && parseInt(age) <= 63 ? fc(LIMIT_CATCHUP_6063) + " enhanced catch-up (ages 60\u201363)" : fc(LIMIT_CATCHUP_50) + " catch-up contribution"}` : " (a catch-up contribution is available after age 50)"}. The SSEP has no IRS dollar limits.
+            <div style={{ marginTop: 8, padding: "9px 13px", background: T.skyLight, border: `1px solid ${T.skyBorder}`, borderRadius: T.radius }}>
+              <div style={{ fontSize: "0.71rem", color: T.sky, fontFamily: T.font, lineHeight: 1.6 }}>
+                <strong>Note:</strong> The 401(k)/ESOP Plan is also subject to IRS dollar limits — <strong>{fc(LIMIT_402G)} in elective deferrals</strong> for {PLAN_YEAR}{parseInt(age) >= 50 ? `, plus a ${parseInt(age) >= 60 && parseInt(age) <= 63 ? fc(LIMIT_CATCHUP_6063) + " enhanced catch-up (ages 60\u201363)" : fc(LIMIT_CATCHUP_50) + " catch-up contribution"}` : " (a catch-up contribution is available after age 50)"}. The SSEP has no IRS dollar limits.
               </div>
             </div>
 
@@ -1298,27 +1377,15 @@ export default function App() {
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }} className="mobile-stack">
               <div>
-                <Label tooltip="Your annual base compensation, not including bonuses or incentive pay.">Base Compensation</Label>
+                <Label tooltip="Your annual base compensation, not including bonuses or other variable pay.">Base Compensation</Label>
                 <Input value={baseSalary} onChange={(v) => { setBaseSalary(v); markDirty(); }} prefix="$" type="number" err={errors.base} inputRef={baseRef} />
                 <FieldErr msg={errors.base} />
               </div>
               <div>
-                <Label tooltip="Any estimated bonus or incentive pay for this year. Included as eligible compensation for deferral calculations.">Estimated Incentive</Label>
-                <Input value={incentive} onChange={(v) => { setIncentive(v); markDirty(); }} prefix="$" type="number" placeholder="0" />
+                <Label tooltip="Your age as of December 31 of this plan year. Ages 50–59 and 64+ are eligible for an $8,000 catch-up contribution. Ages 60–63 are eligible for an $11,250 enhanced catch-up.">Age</Label>
+                <Input value={age} onChange={(v) => { setAge(v); markDirty(); }} type="number" integersOnly err={errors.age} inputRef={ageRef} placeholder="e.g. 45" />
+                <FieldErr msg={errors.age} />
               </div>
-            </div>
-
-            <div style={{ marginBottom: 10 }}>
-              <Label tooltip="Your age as of December 31 of this plan year. Ages 50–59 and 64+ are eligible for an $8,000 catch-up contribution. Ages 60–63 are eligible for an $11,250 enhanced catch-up.">Age</Label>
-              <Input value={age} onChange={(v) => { setAge(v); markDirty(); }} type="number" integersOnly err={errors.age} inputRef={ageRef} placeholder="e.g. 45" />
-              <FieldErr msg={errors.age} />
-              {age && parseInt(age) >= 50 && (
-                <div style={{ marginTop: 5, fontSize: "0.72rem", color: T.navy, fontFamily: T.font, fontWeight: 600 }}>
-                  Catch-up eligible – {parseInt(age) >= 60 && parseInt(age) <= 63
-                    ? `${fc(LIMIT_CATCHUP_6063)} enhanced catch-up (ages 60–63)`
-                    : `${fc(LIMIT_CATCHUP_50)} catch-up`}
-                </div>
-              )}
             </div>
 
             {/* FICA question — 50+ and salary at or above $150,000 only */}
@@ -1844,7 +1911,7 @@ export default function App() {
                   {result.dMatchTotal > 0 && <SummaryLine label="Total employer contributions" value={fc(result.dMatchTotal)} bold color={T.navy} />}
                   {result.grandTotalSaved > 0 && <SummaryLine label="Grand total saved" value={fc(result.grandTotalSaved)} bold color={T.navy} />}
                   <div style={{ marginTop: 8, fontSize: "0.68rem", color: T.textMuted, fontFamily: T.font, lineHeight: 1.5 }}>
-                    Annual estimates based on {fc(result.base)} base compensation{result.incv > 0 ? ` plus ${fc(result.incv)} estimated incentive` : ""}. Actual contributions may vary.
+                    Annual estimates based on {fc(result.base)} base compensation. Actual contributions may vary.
                   </div>
                 </SummaryPanel>
 
@@ -1855,7 +1922,7 @@ export default function App() {
           {/* Disclaimer footer */}
           <div style={{ flexShrink: 0, padding: "8px 16px", borderTop: `1px solid ${T.border}`, background: T.surfaceAlt }}>
             <div style={{ fontSize: "0.64rem", color: T.textMuted, lineHeight: 1.55, fontFamily: T.font }}>
-              Pay schedule from the TDIndustries {PLAN_YEAR} weekly payroll calendar. Contribution amounts rounded to the nearest dollar. Rates rounded up to nearest whole %. Based on {PLAN_YEAR} IRS limits. Employer contributions estimated from plan design — actual amounts may vary. For educational use only — not financial or tax advice.
+              Pay schedule from the TDIndustries {PLAN_YEAR} weekly payroll calendar. Contribution amounts rounded to the nearest dollar. Rates rounded up to nearest whole %. Based on {PLAN_YEAR} IRS limits. For educational use only — not financial or tax advice.
             </div>
           </div>
         </div>
