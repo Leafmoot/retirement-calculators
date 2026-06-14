@@ -727,7 +727,7 @@ function LiveMatrix({ result, isMobile, calcCount }) {
     setPulsing(true);
     const t = setTimeout(() => setPulsing(false), 700);
     return () => clearTimeout(t);
-  }, [calcCount]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [calcCount]); // eslint-disable-line
 
   // ── Render helpers ───────────────────────────────────────────────────────────
 
