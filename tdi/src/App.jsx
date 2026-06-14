@@ -682,7 +682,191 @@ function PlanCell({ label, pct, borderRight, borderColor }) {
   );
 }
 
-// ── Main App ──────────────────────────────────────────────────────────────────
+// ── Live Matrix ───────────────────────────────────────────────────────────────
+// Renders after calculation. Same structure as the static matrix but cells
+// show the person's actual elections and remaining availability.
+function LiveMatrix({ result, isMobile, calcCount }) {
+
+  // ── Hooks ────────────────────────────────────────────────────────────────────
+  const [pulsing, setPulsing] = useState(false);
+
+  // Elected percentages
+  const el401kPre  = result.disp401kPre;
+  const el401kRoth = result.disp401kRoth;
+  const elEsopPre  = result.dispEsopPre;
+  const elEsopRoth = result.dispEsopRoth;
+  const elSsepPre  = result.elSsepPre;
+  const elSsepEsop = result.elSsepEsop;
+
+  const el401kTotal  = el401kPre + el401kRoth;
+  const elEsopTotal  = elEsopPre + elEsopRoth;
+  const elQualTotal  = el401kTotal + elEsopTotal;
+  const elSsepTotal  = elSsepPre + elSsepEsop;
+  const elNonEsopCol = el401kPre + el401kRoth + elSsepPre;
+  const elEsopCol    = elEsopPre + elEsopRoth + elSsepEsop;
+
+  const nonEsopColAvail = Math.max(MAX_401K_PCT     - elNonEsopCol, 0);
+  const esopColAvail    = Math.max(MAX_ESOP_PCT      - elEsopCol,    0);
+  const qualRowAvail    = Math.max(MAX_QUALIFIED_PCT - elQualTotal,  0);
+  const ssepRowAvail    = Math.max(MAX_SSEP_PCT      - elSsepTotal,  0);
+  const qual401kAvail   = Math.max(MAX_401K_PCT      - el401kTotal,  0);
+  const qualEsopAvail   = Math.max(MAX_ESOP_PCT      - elEsopTotal,  0);
+
+  const qualFull     = qualRowAvail    < 0.05;
+  const ssepFull     = ssepRowAvail    < 0.05;
+  const nonEsopFull  = nonEsopColAvail < 0.05;
+  const esopFull     = esopColAvail    < 0.05;
+  const qual401kFull = qual401kAvail   < 0.05;
+  const qualEsopFull = qualEsopAvail   < 0.05;
+
+  // Fill bar pulse on new calculation when a limit is reached
+  useEffect(() => {
+    if (calcCount === 0) return;
+    const anyFull = qualFull || ssepFull || nonEsopFull || esopFull;
+    if (!anyFull) return;
+    setPulsing(true);
+    const t = setTimeout(() => setPulsing(false), 700);
+    return () => clearTimeout(t);
+  }, [calcCount]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Render helpers ───────────────────────────────────────────────────────────
+
+  const fillBar = (elected, max, color, bgColor) => {
+    const pct = Math.min((elected / max) * 100, 100);
+    return (
+      <div style={{ height: 5, borderRadius: 3, background: bgColor, overflow: "hidden", marginTop: 5 }}>
+        <div style={{ height: "100%", width: `${pct}%`, background: color, borderRadius: 3, transition: "width 0.4s ease" }} />
+      </div>
+    );
+  };
+
+  // locked = blocked by a higher-level limit but nothing elected here
+  const bucket = (label, elected, max, color, dimColor, barBg, atLimit) => {
+    const locked = atLimit && elected === 0;
+    return (
+      <div style={{
+        background: locked ? "rgba(100,116,139,0.07)" : atLimit ? "rgba(26,127,75,0.04)" : "transparent",
+        border: `1px solid ${locked ? "rgba(100,116,139,0.18)" : atLimit ? "rgba(26,127,75,0.15)" : "rgba(0,0,0,0.06)"}`,
+        borderRadius: 6, padding: "8px 8px 7px", textAlign: "center",
+      }}>
+        <div style={{ fontSize: "0.68rem", fontFamily: T.font, marginBottom: 2, lineHeight: 1.3,
+          color: locked ? T.textMuted : atLimit ? "#1A6640" : dimColor }}>{label}</div>
+        <div style={{ fontSize: "1.05rem", fontWeight: 800, fontFamily: T.font, lineHeight: 1,
+          color: locked ? "rgba(100,116,139,0.45)" : elected > 0 ? color : T.textMuted }}>
+          {locked
+            ? <span style={{ fontSize: "0.65rem", fontWeight: 700, letterSpacing: "0.04em" }}>Unavailable</span>
+            : elected > 0 ? `${elected}%` : "—"
+          }
+        </div>
+        {fillBar(elected, max, color, locked ? "rgba(100,116,139,0.1)" : barBg, false)}
+      </div>
+    );
+  };
+
+  const zoneStatus = (avail, full, label, color) => (
+    <div style={{ fontSize: "0.63rem", fontFamily: T.font, fontWeight: full ? 700 : 400,
+      color: full ? T.green : color, marginTop: 3, lineHeight: 1.3 }}>
+      {full ? `${label} limit reached` : `${Math.floor(avail)}% of 10% left`}
+    </div>
+  );
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+
+      {/* Column headers */}
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "152px 1fr 1fr", margin: "0 8px", columnGap: 0 }}>
+        <div />
+        <div style={{ padding: "9px 14px", textAlign: "center", background: "#DCEEFF",
+          borderRadius: "7px 7px 0 0", marginRight: 3, boxShadow: "inset 0 0 0 1.5px rgba(0,0,0,0.08)" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4, marginBottom: 2 }}>
+            <span style={{ fontSize: "0.72rem", fontWeight: 700, color: T.navy, fontFamily: T.font, letterSpacing: "0.05em", textTransform: "uppercase" }}>Non-ESOP</span>
+            <InfoTooltip text="Includes 401(k) Pre-tax, 401(k) Roth, and SSEP Pre-tax. All three count toward a single combined limit of 10% — regardless of how elections are split across them." />
+          </div>
+          <div style={{ fontSize: "1.1rem", fontWeight: 800, color: nonEsopFull ? T.green : T.navy, fontFamily: T.font, letterSpacing: "-0.02em", lineHeight: 1 }}>{elNonEsopCol}%</div>
+          {zoneStatus(nonEsopColAvail, nonEsopFull, "Non-ESOP", T.textSub)}
+        </div>
+        <div style={{ padding: "9px 14px", textAlign: "center", background: "#D4F5E4",
+          borderRadius: "7px 7px 0 0", marginLeft: 3, boxShadow: "inset 0 0 0 1.5px rgba(0,0,0,0.08)" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4, marginBottom: 2 }}>
+            <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "#1A6640", fontFamily: T.font, letterSpacing: "0.05em", textTransform: "uppercase" }}>ESOP</span>
+            <InfoTooltip text="ESOP contributions are invested in TDIndustries company stock. Includes ESOP Pre-tax, ESOP Roth, and SSEP ESOP. All three count toward a single combined limit of 10% across both plans." />
+          </div>
+          <div style={{ fontSize: "1.1rem", fontWeight: 800, color: esopFull ? T.green : "#1A6640", fontFamily: T.font, letterSpacing: "-0.02em", lineHeight: 1 }}>{elEsopCol}%</div>
+          {zoneStatus(esopColAvail, esopFull, "ESOP", "#4A9968")}
+        </div>
+      </div>
+
+      {/* Row 1: 401(k)/ESOP Plan */}
+      <div style={{ margin: "6px 8px 3px", border: `2px solid ${T.amberBorder}`, borderRadius: 7, overflow: "hidden", boxShadow: "0 4px 12px rgba(232,160,32,0.35)" }}>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "152px 1fr 1fr" }}>
+          <div style={{ padding: "12px 10px", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", textAlign: "center", borderRight: `1px solid ${T.border}`, background: T.amberLight }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4, marginBottom: 4 }}>
+              <span style={{ fontSize: "0.75rem", fontWeight: 700, color: T.navy, fontFamily: T.font }}>401(k)/ESOP Plan</span>
+              <InfoTooltip text="A qualified plan subject to IRS dollar limits. All four buckets in this row share a single 10% plan cap — 401(k) elections and ESOP elections each have a 10% sub-limit, but the combined total across all four cannot exceed 10%." />
+            </div>
+            <div style={{ fontSize: "0.65rem", color: T.textMuted, fontFamily: T.font, marginBottom: 4 }}>Plan Total</div>
+            <div style={{ fontSize: "1.25rem", fontWeight: 800, color: qualFull ? T.green : T.navy, fontFamily: T.font, letterSpacing: "-0.02em", lineHeight: 1,
+              transform: pulsing && qualFull ? "scale(1.18)" : "scale(1)",
+              transition: pulsing ? "transform 0.2s ease-out, color 0.3s ease" : "transform 0.4s ease-in, color 0.3s ease",
+              display: "inline-block" }}>{elQualTotal}%</div>
+            {zoneStatus(qualRowAvail, qualFull, "Plan", T.textMuted)}
+          </div>
+          <div style={{ padding: "10px 10px", borderRight: `1px solid ${T.border}`, background: "#EEF6FF" }}>
+            <div style={{ fontSize: "0.68rem", fontWeight: 600, color: qual401kFull ? T.green : T.navy, fontFamily: T.font, textAlign: "center", marginBottom: 6 }}>
+              401(k): {el401kTotal}% of 10%{qual401kFull ? " — limit reached" : ""}
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+              {bucket("401(k) Pre-tax", el401kPre,  10, T.navy, T.navy, "#B8D8F8", qualFull || qual401kFull || nonEsopFull)}
+              {bucket("401(k) Roth",    el401kRoth, 10, T.navy, T.navy, "#B8D8F8", qualFull || qual401kFull || nonEsopFull)}
+            </div>
+          </div>
+          <div style={{ padding: "10px 10px", background: "#EDFAF3" }}>
+            <div style={{ fontSize: "0.68rem", fontWeight: 600, color: qualEsopFull ? T.green : "#1A6640", fontFamily: T.font, textAlign: "center", marginBottom: 6 }}>
+              ESOP: {elEsopTotal}% of 10%{qualEsopFull ? " — limit reached" : ""}
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+              {bucket("ESOP Pre-tax", elEsopPre,  10, "#1A6640", "#1A6640", "#A8E6C4", qualFull || qualEsopFull || esopFull)}
+              {bucket("ESOP Roth",    elEsopRoth, 10, "#1A6640", "#1A6640", "#A8E6C4", qualFull || qualEsopFull || esopFull)}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Row 2: SSEP */}
+      <div style={{ margin: "3px 8px 6px", border: `2px solid ${T.skyBorder}`, borderRadius: 7, overflow: "hidden", boxShadow: "0 4px 12px rgba(7,163,218,0.35)" }}>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "152px 1fr 1fr" }}>
+          <div style={{ padding: "12px 10px", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", textAlign: "center", borderRight: `1px solid ${T.border}`, background: T.skyLight }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4, marginBottom: 4 }}>
+              <span style={{ fontSize: "0.75rem", fontWeight: 700, color: T.navy, fontFamily: T.font }}>SSEP</span>
+              <InfoTooltip text="A supplemental plan with no IRS dollar limits — only the plan's own percentage caps apply. SSEP Pre-tax and SSEP ESOP combined cannot exceed 10%. Note that SSEP elections also count toward the column totals: SSEP Pre-tax feeds the Non-ESOP column, and SSEP ESOP feeds the ESOP column." />
+            </div>
+            <div style={{ fontSize: "0.65rem", color: T.textMuted, fontFamily: T.font, marginBottom: 4 }}>Plan Total</div>
+            <div style={{ fontSize: "1.25rem", fontWeight: 800, color: ssepFull ? T.green : T.navy, fontFamily: T.font, letterSpacing: "-0.02em", lineHeight: 1,
+              transform: pulsing && ssepFull ? "scale(1.18)" : "scale(1)",
+              transition: pulsing ? "transform 0.2s ease-out, color 0.3s ease" : "transform 0.4s ease-in, color 0.3s ease",
+              display: "inline-block" }}>{elSsepTotal}%</div>
+            {zoneStatus(ssepRowAvail, ssepFull, "Plan", T.textMuted)}
+          </div>
+          <div style={{ padding: "10px 10px", borderRight: `1px solid ${T.border}`, background: "#EEF6FF", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div style={{ width: "100%" }}>
+              {bucket("SSEP Pre-tax", elSsepPre, 10, T.navy, T.navy, "#B8D8F8", ssepFull || nonEsopFull)}
+            </div>
+          </div>
+          <div style={{ padding: "10px 10px", background: "#EDFAF3", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div style={{ width: "100%" }}>
+              {bucket("SSEP ESOP", elSsepEsop, 10, "#1A6640", "#1A6640", "#A8E6C4", ssepFull || esopFull)}
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  );
+}
+
+// ── End LiveMatrix ────────────────────────────────────────────────────────────
+
+
 export default function App() {
   const { periodsLeft, periodsTotal, nextPayday, cutoffDate, cutoffPassed, firstEligiblePayday, firstEligibleCutoff, firstEligiblePaydayStr } = computeTDIPeriods();
 
@@ -709,6 +893,7 @@ export default function App() {
   const [fica, setFica]                   = useState(null);
 
   const [result, setResult]               = useState(null);
+  const [calcCount, setCalcCount]         = useState(0);
   const [errors, setErrors]               = useState({ base: "", age: "", fica: "" });
   const [isCalculating, setIsCalculating] = useState(false);
   const [calculated, setCalculated]       = useState(false);
@@ -719,6 +904,7 @@ export default function App() {
   const [showTotalSummary, setShowTotalSummary] = useState(false);
   const [showLimitsGuide, setShowLimitsGuide] = useState(false);
   const [showExample, setShowExample] = useState(false);
+  const [showMatrix, setShowMatrix] = useState(true);
 
   const baseRef    = useRef(null);
   const ageRef     = useRef(null);
@@ -1138,6 +1324,7 @@ export default function App() {
         avail401kPre, avail401kRoth, availEsopPre, availEsopRoth,
         availSsepPre, availSsepEsop, availOverall,
       });
+      setCalcCount(n => n + 1);
 
       if (isMobile && resultsRef.current) {
         setTimeout(() => resultsRef.current.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
@@ -1158,6 +1345,7 @@ export default function App() {
     setShowTotalSummary(false);
     setShowLimitsGuide(false);
     setShow401k(false); setShowEsop(false); setShowSsep(false);
+    setShowMatrix(true);
   }
 
 
@@ -1343,16 +1531,31 @@ export default function App() {
                 </div>
               </div>
 
-            </div>{/* end matrix grid */}
+            </div>
 
             {/* Overall 20% bar */}
             <div style={{ margin: "6px 8px 0", background: T.navy, borderRadius: "0 0 10px 10px", padding: "12px 24px", textAlign: "center" }}>
               <div style={{ fontSize: "0.68rem", fontWeight: 600, color: "rgba(255,255,255,0.55)", fontFamily: T.font, letterSpacing: "0.04em", textTransform: "uppercase", marginBottom: 4 }}>
                 401(k)/ESOP Plan + SSEP combined
               </div>
-              <div style={{ fontSize: "1.35rem", fontWeight: 800, color: "#FFFFFF", fontFamily: T.font, letterSpacing: "-0.03em", lineHeight: 1 }}>
-                Overall Maximum = 20%
-              </div>
+              {result ? (
+                <>
+                  <div style={{ fontSize: "1.35rem", fontWeight: 800, color: "#FFFFFF", fontFamily: T.font, letterSpacing: "-0.03em", lineHeight: 1 }}>
+                    {result.elGrandTotal}% of 20% used
+                  </div>
+                  <div style={{ height: 6, borderRadius: 3, background: "rgba(255,255,255,0.15)", overflow: "hidden", margin: "8px auto 0", maxWidth: 240 }}>
+                    <div style={{ height: "100%", width: `${Math.min((result.elGrandTotal / 20) * 100, 100)}%`, background: "#FFFFFF", borderRadius: 3, transition: "width 0.4s ease" }} />
+                  </div>
+                  {result.availOverall < 0.05
+                    ? <div style={{ fontSize: "0.65rem", color: "rgba(255,255,255,0.7)", fontFamily: T.font, marginTop: 6, fontWeight: 700 }}>Overall maximum reached</div>
+                    : <div style={{ fontSize: "0.65rem", color: "rgba(255,255,255,0.6)", fontFamily: T.font, marginTop: 6 }}>{Math.floor(result.availOverall)}% remaining</div>
+                  }
+                </>
+              ) : (
+                <div style={{ fontSize: "1.35rem", fontWeight: 800, color: "#FFFFFF", fontFamily: T.font, letterSpacing: "-0.03em", lineHeight: 1 }}>
+                  Overall Maximum = 20%
+                </div>
+              )}
             </div>
 
             {/* Collapsible example */}
@@ -1713,43 +1916,6 @@ export default function App() {
             </div>
           )}
 
-          {/* Pay Schedule card */}
-          <div style={{ marginBottom: 8 }}>
-            <div style={{ background: T.surface, borderRadius: T.radius, border: `1px solid ${T.border}`, boxShadow: T.shadow, overflow: "hidden" }}>
-              <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, padding: "7px 16px 6px", borderBottom: `1px solid ${T.border}` }}>
-                Pay Schedule
-              </div>
-              <div style={{ padding: "7px 16px 8px", display: "flex", flexDirection: "column", gap: 4 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontFamily: T.font }}>
-                  <span style={{ fontSize: "0.78rem", color: T.textSub }}>Paychecks remaining</span>
-                  <span style={{ fontSize: "0.78rem", fontWeight: 700, color: T.text }}>{periodsLeft} of {periodsTotal}</span>
-                </div>
-                {nextPayday && (
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontFamily: T.font }}>
-                    <span style={{ fontSize: "0.78rem", color: T.textSub }}>Next payday</span>
-                    <span style={{ fontSize: "0.78rem", fontWeight: cutoffPassed ? 400 : 600, color: cutoffPassed ? T.textMuted : T.text }}>
-                      {cutoffPassed
-                        ? <>{fmtPayday(nextPayday)} <span style={{ fontWeight: 400, color: T.textMuted }}>{" — deadline passed"}</span></>
-                        : fmtPayday(nextPayday)}
-                    </span>
-                  </div>
-                )}
-                {cutoffPassed && firstEligiblePayday && (
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontFamily: T.font }}>
-                    <span style={{ fontSize: "0.78rem", color: T.textSub }}>Next available payday</span>
-                    <span style={{ fontSize: "0.78rem", fontWeight: 700, color: T.text }}>{fmtPayday(firstEligiblePayday)}</span>
-                  </div>
-                )}
-                {(cutoffPassed ? firstEligibleCutoff : cutoffDate) && (
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontFamily: T.font }}>
-                    <span style={{ fontSize: "0.78rem", color: T.textSub }}>Change deadline</span>
-                    <span style={{ fontSize: "0.78rem", fontWeight: 600, color: T.text }}>{fmtCutoff(cutoffPassed ? firstEligibleCutoff : cutoffDate)}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
           <div style={{ background: T.surface, borderRadius: T.radiusLg, border: `1px solid ${T.border}`, boxShadow: T.shadowMd, padding: "12px 16px" }}>
 
             {!result || isCalculating ? (
@@ -1757,82 +1923,56 @@ export default function App() {
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
 
-                {/* Availability stat cards */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }} className="mobile-stack">
-
-                  {/* Card 1: All Plans Combined */}
-                  {(() => {
-                    const avail = result.availOverall;
-                    const atLimit = avail < 0.05;
-                    return (
-                      <div style={{ background: T.navy, border: `1px solid ${T.navy}`, borderRadius: T.radius, padding: "10px 12px" }}>
-                        <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "#FFFFFF", fontFamily: T.font, marginBottom: 8, textAlign: "center" }}>All Plans Combined</div>
-                        <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-                            <span style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.65)", fontFamily: T.font }}>{result.elGrandTotal}% of {MAX_TOTAL_PCT}% used</span>
-                            <span style={{ fontSize: "0.72rem", fontWeight: 700, color: atLimit ? T.green : "#FFFFFF", fontFamily: T.font }}>
-                              {atLimit ? "Limit reached" : `${Math.floor(avail)}% available`}
-                            </span>
-                          </div>
+                {/* Live matrix — elections against plan limits, collapsible */}
+                <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.radius, overflow: "hidden" }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowMatrix(v => !v)}
+                    style={{
+                      width: "100%", padding: "8px 14px", display: "flex", alignItems: "center",
+                      justifyContent: "space-between", background: T.surfaceAlt,
+                      border: "none", borderBottom: showMatrix ? `1px solid ${T.border}` : "none",
+                      cursor: "pointer", fontFamily: T.font, outline: "none", transition: "background 0.15s",
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = T.border; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = T.surfaceAlt; }}
+                  >
+                    <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                        <rect x="1" y="4" width="4" height="8" rx="1" fill={T.navyBorder} />
+                        <rect x="6" y="4" width="4" height="8" rx="1" fill={T.borderStrong} />
+                        <rect x="11" y="4" width="4" height="8" rx="1" fill={T.navy} />
+                      </svg>
+                      <span style={{ fontSize: "0.78rem", fontWeight: 700, color: T.navy, fontFamily: T.font, letterSpacing: "-0.01em" }}>
+                        Elections vs. Plan Limits
+                      </span>
+                    </span>
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none"
+                      style={{ flexShrink: 0, transform: showMatrix ? "rotate(180deg)" : "none", transition: "transform 0.15s" }}>
+                      <path d="M2 4l4 4 4-4" stroke={T.textSub} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </button>
+                  {showMatrix && (
+                    <div style={{ padding: "10px 6px 12px" }}>
+                      <LiveMatrix result={result} isMobile={isMobile} calcCount={calcCount} />
+                      {/* Overall 20% bar */}
+                      <div style={{ margin: "6px 8px 0", background: T.navy, borderRadius: "0 0 8px 8px", padding: "10px 20px", textAlign: "center" }}>
+                        <div style={{ fontSize: "0.65rem", fontWeight: 600, color: "rgba(255,255,255,0.55)", fontFamily: T.font, letterSpacing: "0.04em", textTransform: "uppercase", marginBottom: 4 }}>
+                          401(k)/ESOP Plan + SSEP combined
                         </div>
-                      </div>
-                    );
-                  })()}
-
-                  {/* Card 2: 401(k)/ESOP Plan */}
-                  {(() => {
-                    const buckets = [
-                      { label: "401(k) Pre-tax",  avail: result.avail401kPre },
-                      { label: "401(k) Roth",      avail: result.avail401kRoth },
-                      { label: "ESOP Pre-tax",     avail: result.availEsopPre },
-                      { label: "ESOP Roth",        avail: result.availEsopRoth },
-                    ];
-                    return (
-                      <div style={{ background: T.amberLight, border: `1px solid ${T.amberBorder}`, borderRadius: T.radius, padding: "10px 12px" }}>
-                        <div style={{ fontSize: "0.75rem", fontWeight: 700, color: T.navy, fontFamily: T.font, marginBottom: 8, textAlign: "center" }}>401(k)/ESOP Plan</div>
-                        <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-                          {buckets.map(b => {
-                            const atLimit = b.avail < 0.05;
-                            return (
-                              <div key={b.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-                                <span style={{ fontSize: "0.72rem", color: T.textSub, fontFamily: T.font }}>{b.label}</span>
-                                <span style={{ fontSize: "0.72rem", fontWeight: 700, color: atLimit ? T.green : T.navy, fontFamily: T.font }}>
-                                  {atLimit ? "Limit reached" : `${Math.floor(b.avail)}% available`}
-                                </span>
-                              </div>
-                            );
-                          })}
+                        <div style={{ fontSize: "1.2rem", fontWeight: 800, color: "#FFFFFF", fontFamily: T.font, letterSpacing: "-0.03em", lineHeight: 1 }}>
+                          {result.elGrandTotal}% of 20% used
                         </div>
-                      </div>
-                    );
-                  })()}
-
-                  {/* Card 3: SSEP */}
-                  {(() => {
-                    const rows = [
-                      { label: "Pre-tax", avail: result.availSsepPre },
-                      { label: "ESOP",    avail: result.availSsepEsop },
-                    ];
-                    return (
-                      <div style={{ background: T.skyLight, border: `1px solid ${T.skyBorder}`, borderRadius: T.radius, padding: "10px 12px" }}>
-                        <div style={{ fontSize: "0.75rem", fontWeight: 700, color: T.navy, fontFamily: T.font, marginBottom: 8, textAlign: "center" }}>SSEP</div>
-                        <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-                          {rows.map(r => {
-                            const atLimit = r.avail < 0.05;
-                            return (
-                              <div key={r.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-                                <span style={{ fontSize: "0.72rem", color: T.textSub, fontFamily: T.font }}>{r.label}</span>
-                                <span style={{ fontSize: "0.72rem", fontWeight: 700, color: atLimit ? T.green : T.navy, fontFamily: T.font }}>
-                                  {atLimit ? "Limit reached" : `${Math.floor(r.avail)}% available`}
-                                </span>
-                              </div>
-                            );
-                          })}
+                        <div style={{ height: 5, borderRadius: 3, background: "rgba(255,255,255,0.15)", overflow: "hidden", margin: "7px auto 0", maxWidth: 200 }}>
+                          <div style={{ height: "100%", width: `${Math.min((result.elGrandTotal / 20) * 100, 100)}%`, background: "#FFFFFF", borderRadius: 3, transition: "width 0.4s ease" }} />
                         </div>
+                        {result.availOverall < 0.05
+                          ? <div style={{ fontSize: "0.63rem", color: "rgba(255,255,255,0.7)", fontFamily: T.font, marginTop: 5, fontWeight: 700 }}>Overall maximum reached</div>
+                          : <div style={{ fontSize: "0.63rem", color: "rgba(255,255,255,0.6)", fontFamily: T.font, marginTop: 5 }}>{Math.floor(result.availOverall)}% remaining</div>
+                        }
                       </div>
-                    );
-                  })()}
-
+                    </div>
+                  )}
                 </div>
 
                 {/* 402(g) warning */}
@@ -2145,6 +2285,41 @@ export default function App() {
 
               </div>
             )}
+          </div>
+
+          {/* Pay Schedule — at the bottom, logistics close */}
+          <div style={{ background: T.surface, borderRadius: T.radius, border: `1px solid ${T.border}`, boxShadow: T.shadow, overflow: "hidden" }}>
+            <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, padding: "7px 16px 6px", borderBottom: `1px solid ${T.border}` }}>
+              Pay Schedule
+            </div>
+            <div style={{ padding: "7px 16px 8px", display: "flex", flexDirection: "column", gap: 4 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontFamily: T.font }}>
+                <span style={{ fontSize: "0.78rem", color: T.textSub }}>Paychecks remaining</span>
+                <span style={{ fontSize: "0.78rem", fontWeight: 700, color: T.text }}>{periodsLeft} of {periodsTotal}</span>
+              </div>
+              {nextPayday && (
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontFamily: T.font }}>
+                  <span style={{ fontSize: "0.78rem", color: T.textSub }}>Next payday</span>
+                  <span style={{ fontSize: "0.78rem", fontWeight: cutoffPassed ? 400 : 600, color: cutoffPassed ? T.textMuted : T.text }}>
+                    {cutoffPassed
+                      ? <>{fmtPayday(nextPayday)} <span style={{ fontWeight: 400, color: T.textMuted }}>{" — deadline passed"}</span></>
+                      : fmtPayday(nextPayday)}
+                  </span>
+                </div>
+              )}
+              {cutoffPassed && firstEligiblePayday && (
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontFamily: T.font }}>
+                  <span style={{ fontSize: "0.78rem", color: T.textSub }}>Next available payday</span>
+                  <span style={{ fontSize: "0.78rem", fontWeight: 700, color: T.text }}>{fmtPayday(firstEligiblePayday)}</span>
+                </div>
+              )}
+              {(cutoffPassed ? firstEligibleCutoff : cutoffDate) && (
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontFamily: T.font }}>
+                  <span style={{ fontSize: "0.78rem", color: T.textSub }}>Change deadline</span>
+                  <span style={{ fontSize: "0.78rem", fontWeight: 600, color: T.text }}>{fmtCutoff(cutoffPassed ? firstEligibleCutoff : cutoffDate)}</span>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Disclaimer footer */}
