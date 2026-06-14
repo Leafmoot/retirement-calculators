@@ -672,7 +672,7 @@ function SummaryPanel({ isOpen, onToggle, children }) {
 // ── Plan Cell ─────────────────────────────────────────────────────────────────
 function PlanCell({ label, pct, borderRight, borderColor }) {
   return (
-    <div style={{ background: T.surface, padding: "8px 12px", borderRight: borderRight ? `1px solid ${borderColor || T.amberBorder}` : "none" }}>
+    <div style={{ background: T.surface, padding: "8px 12px", borderRight: borderRight ? `1px solid ${borderColor || T.amberBorder}` : "none", textAlign: "center" }}>
       <div style={{ fontSize: "0.68rem", fontWeight: 600, color: T.textSub, fontFamily: T.font, marginBottom: 3 }}>{label}</div>
       {pct === 0
         ? <div style={{ fontSize: "0.82rem", fontWeight: 600, color: T.textMuted, fontFamily: T.font }}>-</div>
@@ -926,6 +926,15 @@ export default function App() {
       const effectiveQualLimit = Math.max(electiveLimit - ytdQualTotal, 0);
       const dQualEmployee = Math.min(dQualRaw, effectiveQualLimit);
 
+      // Per-paycheck dollar amounts — based on raw plan-percentage-capped rates only.
+      // The dollar ceiling governs when deductions stop, not how much comes out per check.
+      // For FICA scenario: pre-tax per-paycheck uses the display rate (capped at 10% plan max),
+      // not the FICA dollar-ceiling-derived rate, so the per-check figure is accurate.
+      const ppCheck401kPre  = totalComp * (disp401kPre  / 100) / 52;
+      const ppCheck401kRoth = totalComp * (disp401kRoth / 100) / 52;
+      const ppCheckEsopPre  = totalComp * (dispEsopPre  / 100) / 52;
+      const ppCheckEsopRoth = totalComp * (dispEsopRoth / 100) / 52;
+
       // When FICA requires Roth catch-up, pre-tax is hard-capped at LIMIT_402G
       let d401kPreFinal, d401kRothFinal, dEsopPreFinal, dEsopRothFinal;
       if (ficaRothRequired && dQualRaw > effectiveQualLimit) {
@@ -994,13 +1003,6 @@ export default function App() {
       const catchUpInPlay     = ficaRothRequired; // show whenever restriction applies, regardless of elected amounts
 
       // ── On-track projections ─────────────────────────────────────────────
-      // Per-paycheck rate for each bucket = raw annual rate / 52.
-      // Must use unscaled d401kPre/dEsopPre (rate × comp), NOT the Final versions
-      // which are scaled down by YTD ceiling math and produce wrong per-check figures.
-      const ppCheck401kPre  = d401kPre  / 52;
-      const ppCheck401kRoth = d401kRoth / 52;
-      const ppCheckEsopPre  = dEsopPre  / 52;
-      const ppCheckEsopRoth = dEsopRoth / 52;
       const ppCheckSsepPre  = dSsepPre  / 52;
       const ppCheckSsepEsop = dSsepEsop / 52;
 
@@ -1846,15 +1848,12 @@ export default function App() {
                     <span style={{ fontSize: "0.82rem", fontWeight: 700, color: T.navy, fontFamily: T.font }}>401(k)/ESOP Plan</span>
                     {result.hasQualContribs && (() => {
                       const onTrack = result.ficaRothRequired
-                        ? (result.unusedPreTax < 1 && (result.ppCheck401kRoth + result.ppCheckEsopRoth > 0 ? result.unusedRoth < 1 : true))
+                        ? (result.unusedPreTax < 1 && result.unusedRoth < 1)
                         : result.unusedQual < 1;
-                      const statusLabel = onTrack
-                        ? "On track to reach limit"
-                        : "Won\u2019t reach limit at this rate";
-                      const statusColor = onTrack ? T.green : T.amber;
+                      if (!onTrack) return null;
                       return (
-                        <span style={{ fontSize: "0.72rem", fontWeight: 700, color: statusColor, fontFamily: T.font }}>
-                          {statusLabel}
+                        <span style={{ fontSize: "0.72rem", fontWeight: 700, color: T.green, fontFamily: T.font }}>
+                          On track to reach limit
                         </span>
                       );
                     })()}
@@ -1872,6 +1871,51 @@ export default function App() {
                       ))}
                     </div>
                   )}
+
+                  {/* Visible summary strip — key numbers without expanding */}
+                  {result.hasQualContribs && periodsLeft > 0 && (() => {
+                    const showUnused = result.ficaRothRequired
+                      ? (result.unusedPreTax > 0 || result.unusedRoth > 0)
+                      : result.unusedQual > 0;
+
+                    // Build the stat cells to display
+                    const cells = [
+                      { label: "Per paycheck", value: fc(result.ppCheckQualTotal) },
+                      { label: "Est. year-end total", value: fc(result.onTrackQualTotal) },
+                    ];
+                    if (showUnused) {
+                      if (result.ficaRothRequired) {
+                        if (result.unusedPreTax > 0) cells.push({ label: "Pre-tax unused", value: fc(result.unusedPreTax), highlight: true });
+                        if (result.unusedRoth   > 0) cells.push({ label: "Roth catch-up unused", value: fc(result.unusedRoth), highlight: true });
+                      } else {
+                        cells.push({ label: "Unused benefit", value: fc(result.unusedQual), highlight: true });
+                      }
+                    }
+
+                    return (
+                      <div style={{
+                        display: "grid",
+                        gridTemplateColumns: `repeat(${cells.length}, 1fr)`,
+                        borderTop: `1px solid ${T.amberBorder}`,
+                        background: T.amberLight,
+                      }}>
+                        {cells.map((cell, i) => (
+                          <div key={cell.label} style={{
+                            padding: "9px 12px",
+                            borderRight: i < cells.length - 1 ? `1px solid ${T.amberBorder}` : "none",
+                            textAlign: "center",
+                          }}>
+                            <div style={{ fontSize: "0.65rem", fontWeight: 600, color: T.textSub, fontFamily: T.font, marginBottom: 3 }}>
+                              {cell.label}
+                            </div>
+                            <div style={{ fontSize: "0.95rem", fontWeight: 700, color: cell.highlight ? "#A05C00" : T.navy, fontFamily: T.font, letterSpacing: "-0.01em", lineHeight: 1 }}>
+                              {cell.value}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
 
                   <DetailPanel
                     label="View Calculation Details"
@@ -1906,19 +1950,7 @@ export default function App() {
                         <SummaryLine label="Remaining this year" value={fc(result.effectiveQualLimit)} indent bold />
                       )}
 
-                      {/* 4. Per Paycheck */}
-                      {periodsLeft > 0 && result.dQualEmployee > 0 && (
-                        <>
-                          <Divider label="Per Paycheck" />
-                          {result.ppCheck401kPre  > 0 && <SummaryLine label="401(k) pre-tax"        value={fc(result.ppCheck401kPre)}  indent />}
-                          {result.ppCheck401kRoth > 0 && <SummaryLine label="401(k) Roth after-tax" value={fc(result.ppCheck401kRoth)} indent />}
-                          {result.ppCheckEsopPre  > 0 && <SummaryLine label="ESOP pre-tax"          value={fc(result.ppCheckEsopPre)}  indent />}
-                          {result.ppCheckEsopRoth > 0 && <SummaryLine label="ESOP Roth after-tax"   value={fc(result.ppCheckEsopRoth)} indent />}
-                          <SummaryLine label="Total per paycheck" value={fc(result.ppCheckQualTotal)} indent bold />
-                        </>
-                      )}
-
-                      {/* 5. On Track to Contribute — shows the math */}
+                      {/* 4. On Track to Contribute — per-paycheck figures folded into the math */}
                       {periodsLeft > 0 && result.dQualEmployee > 0 && (
                         <>
                           <Divider label="On Track to Contribute" />
@@ -1932,6 +1964,8 @@ export default function App() {
                                 return (
                                   <>
                                     <div style={{ fontSize: "0.68rem", fontWeight: 700, color: T.textSub, fontFamily: T.font, textTransform: "uppercase", letterSpacing: "0.04em", padding: "8px 0 2px", borderBottom: `1px solid ${T.border}`, marginBottom: 2 }}>Pre-tax</div>
+                                    {result.ppCheck401kPre  > 0 && <SummaryLine label="401(k) pre-tax per paycheck"  value={fc(result.ppCheck401kPre)}  indent />}
+                                    {result.ppCheckEsopPre  > 0 && <SummaryLine label="ESOP pre-tax per paycheck"    value={fc(result.ppCheckEsopPre)}  indent />}
                                     {exceedsPre ? (
                                       <>
                                         <SummaryLine label="Paychecks until limit" value={`${result.paychecksToLimit} of ${periodsLeft} remaining`} indent />
@@ -1956,6 +1990,8 @@ export default function App() {
                                 return (
                                   <>
                                     <div style={{ fontSize: "0.68rem", fontWeight: 700, color: T.textSub, fontFamily: T.font, textTransform: "uppercase", letterSpacing: "0.04em", padding: "10px 0 2px", borderBottom: `1px solid ${T.border}`, marginBottom: 2 }}>Roth catch-up</div>
+                                    {result.ppCheck401kRoth > 0 && <SummaryLine label="401(k) Roth per paycheck"     value={fc(result.ppCheck401kRoth)} indent />}
+                                    {result.ppCheckEsopRoth > 0 && <SummaryLine label="ESOP Roth per paycheck"       value={fc(result.ppCheckEsopRoth)} indent />}
                                     {exceedsRoth ? (
                                       <>
                                         <SummaryLine label="Paychecks until limit" value={`${rothChecks} of ${periodsLeft} remaining`} indent />
@@ -1976,6 +2012,10 @@ export default function App() {
                             const exceedsLimit = result.ppCheckQualTotal * periodsLeft > (result.effectiveQualLimit);
                             return exceedsLimit ? (
                               <>
+                                {result.ppCheck401kPre  > 0 && <SummaryLine label="401(k) pre-tax per paycheck"  value={fc(result.ppCheck401kPre)}  indent />}
+                                {result.ppCheck401kRoth > 0 && <SummaryLine label="401(k) Roth per paycheck"     value={fc(result.ppCheck401kRoth)} indent />}
+                                {result.ppCheckEsopPre  > 0 && <SummaryLine label="ESOP pre-tax per paycheck"   value={fc(result.ppCheckEsopPre)}  indent />}
+                                {result.ppCheckEsopRoth > 0 && <SummaryLine label="ESOP Roth per paycheck"      value={fc(result.ppCheckEsopRoth)} indent />}
                                 <SummaryLine label="Paychecks until limit" value={`${result.paychecksToLimit} of ${periodsLeft} remaining`} indent />
                                 {result.limitReachedPayday && <SummaryLine label="Limit reached by" value={fmtPayday(result.limitReachedPayday)} indent />}
                                 {result.ytdQualTotal > 0 && <SummaryLine label="Contributed (YTD)" value={fc(result.ytdQualTotal)} indent />}
@@ -1983,6 +2023,10 @@ export default function App() {
                               </>
                             ) : (
                               <>
+                                {result.ppCheck401kPre  > 0 && <SummaryLine label="401(k) pre-tax per paycheck"  value={fc(result.ppCheck401kPre)}  indent />}
+                                {result.ppCheck401kRoth > 0 && <SummaryLine label="401(k) Roth per paycheck"     value={fc(result.ppCheck401kRoth)} indent />}
+                                {result.ppCheckEsopPre  > 0 && <SummaryLine label="ESOP pre-tax per paycheck"   value={fc(result.ppCheckEsopPre)}  indent />}
+                                {result.ppCheckEsopRoth > 0 && <SummaryLine label="ESOP Roth per paycheck"      value={fc(result.ppCheckEsopRoth)} indent />}
                                 <SummaryLine label={`Per paycheck × ${periodsLeft} paychecks`} value={fc(result.ppCheckQualTotal * periodsLeft)} indent />
                                 {result.ytdQualTotal > 0 && <SummaryLine label="Contributed (YTD)" value={fc(result.ytdQualTotal)} indent />}
                                 <SummaryLine label="Estimated year-end total" value={fc(result.onTrackQualTotal)} indent bold />
@@ -2027,6 +2071,34 @@ export default function App() {
                       </div>
                     )}
 
+                    {/* Visible summary strip — key numbers without expanding */}
+                    {result.hasSsepContribs && periodsLeft > 0 && (
+                      <div style={{
+                        display: "grid",
+                        gridTemplateColumns: "1fr 1fr",
+                        borderTop: `1px solid ${T.skyBorder}`,
+                        background: T.skyLight,
+                      }}>
+                        {[
+                          { label: "Per paycheck",        value: fc(result.ppCheckSsepTotal) },
+                          { label: "Est. year-end total",  value: fc(result.onTrackSsepTotal) },
+                        ].map((cell, i) => (
+                          <div key={cell.label} style={{
+                            padding: "9px 12px",
+                            borderRight: i === 0 ? `1px solid ${T.skyBorder}` : "none",
+                            textAlign: "center",
+                          }}>
+                            <div style={{ fontSize: "0.65rem", fontWeight: 600, color: T.textSub, fontFamily: T.font, marginBottom: 3 }}>
+                              {cell.label}
+                            </div>
+                            <div style={{ fontSize: "0.95rem", fontWeight: 700, color: T.navy, fontFamily: T.font, letterSpacing: "-0.01em", lineHeight: 1 }}>
+                              {cell.value}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
                     <DetailPanel
                       label="View Calculation Details"
                       isOpen={showSsepDetail} onToggle={() => setShowSsepDetail(v => !v)}
@@ -2039,20 +2111,12 @@ export default function App() {
                       {result.ytdSsepEsop > 0 && <SummaryLine label="SSEP ESOP"    value={fc(result.ytdSsepEsop)} indent />}
                       {result.ytdSsepTotal === 0 && <SummaryLine label="Nothing contributed yet" value="—" indent />}
 
-                      {/* 2. Per Paycheck */}
-                      {periodsLeft > 0 && result.dSsepTotal > 0 && (
-                        <>
-                          <Divider label="Per Paycheck" />
-                          {result.ppCheckSsepPre  > 0 && <SummaryLine label="SSEP pre-tax" value={fc(result.ppCheckSsepPre)}  indent />}
-                          {result.ppCheckSsepEsop > 0 && <SummaryLine label="SSEP ESOP"    value={fc(result.ppCheckSsepEsop)} indent />}
-                          <SummaryLine label="Total per paycheck" value={fc(result.ppCheckSsepTotal)} indent bold />
-                        </>
-                      )}
-
-                      {/* 3. On Track to Contribute — shows the math */}
+                      {/* 2. On Track to Contribute — per-paycheck figures folded into the math */}
                       {periodsLeft > 0 && result.dSsepTotal > 0 && (
                         <>
                           <Divider label="On Track to Contribute" />
+                          {result.ppCheckSsepPre  > 0 && <SummaryLine label="SSEP pre-tax per paycheck" value={fc(result.ppCheckSsepPre)}  indent />}
+                          {result.ppCheckSsepEsop > 0 && <SummaryLine label="SSEP ESOP per paycheck"    value={fc(result.ppCheckSsepEsop)} indent />}
                           <SummaryLine label={`Per paycheck × ${periodsLeft} paychecks`} value={fc(result.ppCheckSsepTotal * periodsLeft)} indent />
                           {result.ytdSsepTotal > 0 && <SummaryLine label="Contributed (YTD)" value={fc(result.ytdSsepTotal)} indent />}
                           <SummaryLine label="Estimated year-end total" value={fc(result.onTrackSsepTotal)} indent bold />
@@ -2064,9 +2128,9 @@ export default function App() {
                 {/* Collapsible total summary */}
                 <SummaryPanel isOpen={showTotalSummary} onToggle={() => setShowTotalSummary(v => !v)}>
                   <Divider label="Contributions" />
-                  {result.hasQualContribs && <SummaryLine label="401(k)/ESOP" value={fc(result.dQualEmployee)} indent />}
-                  {result.hasSsepContribs && <SummaryLine label="SSEP" value={fc(result.dSsepTotal)} indent />}
-                  {result.dEmployeeTotal > 0 && <SummaryLine label="Total employee contributions" value={fc(result.dEmployeeTotal)} indent bold />}
+                  {result.hasQualContribs && <SummaryLine label="401(k)/ESOP" value={fc(result.onTrackQualTotal)} indent />}
+                  {result.hasSsepContribs && <SummaryLine label="SSEP" value={fc(result.onTrackSsepTotal)} indent />}
+                  {result.dEmployeeTotal > 0 && <SummaryLine label="Total employee contributions" value={fc(result.onTrackQualTotal + result.onTrackSsepTotal)} indent bold />}
                   <div style={{ marginTop: 8, fontSize: "0.68rem", color: T.textMuted, fontFamily: T.font, lineHeight: 1.5 }}>
                     Annual estimates based on {fc(result.base)} base compensation. Actual contributions may vary.
                   </div>
