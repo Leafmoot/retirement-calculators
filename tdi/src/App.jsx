@@ -773,10 +773,10 @@ function LiveMatrix({ result, isMobile, calcCount, staticMode = false, exampleMo
     );
   };
 
-  const zoneStatus = (avail, full, label, color) => {
+  const zoneStatus = (avail, full, label, color, max = 10) => {
     if (staticMode) return (
       <div style={{ fontSize: "0.63rem", fontFamily: T.font, color: T.textMuted, marginTop: 3, lineHeight: 1.3 }}>
-        Up to 10% available
+        overall plan limit
       </div>
     );
     return (
@@ -785,7 +785,7 @@ function LiveMatrix({ result, isMobile, calcCount, staticMode = false, exampleMo
         style={{ fontSize: "0.63rem", fontFamily: T.font, fontWeight: full ? 700 : 400,
         color: full ? T.green : color, marginTop: 3, lineHeight: 1.3,
         animation: full ? "doublePulse 0.65s ease-in-out" : "none" }}>
-        {full ? `${label} limit reached` : `${Math.floor(avail)}% of 10% left`}
+        {full ? `${label} limit reached` : `${Math.floor(avail)}% of ${max}% left`}
       </div>
     );
   };
@@ -872,12 +872,12 @@ function LiveMatrix({ result, isMobile, calcCount, staticMode = false, exampleMo
           <div style={{ padding: "12px 10px", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", textAlign: "center", borderRight: `1px solid ${T.border}`, background: T.skyLight }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4, marginBottom: 4 }}>
               <span style={{ fontSize: "0.75rem", fontWeight: 700, color: T.navy, fontFamily: T.font }}>SSEP</span>
-              <InfoTooltip text="A supplemental plan with no IRS dollar limits — only the plan's own percentage caps apply. SSEP Pre-tax and SSEP ESOP combined cannot exceed 10%. Note that SSEP elections also count toward the column totals: SSEP Pre-tax feeds the Non-ESOP column, and SSEP ESOP feeds the ESOP column." />
+              <InfoTooltip text="The Supplemental Savings and ESOP Plan (SSEP) has no IRS dollar limits. However, the plan limits you to an aggregate of 10% combined with the Non-ESOP component and the ESOP component." />
             </div>
             <div key={ssepFull ? `pct-${pulseKey}` : "pct"}
               style={{ fontSize: "1.15rem", fontWeight: 800, color: staticMode ? T.navy : ssepFull ? T.green : T.navy, fontFamily: T.font, letterSpacing: "-0.02em", lineHeight: 1,
-              animation: (!staticMode && ssepFull) ? "doublePulse 0.65s ease-in-out" : "none" }}>{staticMode ? "10" : elSsepTotal}%</div>
-            {zoneStatus(ssepRowAvail, ssepFull, "Plan", T.textMuted)}
+              animation: (!staticMode && ssepFull) ? "doublePulse 0.65s ease-in-out" : "none" }}>{staticMode ? "20" : elSsepTotal}%</div>
+            {zoneStatus(Math.max(MAX_TOTAL_PCT - elSsepTotal, 0), ssepFull, "Plan", T.textMuted, 20)}
           </div>
           <div style={{ padding: "10px 10px", borderRight: `1px solid ${T.border}`, background: "#EEF6FF", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <div style={{ width: "100%" }}>
@@ -1033,8 +1033,8 @@ export default function App() {
   const lock401kRoth = (used401k >= MAX_401K_PCT) || (usedQual >= MAX_QUALIFIED_PCT) || (usedNonEsop >= MAX_401K_PCT) || (usedTotal >= MAX_TOTAL_PCT);
   const lockEsopPre  = (usedEsop >= MAX_ESOP_PCT) || (usedQual >= MAX_QUALIFIED_PCT) || (usedEsopCol >= MAX_ESOP_PCT) || (usedTotal >= MAX_TOTAL_PCT);
   const lockEsopRoth = (usedEsop >= MAX_ESOP_PCT) || (usedQual >= MAX_QUALIFIED_PCT) || (usedEsopCol >= MAX_ESOP_PCT) || (usedTotal >= MAX_TOTAL_PCT);
-  const lockSsepPre  = (usedSsep >= MAX_SSEP_PCT) || (usedNonEsop >= MAX_401K_PCT)   || (usedTotal >= MAX_TOTAL_PCT);
-  const lockSsepEsop = (usedSsep >= MAX_SSEP_PCT) || (usedEsopCol >= MAX_ESOP_PCT)   || (usedTotal >= MAX_TOTAL_PCT);
+  const lockSsepPre  = (pSsepPre  >= MAX_SSEP_PCT) || (usedNonEsop >= MAX_401K_PCT)   || (usedTotal >= MAX_TOTAL_PCT);
+  const lockSsepEsop = (pSsepEsop >= MAX_SSEP_PCT) || (usedEsopCol >= MAX_ESOP_PCT)   || (usedTotal >= MAX_TOTAL_PCT);
 
   // ── Live dollar preview ─────────────────────────────────────────────────
 
@@ -1161,7 +1161,7 @@ export default function App() {
       const esopColRoomForSsep = Math.max(MAX_ESOP_PCT - esopUsedByQual, 0);
 
       const elSsepPre  = Math.min(pSsepPre,  MAX_SSEP_PCT, nonEsopColRoomForSsep);
-      const elSsepEsop = Math.min(pSsepEsop, Math.max(MAX_SSEP_PCT - elSsepPre, 0), esopColRoomForSsep);
+      const elSsepEsop = Math.min(pSsepEsop, MAX_SSEP_PCT, esopColRoomForSsep);
       const elSsepTotal    = elSsepPre + elSsepEsop;
       const elGrandTotal   = elQualTotal + elSsepTotal;
       // Display grand total uses plan-%-capped display rates (not dollar-ceiling-clipped values)
@@ -1775,7 +1775,7 @@ export default function App() {
               <div>
                 <ExpandRow
                   label="SSEP"
-                  tooltip="Supplemental Savings and ESOP Plan (SSEP). A non-qualified plan with no IRS limits. Your SSEP pre-tax and ESOP contributions combined cannot exceed 10% of compensation. Total deferral across all plans cannot exceed 20%."
+                  tooltip="The Supplemental Savings and ESOP Plan (SSEP) has no IRS dollar limits. However, the plan limits you to an aggregate of 10% combined with the Non-ESOP component and the ESOP component."
                   isOpen={showSsep}
                   onToggle={() => setShowSsep(v => !v)}
                   hasData={hasSsepData && !showSsep}
@@ -1793,14 +1793,14 @@ export default function App() {
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }} className="mobile-stack">
                       <PctInput label="Pre-tax" value={rSsepPre} accentColor={T.navy}
                         disabled={lockSsepPre && pSsepPre === 0}
-                        disabledReason={usedSsep >= MAX_SSEP_PCT ? "SSEP 10% limit reached" : usedNonEsop >= MAX_401K_PCT ? "Non-ESOP column limit reached" : "Overall 20% limit reached"}
-                        onChange={(v) => handleRateChange(setRSsepPre, pSsepPre, [[usedSsep, MAX_SSEP_PCT], [usedNonEsop, MAX_401K_PCT], [usedTotal, MAX_TOTAL_PCT]], v)}
+                        disabledReason={pSsepPre >= MAX_SSEP_PCT ? "SSEP pre-tax 10% limit reached" : usedNonEsop >= MAX_401K_PCT ? "Non-ESOP column limit reached" : "Overall 20% limit reached"}
+                        onChange={(v) => handleRateChange(setRSsepPre, pSsepPre, [[pSsepPre, MAX_SSEP_PCT], [usedNonEsop, MAX_401K_PCT], [usedTotal, MAX_TOTAL_PCT]], v)}
                         tooltip="Reduces your taxable income now; pay taxes later when withdrawn as ordinary income."
                       />
                       <PctInput label="ESOP" value={rSsepEsop} accentColor={T.navy}
                         disabled={lockSsepEsop && pSsepEsop === 0}
-                        disabledReason={usedSsep >= MAX_SSEP_PCT ? "SSEP 10% limit reached" : usedEsopCol >= MAX_ESOP_PCT ? "ESOP column limit reached" : "Overall 20% limit reached"}
-                        onChange={(v) => handleRateChange(setRSsepEsop, pSsepEsop, [[usedSsep, MAX_SSEP_PCT], [usedEsopCol, MAX_ESOP_PCT], [usedTotal, MAX_TOTAL_PCT]], v)}
+                        disabledReason={pSsepEsop >= MAX_SSEP_PCT ? "SSEP ESOP 10% limit reached" : usedEsopCol >= MAX_ESOP_PCT ? "ESOP column limit reached" : "Overall 20% limit reached"}
+                        onChange={(v) => handleRateChange(setRSsepEsop, pSsepEsop, [[pSsepEsop, MAX_SSEP_PCT], [usedEsopCol, MAX_ESOP_PCT], [usedTotal, MAX_TOTAL_PCT]], v)}
                         tooltip="Reduces your taxable income now; pay taxes later when withdrawn as ordinary income."
                       />
                     </div>
