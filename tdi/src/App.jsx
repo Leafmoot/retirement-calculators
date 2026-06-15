@@ -192,14 +192,14 @@ function ProjectionBlock({ totalComp, age, fica }) {
   if (!proj) return null;
   return (
     <>
-      <Divider label="Next Year Projection" />
+      <Divider label="Next Year's Recommended Rate" />
       {proj.split ? (
         <>
-          <SummaryLine label="Pre-tax" value={`${proj.prePct}%`} indent />
-          <SummaryLine label={`Roth to contribute catch-up (${proj.nextCatchUpLabel})`} value={`${proj.rothPct}%`} indent />
+          <SummaryLine label="Pre-tax rate" value={`${proj.prePct}%`} indent />
+          <SummaryLine label={`Roth catch-up rate (${proj.nextCatchUpLabel})`} value={`${proj.rothPct}%`} indent />
         </>
       ) : (
-        <SummaryLine label="Recommended pre-tax rate" value={`${proj.pct}%`} indent bold />
+        <SummaryLine label="Pre-tax rate" value={`${proj.pct}%`} indent bold />
       )}
       <div style={{ fontSize: "0.72rem", color: T.textSub, fontFamily: T.font, lineHeight: 1.5, marginTop: 8, paddingLeft: 12 }}>
         Estimated rates to maximize the 401(k)/ESOP plan at age {proj.nextAge} over a full 52-period year, assuming current compensation and this year's IRS limits carry forward.
@@ -1300,7 +1300,7 @@ export default function App() {
       const onTrackQualTotal = onTrack401kPre + onTrack401kRoth + onTrackEsopPre + onTrackEsopRoth;
       const onTrackSsepTotal = onTrackSsepPre + onTrackSsepEsop;
 
-      // Unused benefit — how much of the IRS limit won't be used at current rates
+      // Below maximum by — how much of the IRS limit won't be used at current rates
       const unusedQual = Math.max(electiveLimit - onTrackQualTotal, 0);
 
       // ── Paycheck countdown to limit ───────────────────────────────────────
@@ -1977,7 +1977,7 @@ export default function App() {
                         if (result.unusedPreTax > 0) cells.push({ label: "Pre-tax unused", value: fc(result.unusedPreTax), highlight: true });
                         if (result.unusedRoth   > 0) cells.push({ label: "Roth catch-up unused", value: fc(result.unusedRoth), highlight: true });
                       } else {
-                        cells.push({ label: "Unused benefit", value: fc(result.unusedQual), highlight: true });
+                        cells.push({ label: "Below maximum by", value: fc(result.unusedQual), highlight: true });
                       }
                     }
 
@@ -2126,17 +2126,17 @@ export default function App() {
                         </>
                       )}
 
-                      {/* 6. Unused Benefit */}
+                      {/* 6. Available to Contribute */}
                       {(result.unusedQual > 0 || result.unusedPreTax > 0 || result.unusedRoth > 0) && (
                         <>
-                          <Divider label="Unused Benefit" />
+                          <Divider label="Available to Contribute" />
                           {result.ficaRothRequired ? (
                             <>
-                              {result.unusedPreTax > 0 && <SummaryLine label="Pre-tax available to contribute"       value={fc(result.unusedPreTax)} indent />}
-                              {result.unusedRoth   > 0 && <SummaryLine label="Roth catch-up available to contribute" value={fc(result.unusedRoth)}   indent />}
+                              {result.unusedPreTax > 0 && <SummaryLine label="Pre-tax below maximum by"       value={fc(result.unusedPreTax)} indent />}
+                              {result.unusedRoth   > 0 && <SummaryLine label="Roth catch-up below maximum by" value={fc(result.unusedRoth)}   indent />}
                             </>
                           ) : (
-                            <SummaryLine label="Available to contribute" value={fc(result.unusedQual)} indent bold />
+                            <SummaryLine label="Below maximum by" value={fc(result.unusedQual)} indent bold />
                           )}
                         </>
                       )}
@@ -2278,9 +2278,13 @@ export default function App() {
             <div style={{ fontSize: "0.64rem", color: T.textMuted, lineHeight: 1.55, fontFamily: T.font }}>
               Pay schedule from the TDIndustries {PLAN_YEAR} weekly payroll calendar. Contribution amounts rounded to the nearest dollar. Rates rounded up to nearest whole %. Based on {PLAN_YEAR} IRS limits. For educational use only — not financial or tax advice.
             </div>
+            <div style={{ fontSize: "0.64rem", color: T.textMuted, fontFamily: T.font, marginTop: 3 }}>
+              Last updated: June 2026
+            </div>
           </div>
         </div>
       </div>
+
     </div>
   );
 }
