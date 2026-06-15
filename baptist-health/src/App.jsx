@@ -733,6 +733,7 @@ export default function App() {
         input::-webkit-inner-spin-button,input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0;}
         input[type=number]{-moz-appearance:textfield;appearance:textfield;}
         details[open] .details-arrow{transform:rotate(180deg);}
+        details summary:hover{background:rgba(0,0,0,0.03);transition:background 0.15s;}
         @media(max-width:640px){.mobile-stack{grid-template-columns:1fr!important}.mobile-text-sm{font-size:1.6rem!important}.mobile-padding-sm{padding:16px 18px!important}}
       `}</style>
 
@@ -740,7 +741,7 @@ export default function App() {
 
       <div style={{ position: "relative", zIndex: 1, flexShrink: 0, padding: "10px 20px 8px", borderBottom: `1px solid ${T.border}`, background: T.surfaceAlt, display: "flex", alignItems: "center" }}>
         <h1 style={{ margin: 0, fontSize: isMobile ? "1rem" : "1.1rem", fontWeight: 800, color: T.text, letterSpacing: "-0.03em" }}>
-          Baptist Health Contribution Assistant
+          Baptist Health Maximum Contribution Calculator
         </h1>
       </div>
 
@@ -1033,6 +1034,7 @@ export default function App() {
         </div>
 
         {/* ── RIGHT: Results ── */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
         <div style={{ background: T.surface, borderRadius: T.radiusLg, border: `1px solid ${T.border}`, boxShadow: T.shadowMd, display: "flex", flexDirection: "column", overflow: "hidden", position: "relative" }}>
 
           {isDirty && result && (
@@ -1054,55 +1056,6 @@ export default function App() {
 
           <div style={{ overflowY: (isMobile || !result) ? "hidden" : "auto", padding: "14px 16px" }}>
 
-            <div style={{ marginBottom: 8 }}>
-              <div style={{
-                background: T.surface,
-                borderRadius: T.radius,
-                border: `1px solid ${T.border}`,
-                boxShadow: T.shadow,
-                overflow: "hidden",
-              }}>
-                <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, padding: "7px 16px 6px", borderBottom: `1px solid ${T.border}` }}>
-                  Pay Schedule
-                </div>
-                <div style={{
-                  padding: "7px 16px 8px",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 4,
-                }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontFamily: T.font }}>
-                  <span style={{ fontSize: "0.78rem", color: T.textSub }}>Paychecks remaining</span>
-                  <span style={{ fontSize: "0.78rem", fontWeight: 700, color: T.text }}>{periodsLeft} of {periodsTotal}</span>
-                </div>
-                {nextPayday && (
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontFamily: T.font }}>
-                    <span style={{ fontSize: "0.78rem", color: T.textSub }}>Next payday</span>
-                    <span style={{ fontSize: "0.78rem", fontWeight: cutoffPassed ? 400 : 600, color: cutoffPassed ? T.textMuted : T.text }}>
-                      {cutoffPassed
-                        ? <>{fmtPayday(nextPayday)} <span style={{ fontWeight: 400, color: T.textMuted }}>— deadline passed</span></>
-                        : fmtPayday(nextPayday)}
-                    </span>
-                  </div>
-                )}
-                {cutoffPassed && firstEligiblePayday && (
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontFamily: T.font }}>
-                    <span style={{ fontSize: "0.78rem", color: T.textSub }}>Next available payday</span>
-                    <span style={{ fontSize: "0.78rem", fontWeight: 700, color: T.text }}>{fmtPayday(firstEligiblePayday)}</span>
-                  </div>
-                )}
-                {(cutoffPassed ? firstEligibleCutoff : cutoffDate) && (
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontFamily: T.font }}>
-                    <span style={{ fontSize: "0.78rem", color: T.textSub }}>Change deadline</span>
-                    <span style={{ fontSize: "0.78rem", fontWeight: 600, color: T.text }}>{fmtCutoff(cutoffPassed ? firstEligibleCutoff : cutoffDate)}</span>
-                  </div>
-                )}
-              </div>
-              </div>
-            </div>
-
-
-
             {!result || isCalculating ? (
               <EmptyResults isCalculating={isCalculating} />
             ) : result.salaryCapped ? (
@@ -1120,6 +1073,12 @@ export default function App() {
               </div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, whiteSpace: "nowrap" }}>
+                    Rates to Reach Your Limits
+                  </span>
+                  <div style={{ flex: 1, height: 1, background: T.border }} />
+                </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
 
                   {/* 403(b) Card */}
@@ -1230,7 +1189,7 @@ export default function App() {
 
                     </div>
                     <details style={{ borderTop: `1px solid ${T.btnBorder}` }}>
-                      <summary style={{ cursor: "pointer", padding: "14px 16px", fontSize: "0.8rem", fontWeight: 700, color: T.text, fontFamily: T.font, userSelect: "none", listStyle: "none", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <summary style={{ cursor: "pointer", padding: "10px 14px", fontSize: "0.8rem", fontWeight: 700, color: T.text, fontFamily: T.font, userSelect: "none", listStyle: "none", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                         <span>View Details</span>
                         <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ flexShrink: 0, transition: "transform 0.2s" }} className="details-arrow">
                           <path d="M3 5l4 4 4-4" stroke={T.textSub} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -1385,7 +1344,7 @@ export default function App() {
                         }
                       </div>
                     <details style={{ borderTop: `1px solid #BFDBFE` }}>
-                      <summary style={{ cursor: "pointer", padding: "14px 16px", fontSize: "0.8rem", fontWeight: 700, color: T.text, fontFamily: T.font, userSelect: "none", listStyle: "none", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <summary style={{ cursor: "pointer", padding: "10px 14px", fontSize: "0.8rem", fontWeight: 700, color: T.text, fontFamily: T.font, userSelect: "none", listStyle: "none", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                         <span>View Details</span>
                         <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ flexShrink: 0, transition: "transform 0.2s" }} className="details-arrow">
                           <path d="M3 5l4 4 4-4" stroke={T.textSub} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -1460,7 +1419,7 @@ export default function App() {
                       </div>
                     )}
                     <details style={{ borderTop: `1px solid ${T.preTaxBorder}` }}>
-                      <summary style={{ cursor: "pointer", padding: "14px 16px", fontSize: "0.8rem", fontWeight: 700, color: T.text, fontFamily: T.font, userSelect: "none", listStyle: "none", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <summary style={{ cursor: "pointer", padding: "10px 14px", fontSize: "0.8rem", fontWeight: 700, color: T.text, fontFamily: T.font, userSelect: "none", listStyle: "none", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                         <span>View Details</span>
                         <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ flexShrink: 0, transition: "transform 0.2s" }} className="details-arrow">
                           <path d="M3 5l4 4 4-4" stroke={T.textSub} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -1509,7 +1468,7 @@ export default function App() {
 
                   return (
                     <details style={{ background: T.surfaceAlt, border: `1px solid ${T.border}`, borderRadius: "8px", overflow: "hidden" }}>
-                      <summary style={{ cursor: "pointer", fontSize: "0.8rem", fontWeight: 700, color: T.text, fontFamily: T.font, padding: "14px 16px", userSelect: "none", listStyle: "none", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <summary style={{ cursor: "pointer", fontSize: "0.8rem", fontWeight: 700, color: T.text, fontFamily: T.font, padding: "10px 14px", userSelect: "none", listStyle: "none", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                         <span>Calculation Breakdown</span>
                         <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ transition: "transform 0.2s" }} className="details-arrow">
                           <path d="M3 5l4 4 4-4" stroke={T.textSub} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -1635,9 +1594,50 @@ export default function App() {
             )}
           </div>
 
-          <div style={{ flexShrink: 0, padding: "8px 16px", borderTop: `1px solid ${T.border}`, background: T.surfaceAlt }}>
-            <div style={{ fontSize: "0.64rem", color: T.textMuted, lineHeight: 1.55 }}>
+        </div>
+
+          {/* Pay Schedule — at the bottom, logistics close */}
+          <div style={{ marginTop: 12, background: T.surface, borderRadius: T.radius, border: `1px solid ${T.border}`, boxShadow: T.shadow, overflow: "hidden" }}>
+            <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, padding: "7px 16px 6px", borderBottom: `1px solid ${T.border}` }}>
+              Pay Schedule
+            </div>
+            <div style={{ padding: "7px 16px 8px", display: "flex", flexDirection: "column", gap: 4 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontFamily: T.font }}>
+                <span style={{ fontSize: "0.78rem", color: T.textSub }}>Paychecks remaining</span>
+                <span style={{ fontSize: "0.78rem", fontWeight: 700, color: T.text }}>{periodsLeft} of {periodsTotal}</span>
+              </div>
+              {nextPayday && (
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontFamily: T.font }}>
+                  <span style={{ fontSize: "0.78rem", color: T.textSub }}>Next payday</span>
+                  <span style={{ fontSize: "0.78rem", fontWeight: cutoffPassed ? 400 : 600, color: cutoffPassed ? T.textMuted : T.text }}>
+                    {cutoffPassed
+                      ? <>{fmtPayday(nextPayday)} <span style={{ fontWeight: 400, color: T.textMuted }}>— deadline passed</span></>
+                      : fmtPayday(nextPayday)}
+                  </span>
+                </div>
+              )}
+              {cutoffPassed && firstEligiblePayday && (
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontFamily: T.font }}>
+                  <span style={{ fontSize: "0.78rem", color: T.textSub }}>Next available payday</span>
+                  <span style={{ fontSize: "0.78rem", fontWeight: 700, color: T.text }}>{fmtPayday(firstEligiblePayday)}</span>
+                </div>
+              )}
+              {(cutoffPassed ? firstEligibleCutoff : cutoffDate) && (
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontFamily: T.font }}>
+                  <span style={{ fontSize: "0.78rem", color: T.textSub }}>Change deadline</span>
+                  <span style={{ fontSize: "0.78rem", fontWeight: 600, color: T.text }}>{fmtCutoff(cutoffPassed ? firstEligibleCutoff : cutoffDate)}</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Disclaimer footer */}
+          <div style={{ padding: "8px 4px" }}>
+            <div style={{ fontSize: "0.64rem", color: T.textMuted, lineHeight: 1.55, fontFamily: T.font }}>
               Pay schedule from the Baptist Health {PLAN_YEAR} bi-weekly payroll calendar. Contribution amounts rounded to the nearest dollar. Rates rounded up to nearest whole %. Based on {PLAN_YEAR} IRS limits. Employer contributions estimated from plan design — actual amounts may vary. For educational use only — not financial or tax advice.
+            </div>
+            <div style={{ fontSize: "0.64rem", color: T.textMuted, fontFamily: T.font, marginTop: 3 }}>
+              Last updated: June {PLAN_YEAR}
             </div>
           </div>
         </div>
