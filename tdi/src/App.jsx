@@ -796,7 +796,7 @@ function LiveMatrix({ result, isMobile, calcCount, staticMode = false, exampleMo
 
       {/* Column headers */}
       <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "152px 1fr 1fr", margin: "0 8px", columnGap: 0 }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "7px 14px", minHeight: "100%", borderRadius: exampleMode ? "7px 0 0 0" : 0, background: exampleMode ? "#F3F4F6" : "transparent", border: exampleMode ? "1px solid #D1D5DB" : "none", borderRight: "none", marginRight: exampleMode ? 6 : 0, boxShadow: exampleMode ? "0 4px 10px rgba(27,58,107,0.10)" : "none", transition: "all 0.2s" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "7px 14px", minHeight: "100%", borderRadius: exampleMode ? "7px 0 0 0" : 0, background: exampleMode ? "#F3F4F6" : "transparent", border: exampleMode ? "1px solid #D1D5DB" : "none", borderRight: "none", marginRight: exampleMode ? 6 : 0, marginBottom: exampleMode ? 6 : 0, boxShadow: exampleMode ? "2px 2px 6px rgba(27,58,107,0.10)" : "none", transition: "all 0.2s" }}>
           {exampleMode && (
             <div style={{ textAlign: "center" }}>
               <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#6B7280", fontFamily: T.font, letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: 2 }}>Example</div>
