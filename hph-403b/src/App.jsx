@@ -139,11 +139,11 @@ function computeHPHPeriods() {
 }
 
 const T = {
-  bg: "#F5F3EF",
+  bg: "#E8F5FA",
   surface: "#FFFFFF",
-  surfaceAlt: "#F9F7F4",
-  border: "#E2DDD7",
-  borderStrong: "#C8C0B5",
+  surfaceAlt: "#F0F9FC",
+  border: "#C8E8F2",
+  borderStrong: "#A0D4E8",
   text: "#1C1917",
   textSub: "#78716C",
   textMuted: "#A8A29E",
@@ -319,29 +319,35 @@ function Input({
   max,
   inputRef,
   integersOnly = false,
+  comma = false,
 }) {
   const handleChange = (e) => {
     const newValue = e.target.value;
 
-    // For number inputs, only allow digits, one decimal point, and empty string
     if (type === "number") {
-      // Allow empty string
       if (newValue === "") {
         onChange("");
         return;
       }
 
-      // For integers only (like age), don't allow decimal point
       if (integersOnly) {
-        if (!/^\d*$/.test(newValue)) {
-          return; // Reject invalid input
-        }
-      } else {
-        // Only allow numbers and one decimal point
-        if (!/^\d*\.?\d*$/.test(newValue)) {
-          return; // Reject invalid input
-        }
+        if (!/^\d*$/.test(newValue)) return;
+        onChange(newValue);
+        return;
       }
+
+      if (comma) {
+        // Strip commas, allow only digits and one decimal point
+        const stripped = newValue.replace(/,/g, "");
+        if (!/^\d*\.?\d*$/.test(stripped)) return;
+        // Format with commas on the integer part
+        const parts = stripped.split(".");
+        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        onChange(parts.length > 1 ? parts.join(".") : parts[0]);
+        return;
+      }
+
+      if (!/^\d*\.?\d*$/.test(newValue)) return;
     }
 
     onChange(newValue);
@@ -378,7 +384,7 @@ function Input({
         onChange={handleChange}
         onFocus={(e) =>
           (e.target.style.boxShadow = `0 0 0 3px ${
-            err ? "#FCA5A544" : "#F59E0B33"
+            err ? "#FCA5A544" : "#0099C833"
           }`)
         }
         onBlur={(e) => (e.target.style.boxShadow = "none")}
@@ -416,10 +422,10 @@ function TogglePair({ options, value, onChange, err }) {
               fontSize: "0.8rem",
               fontWeight: sel ? 600 : 400,
               fontFamily: T.font,
-              border: `1.5px solid ${sel ? T.btn : err ? T.red : T.border}`,
+              border: `1.5px solid ${sel ? "#59BDB7" : err ? T.red : T.border}`,
               borderRadius: T.radius,
-              background: sel ? T.btnLight : err ? T.redLight : T.surface,
-              color: sel ? T.btn : err ? T.red : T.textSub,
+              background: sel ? "#EBF8F7" : err ? T.redLight : T.surface,
+              color: sel ? "#3A9E98" : err ? T.red : T.textSub,
               transition: "all 0.15s",
               lineHeight: 1.4,
             }}
@@ -682,7 +688,7 @@ function EmptyResults({ isCalculating }) {
             width: 52,
             height: 52,
             borderRadius: "50%",
-            background: T.btnLight,
+            background: "#FEF0E0",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -708,7 +714,7 @@ function EmptyResults({ isCalculating }) {
               width="4"
               height="10"
               rx="1"
-              fill={T.btn}
+              fill="#F58220"
               opacity="0.5"
               style={
                 isCalculating
@@ -725,7 +731,7 @@ function EmptyResults({ isCalculating }) {
               width="4"
               height="15"
               rx="1"
-              fill={T.btn}
+              fill="#F58220"
               opacity="0.75"
               style={
                 isCalculating
@@ -742,7 +748,7 @@ function EmptyResults({ isCalculating }) {
               width="4"
               height="19"
               rx="1"
-              fill={T.btn}
+              fill="#F58220"
               style={
                 isCalculating
                   ? {
@@ -775,9 +781,7 @@ function EmptyResults({ isCalculating }) {
               lineHeight: 1.55,
             }}
           >
-            Enter your salary and current contributions to see exactly what
-            percentage you need to contribute each paycheck to reach your{" "}
-            {PLAN_YEAR} IRS maximum.
+            Enter your salary and contributions to see the rate you need each paycheck.
           </div>
         )}
       </div>
@@ -862,7 +866,7 @@ function ProjectionBlock({ salary, age, fica, strategy }) {
           value={`${proj.pct}%`}
           indent
           bold
-          color={T.total}
+          color={"#0099C8"}
         />
       )}
       <div style={{ fontSize: "0.72rem", color: T.textSub, fontFamily: T.font, lineHeight: 1.5, marginTop: 8, paddingLeft: 12 }}>
@@ -893,11 +897,7 @@ function ResultNotices({ result }) {
         ages 60 and 63, your catch-up limit is {fc(LIMITS.catchUp6063)} — higher
         than the standard {fc(LIMITS.catchUp50)} that applies at other catch-up
         eligible ages. This enhanced window closes the year you turn 64, at
-        which point your catch-up reverts to {fc(LIMITS.catchUp50)}.{" "}
-        <em>
-          Note: not all plans have adopted this provision — confirm with your
-          plan administrator before relying on the higher limit.
-        </em>
+        which point your catch-up reverts to {fc(LIMITS.catchUp50)}.
       </NoteBox>
     );
   }
@@ -1437,6 +1437,9 @@ export default function App() {
           details[open] .details-arrow {
             transform: rotate(180deg);
           }
+          details summary:hover {
+            background: #E8F2F6;
+          }
           
           /* Mobile responsive styles */
           @media (max-width: 640px) {
@@ -1506,7 +1509,7 @@ export default function App() {
           flexShrink: 0,
           padding: "10px 20px 8px",
           borderBottom: `1px solid ${T.border}`,
-          background: T.surfaceAlt,
+          background: "#0099C8",
           display: "flex",
           alignItems: "center",
         }}
@@ -1516,11 +1519,11 @@ export default function App() {
             margin: 0,
             fontSize: isMobile ? "1rem" : "1.1rem",
             fontWeight: 800,
-            color: T.text,
+            color: "#FFFFFF",
             letterSpacing: "-0.03em",
           }}
         >
-          HPH 403(b) Contribution Assistant
+          Hawaiʻi Pacific Health 403(b) Savings Plan — Maximum Contribution Calculator
         </h1>
       </div>
 
@@ -1588,6 +1591,7 @@ export default function App() {
                   type="number"
                   err={errors.salary}
                   inputRef={salaryRef}
+                  comma
                 />
                 <FieldErr msg={errors.salary} />
               </div>
@@ -1636,115 +1640,6 @@ export default function App() {
               </div>
             )}
 
-            {/* YTD contributions */}
-            <div style={{ display: "flex", alignItems: "center", gap: 6, margin: "14px 0 10px" }}>
-              <span style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textMuted, fontFamily: T.font, whiteSpace: "nowrap" }}>
-                Year-to-Date Contributions
-              </span>
-              <span style={{ fontSize: "14px", lineHeight: 1 }}><InfoTooltip text="Only needed if you've already made contributions this year. Leave blank to calculate based on full annual limits." /></span>
-              <div style={{ flex: 1, height: 1, background: T.border }} />
-            </div>
-            <div style={{ marginBottom: 12 }}>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
-                  gap: 10,
-                }}
-                className="mobile-stack"
-              >
-                <div>
-                  <div style={{ fontSize: "0.71rem", fontWeight: 600, color: T.textSub, marginBottom: 3, fontFamily: T.font }}>
-                    Pre-Tax (Traditional)
-                  </div>
-                  <Input
-                    value={ytdPre}
-                    onChange={(v) => { setYtdPre(v); markDirty(); }}
-                    placeholder=""
-                    prefix="$"
-                    type="number"
-                    err={errors.ytdPre}
-                    inputRef={ytdPreRef}
-                  />
-                  <FieldErr msg={errors.ytdPre} />
-                </div>
-                <div>
-                  <div style={{ fontSize: "0.71rem", fontWeight: 600, color: T.textSub, marginBottom: 3, fontFamily: T.font }}>
-                    Roth (After-Tax)
-                  </div>
-                  <Input
-                    value={ytdRoth}
-                    onChange={(v) => { setYtdRoth(v); markDirty(); }}
-                    placeholder=""
-                    prefix="$"
-                    type="number"
-                    err={errors.ytdRoth}
-                    inputRef={ytdRothRef}
-                  />
-                  <FieldErr msg={errors.ytdRoth} />
-                </div>
-              </div>
-            </div>
-
-            {/* Contribution Goal */}
-            <div style={{ display: "flex", alignItems: "center", gap: 6, margin: "14px 0 10px" }}>
-              <span style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textMuted, fontFamily: T.font, whiteSpace: "nowrap" }}>
-                Contribution Goal
-              </span>
-              <span style={{ fontSize: "14px", lineHeight: 1 }}><InfoTooltip text="Leave blank to calculate to the IRS maximum. Only use this if you want to contribute less than the maximum allowed." /></span>
-              <div style={{ flex: 1, height: 1, background: T.border }} />
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                setUseCustomLimit(v => {
-                  if (v) { setCustomLimit(""); setErrors((prev) => ({ ...prev, customLimit: "" })); }
-                  markDirty();
-                  return !v;
-                });
-              }}
-              style={{
-                width: "100%", boxSizing: "border-box", padding: "9px 12px",
-                fontSize: "0.875rem", fontFamily: T.font,
-                color: useCustomLimit ? T.btn : T.text,
-                fontWeight: useCustomLimit ? 600 : 400,
-                background: useCustomLimit ? T.btnLight : T.surface,
-                border: `1.5px solid ${useCustomLimit ? T.btn : T.border}`,
-                borderRadius: T.radius, outline: "none", cursor: "pointer",
-                textAlign: "left", display: "flex", alignItems: "center",
-                justifyContent: "space-between", transition: "all 0.15s",
-                boxShadow: useCustomLimit ? `0 0 0 3px ${T.btnLight}` : "none",
-              }}
-              onMouseEnter={(e) => { if (!useCustomLimit) e.currentTarget.style.background = T.surfaceAlt; }}
-              onMouseLeave={(e) => { if (!useCustomLimit) e.currentTarget.style.background = T.surface; }}
-            >
-              <span>Set a target</span>
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none"
-                style={{ flexShrink: 0, transform: useCustomLimit ? "rotate(180deg)" : "none", transition: "transform 0.15s" }}>
-                <path d="M2 4l4 4 4-4" stroke={useCustomLimit ? T.btn : T.textSub} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </button>
-            {useCustomLimit && (
-              <div style={{ marginTop: 8, marginBottom: 4 }}>
-                <Label tooltip="Enter your total annual contribution goal. Cannot exceed the IRS maximum for your age.">
-                  Target annual contribution
-                </Label>
-                <Input
-                  value={customLimit}
-                  onChange={(v) => { setCustomLimit(v); setErrors((prev) => ({ ...prev, customLimit: "" })); markDirty(); }}
-                  placeholder=""
-                  prefix="$"
-                  type="number"
-                  err={errors.customLimit}
-                  inputRef={customLimitRef}
-                />
-                <FieldErr msg={errors.customLimit} />
-                <div style={{ fontSize: "0.67rem", color: T.textMuted, marginTop: 2, fontFamily: T.font, lineHeight: 1.3 }}>
-                  Maximum allowed: {fc(LIMITS.standard + getCatchUp(parsedAge))}
-                </div>
-              </div>
-            )}
-
             {/* Contribution Strategy - Different labels based on age */}
             {catchUpAge ? (
               <div style={{ marginBottom: 10 }}>
@@ -1790,31 +1685,146 @@ export default function App() {
               </div>
             )}
 
+            {/* YTD contributions */}
+            <div style={{ display: "flex", alignItems: "center", gap: 6, margin: "14px 0 10px" }}>
+              <span style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textMuted, fontFamily: T.font, whiteSpace: "nowrap" }}>
+                Year-to-Date Contributions
+              </span>
+              <span style={{ fontSize: "14px", lineHeight: 1 }}><InfoTooltip text="Only needed if you've already made contributions this year. Leave blank to calculate based on full annual limits." /></span>
+              <div style={{ flex: 1, height: 1, background: T.border }} />
+            </div>
+            <div style={{ marginBottom: 12 }}>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: 10,
+                }}
+                className="mobile-stack"
+              >
+                <div>
+                  <div style={{ fontSize: "0.71rem", fontWeight: 600, color: T.textSub, marginBottom: 3, fontFamily: T.font }}>
+                    Pre-Tax (Traditional)
+                  </div>
+                  <Input
+                    value={ytdPre}
+                    onChange={(v) => { setYtdPre(v); markDirty(); }}
+                    placeholder=""
+                    prefix="$"
+                    type="number"
+                    err={errors.ytdPre}
+                    inputRef={ytdPreRef}
+                    comma
+                  />
+                  <FieldErr msg={errors.ytdPre} />
+                </div>
+                <div>
+                  <div style={{ fontSize: "0.71rem", fontWeight: 600, color: T.textSub, marginBottom: 3, fontFamily: T.font }}>
+                    Roth (After-Tax)
+                  </div>
+                  <Input
+                    value={ytdRoth}
+                    onChange={(v) => { setYtdRoth(v); markDirty(); }}
+                    placeholder=""
+                    prefix="$"
+                    type="number"
+                    err={errors.ytdRoth}
+                    inputRef={ytdRothRef}
+                    comma
+                  />
+                  <FieldErr msg={errors.ytdRoth} />
+                </div>
+              </div>
+            </div>
+
+            {/* Contribution Goal */}
+            <div style={{ display: "flex", alignItems: "center", gap: 6, margin: "14px 0 10px" }}>
+              <span style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textMuted, fontFamily: T.font, whiteSpace: "nowrap" }}>
+                Contribution Goal
+              </span>
+              <span style={{ fontSize: "14px", lineHeight: 1 }}><InfoTooltip text="Leave blank to calculate to the IRS maximum. Only use this if you want to contribute less than the maximum allowed." /></span>
+              <div style={{ flex: 1, height: 1, background: T.border }} />
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setUseCustomLimit(v => {
+                  if (v) { setCustomLimit(""); setErrors((prev) => ({ ...prev, customLimit: "" })); }
+                  markDirty();
+                  return !v;
+                });
+              }}
+              style={{
+                width: "100%", boxSizing: "border-box", padding: "9px 12px",
+                fontSize: "0.875rem", fontFamily: T.font,
+                color: useCustomLimit ? "#3A9E98" : T.text,
+                fontWeight: useCustomLimit ? 600 : 400,
+                background: useCustomLimit ? "#EBF8F7" : T.surface,
+                border: `1.5px solid ${useCustomLimit ? "#59BDB7" : T.border}`,
+                borderRadius: T.radius, outline: "none", cursor: "pointer",
+                textAlign: "left", display: "flex", alignItems: "center",
+                justifyContent: "space-between", transition: "all 0.15s",
+                boxShadow: useCustomLimit ? `0 0 0 3px #EBF8F7` : "none",
+              }}
+              onMouseEnter={(e) => { if (!useCustomLimit) e.currentTarget.style.background = T.surfaceAlt; }}
+              onMouseLeave={(e) => { if (!useCustomLimit) e.currentTarget.style.background = T.surface; }}
+            >
+              <span>Set a target</span>
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none"
+                style={{ flexShrink: 0, transform: useCustomLimit ? "rotate(180deg)" : "none", transition: "transform 0.15s" }}>
+                <path d="M2 4l4 4 4-4" stroke={useCustomLimit ? "#59BDB7" : T.textSub} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+            {useCustomLimit && (
+              <div style={{ marginTop: 8, marginBottom: 4 }}>
+                <Label tooltip="Enter your total annual contribution goal. Cannot exceed the IRS maximum for your age.">
+                  Target annual contribution
+                </Label>
+                <Input
+                  value={customLimit}
+                  onChange={(v) => { setCustomLimit(v); setErrors((prev) => ({ ...prev, customLimit: "" })); markDirty(); }}
+                  placeholder=""
+                  prefix="$"
+                  type="number"
+                  err={errors.customLimit}
+                  inputRef={customLimitRef}
+                  comma
+                />
+                <FieldErr msg={errors.customLimit} />
+                <div style={{ fontSize: "0.67rem", color: T.textMuted, marginTop: 2, fontFamily: T.font, lineHeight: 1.3 }}>
+                  Maximum allowed: {fc(LIMITS.standard + getCatchUp(parsedAge))}
+                </div>
+              </div>
+            )}
+
           </div>
 
           {/* Sticky Actions Footer */}
           <div style={{ flexShrink: 0, padding: "12px 16px", borderTop: `1px solid ${T.border}`, background: T.surface, display: "flex", gap: 6 }}>
             <button onClick={calculate} style={{
               flex: 1, padding: "10px 14px",
-              background: isDirty ? "#6B7280" : T.btn, color: "#FFF",
+              background: isDirty ? "#6B7280" : "#F58220", color: "#FFF",
               border: "none", borderRadius: T.radius, fontSize: "0.85rem",
               fontWeight: 700, fontFamily: T.font, cursor: "pointer",
               transition: "background 0.2s", boxShadow: T.shadow,
               display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
             }}
-              onMouseOver={(e) => (e.currentTarget.style.background = isDirty ? "#4B5563" : T.btnHover)}
-              onMouseOut={(e) => (e.currentTarget.style.background = isDirty ? "#6B7280" : T.btn)}
+              onMouseOver={(e) => (e.currentTarget.style.background = isDirty ? "#4B5563" : "#D96E10")}
+              onMouseOut={(e) => (e.currentTarget.style.background = isDirty ? "#6B7280" : "#F58220")}
             >
               {isDirty ? (<><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="6.5" r="5.5" stroke="rgba(255,255,255,0.7)" strokeWidth="1.2" /><path d="M6.5 3.5v3.2l2 1.2" stroke="rgba(255,255,255,0.7)" strokeWidth="1.2" strokeLinecap="round" /></svg> Recalculate</>) : "Calculate →"}
             </button>
-            <button onClick={clearAll} style={{ padding: "10px 16px", background: T.surfaceAlt, color: T.textSub, border: `1.5px solid ${T.border}`, borderRadius: T.radius, fontSize: "0.8rem", fontWeight: 600, fontFamily: T.font, cursor: "pointer", transition: "all 0.15s" }}
-              onMouseOver={(e) => (e.currentTarget.style.background = T.border)}
-              onMouseOut={(e) => (e.currentTarget.style.background = T.surfaceAlt)}
+            <button onClick={clearAll} style={{ padding: "10px 16px", background: "#FFFFFF", color: "#6B7280", border: `1.5px solid #D1D5DB`, borderRadius: T.radius, fontSize: "0.8rem", fontWeight: 600, fontFamily: T.font, cursor: "pointer", transition: "all 0.15s" }}
+              onMouseOver={(e) => { e.currentTarget.style.background = "#F3F4F6"; e.currentTarget.style.borderColor = "#9CA3AF"; }}
+              onMouseOut={(e) => { e.currentTarget.style.background = "#FFFFFF"; e.currentTarget.style.borderColor = "#D1D5DB"; }}
             >Clear</button>
           </div>
         </div>
 
         {/* ── RIGHT: Results ── */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+
+        {/* Results card */}
         <div
           ref={resultRef}
           style={{
@@ -1873,15 +1883,15 @@ export default function App() {
                       width: 52,
                       height: 52,
                       borderRadius: "50%",
-                      background: T.btnLight,
+                      background: "#FEF0E0",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
                     }}
                   >
                     <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
-                      <path d="M20 11A8 8 0 1 0 4.93 17" stroke={T.btn} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
-                      <path d="M20 7v4h-4" stroke={T.btn} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M20 11A8 8 0 1 0 4.93 17" stroke="#F58220" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M20 7v4h-4" stroke="#F58220" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                   </div>
                   <div
@@ -1904,58 +1914,17 @@ export default function App() {
                       lineHeight: 1.55,
                     }}
                   >
-                    Click <strong>Recalculate</strong> to update your results
-                    based on the new values you've entered.
+                    Click <strong>Recalculate</strong> to update your results.
                   </div>
                 </div>
               </div>
             )}
-            {/* ── Pay Schedule — always visible in results ── */}
-            <div style={{ marginBottom: 8 }}>
-              <div style={{
-                background: T.surface,
-                borderRadius: T.radius,
-                border: `1px solid ${T.border}`,
-                boxShadow: T.shadow,
-                overflow: "hidden",
-              }}>
-                <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, padding: "7px 16px 6px", borderBottom: `1px solid ${T.border}` }}>
-                  Pay Schedule
-                </div>
-                <div style={{
-                  padding: "7px 16px 8px",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 4,
-                }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontFamily: T.font }}>
-                  <span style={{ fontSize: "0.78rem", color: T.textSub }}>Paychecks remaining</span>
-                  <span style={{ fontSize: "0.78rem", fontWeight: 700, color: T.text }}>{periodsLeft} of {periodsTotal}</span>
-                </div>
-                {nextPayday && (
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontFamily: T.font }}>
-                    <span style={{ fontSize: "0.78rem", color: T.textSub }}>Next payday</span>
-                    <span style={{ fontSize: "0.78rem", fontWeight: cutoffPassed ? 400 : 600, color: cutoffPassed ? T.textMuted : T.text }}>
-                      {cutoffPassed
-                        ? <>{fmtPayday(nextPayday)} <span style={{ fontWeight: 400, color: T.textMuted }}>— deadline passed</span></>
-                        : fmtPayday(nextPayday)}
-                    </span>
-                  </div>
-                )}
-                {cutoffPassed && firstEligiblePayday && (
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontFamily: T.font }}>
-                    <span style={{ fontSize: "0.78rem", color: T.textSub }}>Next available payday</span>
-                    <span style={{ fontSize: "0.78rem", fontWeight: 700, color: T.text }}>{fmtPayday(firstEligiblePayday)}</span>
-                  </div>
-                )}
-                {(cutoffPassed ? firstEligibleCutoff : cutoffDate) && (
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontFamily: T.font }}>
-                    <span style={{ fontSize: "0.78rem", color: T.textSub }}>Change deadline</span>
-                    <span style={{ fontSize: "0.78rem", fontWeight: 600, color: T.text }}>{fmtCutoff(cutoffPassed ? firstEligibleCutoff : cutoffDate)}</span>
-                  </div>
-                )}
-              </div>
-              </div>
+            {/* ── Results panel title ── */}
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+              <span style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, whiteSpace: "nowrap" }}>
+                Rates to Reach Your Limit
+              </span>
+              <div style={{ flex: 1, height: 1, background: T.border }} />
             </div>
 
             {!result || isCalculating ? (
@@ -2122,16 +2091,6 @@ export default function App() {
                     <strong>{fc(result.annualLimit)}</strong>.
                   </div>
                 </div>
-                {result.usingCustomLimit && (
-                  <NoteBox color="#1E40AF" bg="#F0F9FF" border="#BFDBFE">
-                    <strong>Custom goal in use:</strong> You've reached your
-                    custom contribution goal of {fc(result.annualLimit)}. The
-                    IRS maximum for your age is {fc(result.maxAllowed)}, so you
-                    could contribute{" "}
-                    {fc(result.maxAllowed - result.annualLimit)} more if
-                    desired.
-                  </NoteBox>
-                )}
                 <Divider label="Limit Summary" />
                 <SummaryLine
                   label={result.usingCustomLimit ? "Your Goal" : "Annual Limit"}
@@ -2148,8 +2107,8 @@ export default function App() {
                 {/* Collapsible Details */}
                 <details
                   style={{
-                    background: T.surfaceAlt,
-                    border: `1px solid ${T.border}`,
+                    background: "#EBF8F7",
+                    border: `1px solid #59BDB7`,
                     borderRadius: "8px",
                     overflow: "hidden",
                     marginTop: 12,
@@ -2162,7 +2121,7 @@ export default function App() {
                       fontWeight: 700,
                       color: T.text,
                       fontFamily: T.font,
-                      padding: "14px 16px",
+                      padding: "10px 16px",
                       userSelect: "none",
                       listStyle: "none",
                       display: "flex",
@@ -2230,6 +2189,16 @@ export default function App() {
                     <ProjectionBlock salary={salary} age={age} fica={result.fica} strategy={result.strategy} />
                   </div>
                 </details>
+                {result.usingCustomLimit && (
+                  <NoteBox color="#1E40AF" bg="#F0F9FF" border="#BFDBFE">
+                    <strong>Custom goal in use:</strong> You've reached your
+                    custom contribution goal of {fc(result.annualLimit)}. The
+                    IRS maximum for your age is {fc(result.maxAllowed)}, so you
+                    could contribute{" "}
+                    {fc(result.maxAllowed - result.annualLimit)} more if
+                    desired.
+                  </NoteBox>
+                )}
               </div>
             ) : result.split ? (
               <div>
@@ -2256,48 +2225,11 @@ export default function App() {
                     ]}
                   />
                 </div>
-                {(result.usingCustomLimit || (result.stdRem === 0 && result.yPre > 0) || result.highRate) && (
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 8,
-                    marginBottom: 8,
-                  }}
-                >
-                  {result.usingCustomLimit && (
-                    <NoteBox color="#1E40AF" bg="#F0F9FF" border="#BFDBFE">
-                      <strong>Custom goal in use:</strong> You've set a custom
-                      contribution goal of {fc(result.annualLimit)}. The IRS
-                      maximum for your age is {fc(result.maxAllowed)}.
-                    </NoteBox>
-                  )}
-                  {result.stdRem === 0 && result.yPre > 0 && (
-                    <NoteBox color="#166534" bg="#F0FDF4" border="#BBF7D0">
-                      <strong>Pre-tax base limit reached:</strong> You've
-                      already contributed {fc(result.yPre)} in pre-tax, which
-                      meets the {fc(LIMITS.standard)} base limit. Your remaining{" "}
-                      {fc(result.cuRem)} can only go to Roth catch-up
-                      contributions.
-                    </NoteBox>
-                  )}
-                  {result.highRate && (
-                    <NoteBox color="#78350F" bg="#FFFBEB" border="#FDE68A">
-                      <strong>Important — high contribution rate:</strong> The
-                        required combined rate of {result.totPct}% is a
-                        significant portion of your pay. Confirm your plan allows
-                        this election and that your net pay will cover your
-                        expenses. Some plans cap deferral elections — check with
-                        your plan administrator.
-                    </NoteBox>
-                  )}
-                </div>
-                )}
                 {/* Collapsible Details */}
                 <details
                   style={{
-                    background: T.surfaceAlt,
-                    border: `1px solid ${T.border}`,
+                    background: "#EBF8F7",
+                    border: `1px solid #59BDB7`,
                     borderRadius: "8px",
                     overflow: "hidden",
                     marginTop: 8,
@@ -2310,7 +2242,7 @@ export default function App() {
                       fontWeight: 700,
                       color: T.text,
                       fontFamily: T.font,
-                      padding: "14px 16px",
+                      padding: "10px 16px",
                       userSelect: "none",
                       listStyle: "none",
                       display: "flex",
@@ -2386,7 +2318,7 @@ export default function App() {
                       value={fc(result.annualLimit)}
                       indent
                       bold
-                      color={T.total}
+                      color={"#0099C8"}
                     />
                     {/* Section: Contributed So Far */}
                     <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>Contributed So Far</div>
@@ -2436,6 +2368,36 @@ export default function App() {
                   </div>
                 </details>
 
+                {(result.usingCustomLimit || (result.stdRem === 0 && result.yPre > 0) || result.highRate) && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 8 }}>
+                  {result.usingCustomLimit && (
+                    <NoteBox color="#1E40AF" bg="#F0F9FF" border="#BFDBFE">
+                      <strong>Custom goal in use:</strong> You've set a custom
+                      contribution goal of {fc(result.annualLimit)}. The IRS
+                      maximum for your age is {fc(result.maxAllowed)}.
+                    </NoteBox>
+                  )}
+                  {result.stdRem === 0 && result.yPre > 0 && (
+                    <NoteBox color="#166534" bg="#F0FDF4" border="#BBF7D0">
+                      <strong>Pre-tax base limit reached:</strong> You've
+                      already contributed {fc(result.yPre)} in pre-tax, which
+                      meets the {fc(LIMITS.standard)} base limit. Your remaining{" "}
+                      {fc(result.cuRem)} can only go to Roth catch-up
+                      contributions.
+                    </NoteBox>
+                  )}
+                  {result.highRate && (
+                    <NoteBox color="#78350F" bg="#FFFBEB" border="#FDE68A">
+                      <strong>Important — high contribution rate:</strong> The
+                        required combined rate of {result.totPct}% is a
+                        significant portion of your pay. Confirm your plan allows
+                        this election and that your net pay will cover your
+                        expenses. Some plans cap deferral elections — check with
+                        your plan administrator.
+                    </NoteBox>
+                  )}
+                </div>
+                )}
                 <ResultNotices result={result} />
               </div>
             ) : (
@@ -2458,69 +2420,11 @@ export default function App() {
                     subLines={[`${result.checks} paychecks remaining`]}
                   />
                 </div>
-                {(result.usingCustomLimit || result.rothOnlyMode || result.highRate) && (
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 8,
-                    marginBottom: 8,
-                  }}
-                >
-                  {result.usingCustomLimit && (
-                    <NoteBox color="#1E40AF" bg="#F0F9FF" border="#BFDBFE">
-                      <strong>Custom goal in use:</strong> You've set a custom
-                      contribution goal of {fc(result.annualLimit)}. The IRS
-                      maximum for your age is {fc(result.maxAllowed)}.
-                    </NoteBox>
-                  )}
-                  {result.rothOnlyMode && parse(ytdPre) > 0 && (
-                    <NoteBox color="#78350F" bg="#FFFBEB" border="#FDE68A">
-                      <strong>Mid-year switch to Roth:</strong> You've
-                      contributed {fc(parse(ytdPre))} pre-tax so far this year.
-                      Your remaining contributions of {fc(result.rem)} will go
-                      entirely to Roth as selected. Combined, you'll reach{" "}
-                      {fc(result.annualLimit)} for the year.
-                    </NoteBox>
-                  )}
-                  {result.rothOnlyMode &&
-                    parse(ytdPre) === 0 &&
-                    !result.fica && (
-                      <NoteBox color="#1E40AF" bg="#F0F9FF" border="#BFDBFE">
-                        <strong>Roth-only strategy:</strong> All your
-                        contributions will go to Roth (after-tax) as selected.
-                        You have {fc(result.rem)} remaining to reach your{" "}
-                        {result.usingCustomLimit ? "goal" : "limit"} of{" "}
-                        {fc(result.annualLimit)}.
-                      </NoteBox>
-                    )}
-                  {result.rothOnlyMode && result.fica === true && (
-                    <NoteBox color="#1E40AF" bg="#F0F9FF" border="#BFDBFE">
-                      <strong>Roth-only strategy:</strong> All your remaining{" "}
-                      {fc(result.rem)} will go to Roth as selected. Note: Since
-                      your FICA wages were more than {FICA_THRESHOLD_DISPLAY}, your{" "}
-                      {fc(result.catchUpAmt)} catch-up would have been required
-                      to be Roth regardless, but your {fc(LIMITS.standard)} base
-                      is Roth by your choice.
-                    </NoteBox>
-                  )}
-                  {result.highRate && (
-                    <NoteBox color="#78350F" bg="#FFFBEB" border="#FDE68A">
-                      <strong>Important — high contribution rate:</strong>{" "}
-                      Reaching the limit requires a {result.pct}% deferral rate,
-                      which is a significant portion of your pay. Confirm your
-                      plan allows this election and that your net pay will cover
-                      your expenses. Some plans cap deferral elections — check
-                      with your plan administrator.
-                    </NoteBox>
-                  )}
-                </div>
-                )}
                 {/* Collapsible Details */}
                 <details
                   style={{
-                    background: T.surfaceAlt,
-                    border: `1px solid ${T.border}`,
+                    background: "#EBF8F7",
+                    border: `1px solid #59BDB7`,
                     borderRadius: "8px",
                     overflow: "hidden",
                     marginTop: 8,
@@ -2533,7 +2437,7 @@ export default function App() {
                       fontWeight: 700,
                       color: T.text,
                       fontFamily: T.font,
-                      padding: "14px 16px",
+                      padding: "10px 16px",
                       userSelect: "none",
                       listStyle: "none",
                       display: "flex",
@@ -2605,7 +2509,7 @@ export default function App() {
                       value={fc(result.annualLimit)}
                       indent
                       bold
-                      color={T.total}
+                      color={"#0099C8"}
                     />
                     {/* Section: Contributed So Far */}
                     <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>Contributed So Far</div>
@@ -2646,34 +2550,131 @@ export default function App() {
                   </div>
                 </details>
 
+                {(result.usingCustomLimit || result.rothOnlyMode || result.highRate) && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 8 }}>
+                  {result.usingCustomLimit && (
+                    <NoteBox color="#1E40AF" bg="#F0F9FF" border="#BFDBFE">
+                      <strong>Custom goal in use:</strong> You've set a custom
+                      contribution goal of {fc(result.annualLimit)}. The IRS
+                      maximum for your age is {fc(result.maxAllowed)}.
+                    </NoteBox>
+                  )}
+                  {result.rothOnlyMode && parse(ytdPre) > 0 && (
+                    <NoteBox color="#78350F" bg="#FFFBEB" border="#FDE68A">
+                      <strong>Mid-year switch to Roth:</strong> You've
+                      contributed {fc(parse(ytdPre))} pre-tax so far this year.
+                      Your remaining contributions of {fc(result.rem)} will go
+                      entirely to Roth as selected. Combined, you'll reach{" "}
+                      {fc(result.annualLimit)} for the year.
+                    </NoteBox>
+                  )}
+                  {result.rothOnlyMode &&
+                    parse(ytdPre) === 0 &&
+                    !result.fica && (
+                      <NoteBox color="#1E40AF" bg="#F0F9FF" border="#BFDBFE">
+                        <strong>Roth-only strategy:</strong> All your
+                        contributions will go to Roth (after-tax) as selected.
+                        You have {fc(result.rem)} remaining to reach your{" "}
+                        {result.usingCustomLimit ? "goal" : "limit"} of{" "}
+                        {fc(result.annualLimit)}.
+                      </NoteBox>
+                    )}
+                  {result.rothOnlyMode && result.fica === true && (
+                    <NoteBox color="#1E40AF" bg="#F0F9FF" border="#BFDBFE">
+                      <strong>Roth-only strategy:</strong> All your remaining{" "}
+                      {fc(result.rem)} will go to Roth as selected. Note: Since
+                      your FICA wages were more than {FICA_THRESHOLD_DISPLAY}, your{" "}
+                      {fc(result.catchUpAmt)} catch-up would have been required
+                      to be Roth regardless, but your {fc(LIMITS.standard)} base
+                      is Roth by your choice.
+                    </NoteBox>
+                  )}
+                  {result.highRate && (
+                    <NoteBox color="#78350F" bg="#FFFBEB" border="#FDE68A">
+                      <strong>Important — high contribution rate:</strong>{" "}
+                      Reaching the limit requires a {result.pct}% deferral rate,
+                      which is a significant portion of your pay. Confirm your
+                      plan allows this election and that your net pay will cover
+                      your expenses. Some plans cap deferral elections — check
+                      with your plan administrator.
+                    </NoteBox>
+                  )}
+                </div>
+                )}
                 <ResultNotices result={result} />
               </div>
             )}
           </div>
+        </div>
+        {/* End results card */}
 
-          {/* Footer disclaimer */}
-          <div
-            style={{
-              flexShrink: 0,
-              padding: "8px 16px",
-              borderTop: `1px solid ${T.border}`,
-              background: T.surfaceAlt,
-            }}
-          >
-            <div
-              style={{
-                fontSize: "0.64rem",
-                color: T.textMuted,
-                lineHeight: 1.55,
-              }}
-            >
-              Pay schedule calculated from the HPH {PLAN_YEAR} bi-weekly payroll calendar.{" "}
-              Rates rounded up to nearest whole %.{" "}
-              Based on {PLAN_YEAR} IRS limits. {PLAN_YEAR + 1} projection assumes current limits and salary carry forward — update annually when new IRS limits are announced.{" "}
-              For educational use only — not financial or tax advice. Consult your plan administrator or a tax professional for guidance specific to your situation.
+        {/* ── Pay Schedule — outside card, always visible ── */}
+        <div style={{
+          background: T.surface,
+          borderRadius: T.radius,
+          border: `1px solid ${T.border}`,
+          boxShadow: T.shadow,
+          overflow: "hidden",
+          padding: "12px 16px",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
+            <span style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, whiteSpace: "nowrap" }}>
+              Pay Schedule
+            </span>
+            <div style={{ flex: 1, height: 1, background: T.border }} />
+          </div>
+          <div style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 4,
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontFamily: T.font }}>
+              <span style={{ fontSize: "0.78rem", color: T.textSub }}>Paychecks remaining</span>
+              <span style={{ fontSize: "0.78rem", fontWeight: 700, color: T.text }}>{periodsLeft} of {periodsTotal}</span>
             </div>
+            {nextPayday && (
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontFamily: T.font }}>
+                <span style={{ fontSize: "0.78rem", color: T.textSub }}>Next payday</span>
+                <span style={{ fontSize: "0.78rem", fontWeight: cutoffPassed ? 400 : 600, color: cutoffPassed ? T.textMuted : T.text }}>
+                  {cutoffPassed
+                    ? <>{fmtPayday(nextPayday)} <span style={{ fontWeight: 400, color: T.textMuted }}>— deadline passed</span></>
+                    : fmtPayday(nextPayday)}
+                </span>
+              </div>
+            )}
+            {cutoffPassed && firstEligiblePayday && (
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontFamily: T.font }}>
+                <span style={{ fontSize: "0.78rem", color: T.textSub }}>Next available payday</span>
+                <span style={{ fontSize: "0.78rem", fontWeight: 700, color: T.text }}>{fmtPayday(firstEligiblePayday)}</span>
+              </div>
+            )}
+            {(cutoffPassed ? firstEligibleCutoff : cutoffDate) && (
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontFamily: T.font }}>
+                <span style={{ fontSize: "0.78rem", color: T.textSub }}>Change deadline</span>
+                <span style={{ fontSize: "0.78rem", fontWeight: 600, color: T.text }}>{fmtCutoff(cutoffPassed ? firstEligibleCutoff : cutoffDate)}</span>
+              </div>
+            )}
           </div>
         </div>
+
+        {/* Footer disclaimer */}
+        <div
+          style={{
+            fontSize: "0.64rem",
+            color: T.textMuted,
+            lineHeight: 1.55,
+            padding: "0 4px",
+          }}
+        >
+          Pay schedule calculated from the HPH {PLAN_YEAR} bi-weekly payroll calendar.{" "}
+          Rates rounded up to nearest whole %.{" "}
+          Based on {PLAN_YEAR} IRS limits. {PLAN_YEAR + 1} projection assumes current limits and salary carry forward — update annually when new IRS limits are announced.{" "}
+          For educational use only — not financial or tax advice. Consult your plan administrator or a tax professional for guidance specific to your situation.{" "}
+          <br />Last updated: June 2026
+        </div>
+
+        </div>
+        {/* End right column */}
       </div>
     </div>
   );
