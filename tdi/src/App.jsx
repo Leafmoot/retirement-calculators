@@ -693,11 +693,11 @@ function LiveMatrix({ result, isMobile, calcCount, staticMode = false, exampleMo
   const [pulseKey, setPulseKey] = useState(0);
 
   // Elected percentages — fixed at example figures in exampleMode, neutral 0 in staticMode
-  const el401kPre  = staticMode ? 0 : exampleMode ? 6  : result.disp401kPre;
+  const el401kPre  = staticMode ? 0 : exampleMode ? 10 : result.disp401kPre;
   const el401kRoth = staticMode ? 0 : exampleMode ? 0  : result.disp401kRoth;
-  const elEsopPre  = staticMode ? 0 : exampleMode ? 0  : result.dispEsopPre;
+  const elEsopPre  = staticMode ? 0 : exampleMode ? 5  : result.dispEsopPre;
   const elEsopRoth = staticMode ? 0 : exampleMode ? 0  : result.dispEsopRoth;
-  const elSsepPre  = staticMode ? 0 : exampleMode ? 4  : result.elSsepPre;
+  const elSsepPre  = staticMode ? 0 : exampleMode ? 0  : result.elSsepPre;
   const elSsepEsop = staticMode ? 0 : exampleMode ? 5  : result.elSsepEsop;
 
   const el401kTotal  = el401kPre + el401kRoth;
@@ -773,10 +773,10 @@ function LiveMatrix({ result, isMobile, calcCount, staticMode = false, exampleMo
     );
   };
 
-  const zoneStatus = (avail, full, label, color, max = 10) => {
+  const zoneStatus = (avail, full, label, color, max = 10, staticLabel = "overall plan limit") => {
     if (staticMode) return (
       <div style={{ fontSize: "0.63rem", fontFamily: T.font, color: T.textMuted, marginTop: 3, lineHeight: 1.3 }}>
-        overall plan limit
+        {staticLabel}
       </div>
     );
     return (
@@ -796,7 +796,7 @@ function LiveMatrix({ result, isMobile, calcCount, staticMode = false, exampleMo
 
       {/* Column headers */}
       <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "152px 1fr 1fr", margin: "0 8px", columnGap: 0 }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "7px 14px", minHeight: "100%", borderRadius: exampleMode ? "7px 0 0 0" : 0, background: exampleMode ? "#F3F4F6" : "transparent", border: exampleMode ? "1px solid #D1D5DB" : "none", borderRight: "none", marginRight: exampleMode ? 6 : 0, marginBottom: exampleMode ? 6 : 0, boxShadow: exampleMode ? "2px 2px 6px rgba(27,58,107,0.10)" : "none", transition: "all 0.2s" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "7px 14px", minHeight: "100%", borderRadius: exampleMode ? "7px 0 0 0" : 0, background: exampleMode ? "#F3F4F6" : "transparent", border: exampleMode ? "1px solid #D1D5DB" : "none", borderRight: "none", marginRight: exampleMode ? 6 : 0, boxShadow: exampleMode ? "0 4px 10px rgba(27,58,107,0.10)" : "none", transition: "all 0.2s" }}>
           {exampleMode && (
             <div style={{ textAlign: "center" }}>
               <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#6B7280", fontFamily: T.font, letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: 2 }}>Example</div>
@@ -815,7 +815,7 @@ function LiveMatrix({ result, isMobile, calcCount, staticMode = false, exampleMo
               style={{ fontSize: "1.15rem", fontWeight: 800, color: staticMode ? T.navy : nonEsopFull ? T.green : T.navy, fontFamily: T.font, letterSpacing: "-0.02em", lineHeight: 1,
               display: "inline-block", animation: (!staticMode && nonEsopFull) ? "doublePulse 0.65s ease-in-out" : "none" }}>{staticMode ? "10" : elNonEsopCol}%</span>
           </div>
-          {zoneStatus(nonEsopColAvail, nonEsopFull, "Non-ESOP", T.textSub)}
+          {zoneStatus(nonEsopColAvail, nonEsopFull, "Non-ESOP", T.textSub, 10, "overall plans limit")}
         </div>
         <div style={{ padding: "7px 14px", textAlign: "center", background: "#D4F5E4",
           borderRadius: "7px 7px 0 0", marginLeft: 3, boxShadow: "inset 0 0 0 1.5px rgba(0,0,0,0.08), 0 4px 10px rgba(27,58,107,0.13)" }}>
@@ -828,7 +828,7 @@ function LiveMatrix({ result, isMobile, calcCount, staticMode = false, exampleMo
               style={{ fontSize: "1.15rem", fontWeight: 800, color: staticMode ? "#1A6640" : esopFull ? T.green : "#1A6640", fontFamily: T.font, letterSpacing: "-0.02em", lineHeight: 1,
               display: "inline-block", animation: (!staticMode && esopFull) ? "doublePulse 0.65s ease-in-out" : "none" }}>{staticMode ? "10" : elEsopCol}%</span>
           </div>
-          {zoneStatus(esopColAvail, esopFull, "ESOP", "#4A9968")}
+          {zoneStatus(esopColAvail, esopFull, "ESOP", "#4A9968", 10, "overall plans limit")}
         </div>
       </div>
 
@@ -838,12 +838,12 @@ function LiveMatrix({ result, isMobile, calcCount, staticMode = false, exampleMo
           <div style={{ padding: "12px 10px", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", textAlign: "center", borderRight: `1px solid ${T.border}`, background: T.amberLight }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4, marginBottom: 4 }}>
               <span style={{ fontSize: "0.75rem", fontWeight: 700, color: T.navy, fontFamily: T.font }}>401(k)/ESOP Plan</span>
-              <InfoTooltip text="A qualified plan subject to IRS dollar limits. All four buckets in this row share a single 10% plan cap — 401(k) elections and ESOP elections each have a 10% sub-limit, but the combined total across all four cannot exceed 10%." />
+              <InfoTooltip text="A qualified plan subject to IRS dollar limits. 401(k) elections cannot exceed 10% and ESOP elections cannot exceed 10% — each independently. The combined total across all four buckets can reach up to 20%, subject to the overall 20% plan maximum." />
             </div>
             <div key={qualFull ? `pct-${pulseKey}` : "pct"}
               style={{ fontSize: "1.15rem", fontWeight: 800, color: staticMode ? T.navy : qualFull ? T.green : T.navy, fontFamily: T.font, letterSpacing: "-0.02em", lineHeight: 1,
-              animation: (!staticMode && qualFull) ? "doublePulse 0.65s ease-in-out" : "none" }}>{staticMode ? "10" : elQualTotal}%</div>
-            {zoneStatus(qualRowAvail, qualFull, "Plan", T.textMuted)}
+              animation: (!staticMode && qualFull) ? "doublePulse 0.65s ease-in-out" : "none" }}>{staticMode ? "20" : elQualTotal}%</div>
+            {zoneStatus(qualRowAvail, qualFull, "Plan", T.textMuted, 20)}
           </div>
           <div style={{ padding: "10px 10px", borderRight: `1px solid ${T.border}`, background: "#EEF6FF" }}>
             <div style={{ fontSize: "0.68rem", fontWeight: 600, color: staticMode ? T.navy : qual401kFull ? T.green : T.navy, fontFamily: T.font, textAlign: "center", marginBottom: 6 }}>
@@ -894,8 +894,8 @@ function LiveMatrix({ result, isMobile, calcCount, staticMode = false, exampleMo
 
       {/* Overall 20% bar */}
       {(() => {
-        const grandTotal  = staticMode ? 0 : exampleMode ? 15 : result.dispGrandTotal;
-        const remaining   = staticMode ? 20 : exampleMode ? 5 : result.dispOverallRemaining;
+        const grandTotal  = staticMode ? 0 : exampleMode ? 20 : result.dispGrandTotal;
+        const remaining   = staticMode ? 20 : exampleMode ? 0 : result.dispOverallRemaining;
         const isStatic    = staticMode;
         return (
           <div style={{ margin: "6px 8px 0", background: T.navy, borderRadius: "0 0 8px 8px", padding: "10px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
@@ -1029,10 +1029,10 @@ export default function App() {
   const usedEsopCol = pEsopPre + pEsopRoth + pSsepEsop;  // ESOP column
 
   // Lock conditions — each field checks every ceiling that applies to it
-  const lock401kPre  = (used401k >= MAX_401K_PCT) || (usedQual >= MAX_QUALIFIED_PCT) || (usedNonEsop >= MAX_401K_PCT) || (usedTotal >= MAX_TOTAL_PCT);
-  const lock401kRoth = (used401k >= MAX_401K_PCT) || (usedQual >= MAX_QUALIFIED_PCT) || (usedNonEsop >= MAX_401K_PCT) || (usedTotal >= MAX_TOTAL_PCT);
-  const lockEsopPre  = (usedEsop >= MAX_ESOP_PCT) || (usedQual >= MAX_QUALIFIED_PCT) || (usedEsopCol >= MAX_ESOP_PCT) || (usedTotal >= MAX_TOTAL_PCT);
-  const lockEsopRoth = (usedEsop >= MAX_ESOP_PCT) || (usedQual >= MAX_QUALIFIED_PCT) || (usedEsopCol >= MAX_ESOP_PCT) || (usedTotal >= MAX_TOTAL_PCT);
+  const lock401kPre  = (used401k >= MAX_401K_PCT) || (usedNonEsop >= MAX_401K_PCT) || (usedTotal >= MAX_TOTAL_PCT);
+  const lock401kRoth = (used401k >= MAX_401K_PCT) || (usedNonEsop >= MAX_401K_PCT) || (usedTotal >= MAX_TOTAL_PCT);
+  const lockEsopPre  = (usedEsop >= MAX_ESOP_PCT) || (usedEsopCol >= MAX_ESOP_PCT) || (usedTotal >= MAX_TOTAL_PCT);
+  const lockEsopRoth = (usedEsop >= MAX_ESOP_PCT) || (usedEsopCol >= MAX_ESOP_PCT) || (usedTotal >= MAX_TOTAL_PCT);
   const lockSsepPre  = (pSsepPre  >= MAX_SSEP_PCT) || (usedNonEsop >= MAX_401K_PCT)   || (usedTotal >= MAX_TOTAL_PCT);
   const lockSsepEsop = (pSsepEsop >= MAX_SSEP_PCT) || (usedEsopCol >= MAX_ESOP_PCT)   || (usedTotal >= MAX_TOTAL_PCT);
 
@@ -1527,49 +1527,19 @@ export default function App() {
               {showExample && (
                 <div style={{ background: "#F9FAFB", border: `1px solid ${T.border}`, borderTop: "none", borderRadius: `0 0 ${T.radius} ${T.radius}`, padding: "14px 16px" }}>
 
-                  {/* Intro sentence + Show in chart button side by side */}
-                  <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 14 }}>
-                    <div style={{ fontSize: "0.74rem", color: T.textMuted, fontFamily: T.font, lineHeight: 1.65, fontStyle: "italic" }}>
-                      This example shows how a column limit can be reached even when a plan row still has availability remaining.
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setExampleInChart(v => !v)}
-                      onMouseEnter={(e) => { e.currentTarget.style.background = exampleInChart ? "#E5E7EB" : T.border; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.background = exampleInChart ? "#F3F4F6" : T.surfaceAlt; }}
-                      style={{
-                        flexShrink: 0, display: "flex", alignItems: "center", gap: 6,
-                        padding: "6px 12px",
-                        background: exampleInChart ? "#F3F4F6" : T.surfaceAlt,
-                        border: `1px solid ${exampleInChart ? "#D1D5DB" : T.border}`,
-                        borderRadius: T.radius, cursor: "pointer", fontFamily: T.font,
-                        fontSize: "0.72rem", fontWeight: 700,
-                        color: exampleInChart ? "#6B7280" : T.textSub,
-                        transition: "all 0.15s", whiteSpace: "nowrap",
-                      }}
-                    >
-                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                        <rect x="1" y="3" width="3" height="6" rx="0.5" fill={exampleInChart ? "#6B7280" : T.textMuted} />
-                        <rect x="5" y="3" width="3" height="6" rx="0.5" fill={exampleInChart ? "#6B7280" : T.textMuted} opacity="0.6" />
-                        <rect x="9" y="3" width="2" height="6" rx="0.5" fill={exampleInChart ? "#6B7280" : T.textMuted} opacity="0.3" />
-                      </svg>
-                      {exampleInChart ? "Clear example from chart" : "Show example in chart above"}
-                    </button>
-                  </div>
-
                   {/* Scenario */}
                   <div style={{ fontSize: "0.74rem", color: T.textSub, fontFamily: T.font, lineHeight: 1.65, marginBottom: 14 }}>
-                    An employee elects <strong style={{ color: T.text }}>6% to 401(k) Pre-tax</strong>, <strong style={{ color: T.text }}>4% to SSEP Pre-tax</strong>, and <strong style={{ color: T.text }}>5% to SSEP ESOP</strong>. Each limit is then checked independently.
+                    In this example, an employee elects <strong style={{ color: T.text }}>10% to 401(k) Pre-tax</strong>, <strong style={{ color: T.text }}>5% to ESOP Pre-tax</strong>, and <strong style={{ color: T.text }}>5% to SSEP ESOP</strong>. Each limit is then checked independently.
                   </div>
 
                   {/* Check rows */}
                   <div style={{ display: "flex", flexDirection: "column" }}>
                     {[
-                      { label: "401(k)/ESOP Plan row", used: 6, limit: 10, detail: "401(k) Pre-tax only", pass: true },
-                      { label: "SSEP row", used: 9, limit: 10, detail: "SSEP Pre-tax (4%) + SSEP ESOP (5%)", pass: true },
-                      { label: "Non-ESOP column", used: 10, limit: 10, detail: "401(k) Pre-tax (6%) + SSEP Pre-tax (4%)", pass: false },
-                      { label: "ESOP column", used: 5, limit: 10, detail: "SSEP ESOP only", pass: true },
-                      { label: "Overall total", used: 15, limit: 20, detail: "All elections combined", pass: true },
+                      { label: "401(k)/ESOP Plan row", used: 15, limit: 20, detail: "401(k) Pre-tax (10%) + ESOP Pre-tax (5%)", pass: true },
+                      { label: "SSEP row", used: 5, limit: 20, detail: "SSEP ESOP only", pass: true },
+                      { label: "Non-ESOP column", used: 10, limit: 10, detail: "401(k) Pre-tax only", pass: false },
+                      { label: "ESOP column", used: 10, limit: 10, detail: "ESOP Pre-tax (5%) + SSEP ESOP (5%)", pass: false },
+                      { label: "Overall total", used: 20, limit: 20, detail: "All elections combined", pass: true },
                     ].map((row, i, arr) => (
                       <div key={row.label} style={{
                         display: "flex", alignItems: "flex-start", gap: 10,
@@ -1597,10 +1567,48 @@ export default function App() {
                   {/* Conclusion callout */}
                   <div style={{ marginTop: 12, padding: "11px 13px", background: T.amberLight, border: `1px solid ${T.amberBorder}`, borderRadius: T.radius }}>
                     <div style={{ fontSize: "0.72rem", color: T.textSub, fontFamily: T.font, lineHeight: 1.65 }}>
-                      The SSEP row shows 1% of availability remaining — but that 1% cannot be used for SSEP Pre-tax, because SSEP Pre-tax is a Non-ESOP bucket and the Non-ESOP column is already at its limit.{" "}
-                      <strong style={{ color: T.text }}>A row having availability does not mean you can use it. Column limits apply across both plans simultaneously.</strong>
+                      Even though the 401(k)/ESOP Plan row still has 5% of availability remaining, no additional elections are possible — both column limits and the overall 20% maximum have all been reached.{" "}
+                      <strong style={{ color: T.text }}>Column limits and the overall maximum apply across both plans simultaneously, regardless of how much room a single row appears to have.</strong>
                     </div>
                   </div>
+
+                  {/* Full-width banner toggle */}
+                  <button
+                    type="button"
+                    onClick={() => setExampleInChart(v => !v)}
+                    style={{
+                      width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
+                      padding: "12px 14px", marginTop: 14,
+                      borderRadius: T.radius, cursor: "pointer", fontFamily: T.font,
+                      background: "#EEF5FB",
+                      border: "1.5px solid #C8D8EE",
+                      transition: "all 0.2s",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <div style={{ width: 32, height: 32, borderRadius: 8, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(27,58,107,0.10)" }}>
+                        <svg width="14" height="14" viewBox="0 0 12 12" fill="none">
+                          <rect x="1" y="3" width="3" height="6" rx="0.5" fill={T.navy} />
+                          <rect x="5" y="3" width="3" height="6" rx="0.5" fill={T.navy} opacity="0.6" />
+                          <rect x="9" y="3" width="2" height="6" rx="0.5" fill={T.navy} opacity="0.3" />
+                        </svg>
+                      </div>
+                      <div style={{ textAlign: "left" }}>
+                        <div style={{ fontSize: "0.78rem", fontWeight: 700, color: T.navy, fontFamily: T.font }}>
+                          {exampleInChart ? "Example loaded in chart above" : "Load this example into the chart above"}
+                        </div>
+                        <div style={{ fontSize: "0.68rem", color: "#4A6FA5", fontFamily: T.font, marginTop: 2 }}>
+                          {exampleInChart ? "Clear to restore your own inputs" : "See the elections above reflected in the live chart"}
+                        </div>
+                      </div>
+                    </div>
+                    <div
+                      onMouseEnter={(e) => { e.currentTarget.style.background = T.navyBorder; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = exampleInChart ? T.navyBorder : T.btnLight; }}
+                      style={{ fontSize: "0.72rem", fontWeight: 700, padding: "7px 14px", borderRadius: T.radius, flexShrink: 0, fontFamily: T.font, background: exampleInChart ? T.navyBorder : T.btnLight, border: `1.5px solid ${T.navyBorder}`, color: T.navy, transition: "background 0.15s", cursor: "pointer" }}>
+                      {exampleInChart ? "Clear example" : "Load example"}
+                    </div>
+                  </button>
 
                 </div>
               )}
@@ -1693,14 +1701,14 @@ export default function App() {
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }} className="mobile-stack">
                       <PctInput label="Pre-tax" value={r401kPre} accentColor={T.navy}
                         disabled={lock401kPre && p401kPre === 0}
-                        disabledReason={usedQual >= MAX_QUALIFIED_PCT ? "Qualified plan limit reached" : usedNonEsop >= MAX_401K_PCT ? "Non-ESOP column limit reached" : usedTotal >= MAX_TOTAL_PCT ? "Overall 20% limit reached" : "401(k) 10% limit reached"}
-                        onChange={(v) => handlePreTaxWithFicaCap(setR401kPre, p401kPre, [[used401k, MAX_401K_PCT], [usedQual, MAX_QUALIFIED_PCT], [usedNonEsop, MAX_401K_PCT], [usedTotal, MAX_TOTAL_PCT]], v)}
+                        disabledReason={usedNonEsop >= MAX_401K_PCT ? "Non-ESOP column limit reached" : usedTotal >= MAX_TOTAL_PCT ? "Overall 20% limit reached" : "401(k) 10% limit reached"}
+                        onChange={(v) => handlePreTaxWithFicaCap(setR401kPre, p401kPre, [[used401k, MAX_401K_PCT], [usedNonEsop, MAX_401K_PCT], [usedTotal, MAX_TOTAL_PCT]], v)}
                         tooltip="Reduces your taxable income now; pay taxes later when withdrawn as ordinary income."
                       />
                       <PctInput label="Roth after-tax" value={r401kRoth} accentColor={T.navy}
                         disabled={lock401kRoth && p401kRoth === 0}
-                        disabledReason={usedQual >= MAX_QUALIFIED_PCT ? "Qualified plan limit reached" : usedNonEsop >= MAX_401K_PCT ? "Non-ESOP column limit reached" : usedTotal >= MAX_TOTAL_PCT ? "Overall 20% limit reached" : "401(k) 10% limit reached"}
-                        onChange={(v) => handleRateChange(setR401kRoth, p401kRoth, [[used401k, MAX_401K_PCT], [usedQual, MAX_QUALIFIED_PCT], [usedNonEsop, MAX_401K_PCT], [usedTotal, MAX_TOTAL_PCT]], v)}
+                        disabledReason={usedNonEsop >= MAX_401K_PCT ? "Non-ESOP column limit reached" : usedTotal >= MAX_TOTAL_PCT ? "Overall 20% limit reached" : "401(k) 10% limit reached"}
+                        onChange={(v) => handleRateChange(setR401kRoth, p401kRoth, [[used401k, MAX_401K_PCT], [usedNonEsop, MAX_401K_PCT], [usedTotal, MAX_TOTAL_PCT]], v)}
                         tooltip="Pay taxes now; earnings are tax-free if Roth account open for at least 5 years AND withdrawn after age 59½ or due to death or disability."
                       />
                     </div>
@@ -1725,7 +1733,7 @@ export default function App() {
               <div>
                 <ExpandRow
                   label="ESOP Savings"
-                  tooltip="Your ESOP pre-tax and Roth after-tax contributions combined cannot exceed 10% of your compensation. Your 401(k) and ESOP contributions also share an overall 10% combined limit for the 401(k)/ESOP Plan."
+                  tooltip="Your ESOP pre-tax and Roth after-tax contributions combined cannot exceed 10% of your compensation. ESOP elections are independent of 401(k) elections — both can reach 10% simultaneously, subject to the overall 20% plan maximum."
                   isOpen={showEsop}
                   onToggle={() => setShowEsop(v => !v)}
                   hasData={hasEsopData && !showEsop}
@@ -1743,14 +1751,14 @@ export default function App() {
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }} className="mobile-stack">
                       <PctInput label="Pre-tax" value={rEsopPre} accentColor={T.navy}
                         disabled={lockEsopPre && pEsopPre === 0}
-                        disabledReason={usedQual >= MAX_QUALIFIED_PCT ? "Qualified plan limit reached" : usedEsopCol >= MAX_ESOP_PCT ? "ESOP column limit reached" : usedTotal >= MAX_TOTAL_PCT ? "Overall 20% limit reached" : "ESOP 10% limit reached"}
-                        onChange={(v) => handlePreTaxWithFicaCap(setREsopPre, pEsopPre, [[usedEsop, MAX_ESOP_PCT], [usedQual, MAX_QUALIFIED_PCT], [usedEsopCol, MAX_ESOP_PCT], [usedTotal, MAX_TOTAL_PCT]], v)}
+                        disabledReason={usedEsopCol >= MAX_ESOP_PCT ? "ESOP column limit reached" : usedTotal >= MAX_TOTAL_PCT ? "Overall 20% limit reached" : "ESOP 10% limit reached"}
+                        onChange={(v) => handlePreTaxWithFicaCap(setREsopPre, pEsopPre, [[usedEsop, MAX_ESOP_PCT], [usedEsopCol, MAX_ESOP_PCT], [usedTotal, MAX_TOTAL_PCT]], v)}
                         tooltip="Reduces your taxable income now; pay taxes later when withdrawn as ordinary income."
                       />
                       <PctInput label="Roth after-tax" value={rEsopRoth} accentColor={T.navy}
                         disabled={lockEsopRoth && pEsopRoth === 0}
-                        disabledReason={usedQual >= MAX_QUALIFIED_PCT ? "Qualified plan limit reached" : usedEsopCol >= MAX_ESOP_PCT ? "ESOP column limit reached" : usedTotal >= MAX_TOTAL_PCT ? "Overall 20% limit reached" : "ESOP 10% limit reached"}
-                        onChange={(v) => handleRateChange(setREsopRoth, pEsopRoth, [[usedEsop, MAX_ESOP_PCT], [usedQual, MAX_QUALIFIED_PCT], [usedEsopCol, MAX_ESOP_PCT], [usedTotal, MAX_TOTAL_PCT]], v)}
+                        disabledReason={usedEsopCol >= MAX_ESOP_PCT ? "ESOP column limit reached" : usedTotal >= MAX_TOTAL_PCT ? "Overall 20% limit reached" : "ESOP 10% limit reached"}
+                        onChange={(v) => handleRateChange(setREsopRoth, pEsopRoth, [[usedEsop, MAX_ESOP_PCT], [usedEsopCol, MAX_ESOP_PCT], [usedTotal, MAX_TOTAL_PCT]], v)}
                         tooltip="Pay taxes now; earnings are tax-free if Roth account open for at least 5 years AND withdrawn after age 59½ or due to death or disability."
                       />
                     </div>
