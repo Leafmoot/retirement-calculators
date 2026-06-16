@@ -709,7 +709,7 @@ function LiveMatrix({ result, isMobile, calcCount, staticMode = false, exampleMo
 
   const nonEsopColAvail = Math.max(MAX_401K_PCT     - elNonEsopCol, 0);
   const esopColAvail    = Math.max(MAX_ESOP_PCT      - elEsopCol,    0);
-  const qualRowAvail    = Math.max(MAX_QUALIFIED_PCT - elQualTotal,  0);
+  const qualRowAvail    = Math.max(MAX_TOTAL_PCT     - elQualTotal,  0);
   const ssepRowAvail    = Math.max(MAX_SSEP_PCT      - elSsepTotal,  0);
   const qual401kAvail   = Math.max(MAX_401K_PCT      - el401kTotal,  0);
   const qualEsopAvail   = Math.max(MAX_ESOP_PCT      - elEsopTotal,  0);
@@ -1232,7 +1232,7 @@ export default function App() {
       const esopColRemaining    = Math.max(MAX_ESOP_PCT - elEsopCol, 0);
 
       // 401(k)/ESOP plan row remaining — plan % rules only, not IRS dollar ceiling
-      const qualRowRemaining = Math.max(MAX_QUALIFIED_PCT - elQualTotal, 0);
+      const qualRowRemaining = Math.max(MAX_TOTAL_PCT     - elQualTotal, 0);
       // 401(k) sub-cap remaining
       const qual401kSubRemaining = Math.max(MAX_401K_PCT - el401kCombined, 0);
       // ESOP sub-cap remaining
@@ -1972,8 +1972,8 @@ export default function App() {
                   {/* Visible summary strip — key numbers without expanding */}
                   {result.hasQualContribs && periodsLeft > 0 && (() => {
                     const showUnused = result.ficaRothRequired
-                      ? (result.unusedPreTax > 0 || result.unusedRoth > 0)
-                      : result.unusedQual > 0;
+                      ? (result.unusedPreTax >= 1 || result.unusedRoth >= 1)
+                      : result.unusedQual >= 1;
 
                     // Build the stat cells to display
                     const cells = [
@@ -1982,7 +1982,7 @@ export default function App() {
                     ];
                     if (showUnused) {
                       if (result.ficaRothRequired) {
-                        if (result.unusedPreTax > 0) cells.push({ label: "Pre-tax unused", value: fc(result.unusedPreTax), highlight: true });
+                        if (result.unusedPreTax >= 1) cells.push({ label: "Pre-tax unused", value: fc(result.unusedPreTax), highlight: true });
                         if (result.unusedRoth   > 0) cells.push({ label: "Roth catch-up unused", value: fc(result.unusedRoth), highlight: true });
                       } else {
                         cells.push({ label: "Below maximum by", value: fc(result.unusedQual), highlight: true });
@@ -2027,7 +2027,9 @@ export default function App() {
                       {result.catchUp > 0 && (
                         <SummaryLine label={`Catch-up (${result.is6063 ? "ages 60–63" : "age 50+"})`} value={fc(result.catchUp)} indent />
                       )}
-                      <SummaryLine label="Total limit" value={fc(result.electiveLimit)} indent bold />
+                      {result.catchUp > 0 && (
+                        <SummaryLine label="Total limit" value={fc(result.electiveLimit)} indent bold />
+                      )}
 
                       {/* 2. Contributed Year-to-Date */}
                       <Divider label="Contributed Year-to-Date" />
@@ -2135,13 +2137,13 @@ export default function App() {
                       )}
 
                       {/* 6. Available to Contribute */}
-                      {(result.unusedQual > 0 || result.unusedPreTax > 0 || result.unusedRoth > 0) && (
+                      {(result.unusedQual >= 1 || result.unusedPreTax >= 1 || result.unusedRoth >= 1) && (
                         <>
                           <Divider label="Available to Contribute" />
                           {result.ficaRothRequired ? (
                             <>
-                              {result.unusedPreTax > 0 && <SummaryLine label="Pre-tax below maximum by"       value={fc(result.unusedPreTax)} indent />}
-                              {result.unusedRoth   > 0 && <SummaryLine label="Roth catch-up below maximum by" value={fc(result.unusedRoth)}   indent />}
+                              {result.unusedPreTax >= 1 && <SummaryLine label="Pre-tax below maximum by"       value={fc(result.unusedPreTax)} indent />}
+                              {result.unusedRoth   >= 1 && <SummaryLine label="Roth catch-up below maximum by" value={fc(result.unusedRoth)}   indent />}
                             </>
                           ) : (
                             <SummaryLine label="Below maximum by" value={fc(result.unusedQual)} indent bold />
