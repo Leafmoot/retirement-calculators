@@ -458,7 +458,7 @@ function EmptyResults({ isCalculating }) {
 }
 
 // ── Percentage Input ───────────────────────────────────────────────────────────
-function PctInput({ value, onChange, label, tooltip, disabled, disabledReason, err, accentColor }) {
+function PctInput({ value, onChange, label, tooltip, disabled, disabledReason, err, accentColor, inputRef }) {
   const color = accentColor || T.text;
   return (
     <div>
@@ -469,6 +469,7 @@ function PctInput({ value, onChange, label, tooltip, disabled, disabledReason, e
       </div>
       <div style={{ position: "relative" }} className={err ? "field-shake" : ""}>
         <input
+          ref={inputRef}
           type="text" inputMode="decimal"
           value={disabled ? "0" : value}
           placeholder={disabled ? "" : "0"}
@@ -975,6 +976,12 @@ export default function App() {
   const ytd401kRothRef = useRef(null);
   const ytdEsopPreRef  = useRef(null);
   const ytdEsopRothRef = useRef(null);
+  const r401kPreRef  = useRef(null);
+  const r401kRothRef = useRef(null);
+  const rEsopPreRef  = useRef(null);
+  const rEsopRothRef = useRef(null);
+  const rSsepPreRef  = useRef(null);
+  const rSsepEsopRef = useRef(null);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 1024);
@@ -1045,17 +1052,29 @@ export default function App() {
   const ytdEsopRothAmt = parse(ytdEsopRoth);
   const ytdQualTotal   = ytd401kPreAmt + ytd401kRothAmt + ytdEsopPreAmt + ytdEsopRothAmt;
 
-  function handleRateChange(setter, fieldUsed, bucketChecks, newVal) {
+  function handleRateChange(setter, fieldUsed, bucketChecks, newVal, ref) {
     const raw = newVal === "" ? 0 : parsePct(newVal);
+    // Check every limit that applies to this field (its own row, the shared
+    // column it belongs to, and the overall plan max), and find whichever one
+    // leaves the LEAST room. Checking only the first limit reached and stopping
+    // there can miss a stricter limit further down the list.
+    let strictestAllowed = Infinity;
     for (const [bucketUsed, bucketMax] of bucketChecks) {
       const otherContrib = bucketUsed - fieldUsed;
-      if (raw + otherContrib > bucketMax) {
-        const maxAllowed = Math.max(bucketMax - otherContrib, 0);
-        // Round up to next whole integer so the plan system can accept the value
-        const rounded = maxAllowed === 0 ? 0 : Math.ceil(maxAllowed);
-        setter(rounded === 0 ? "" : String(rounded));
-        return;
-      }
+      const allowedForThisBucket = Math.max(bucketMax - otherContrib, 0);
+      if (allowedForThisBucket < strictestAllowed) strictestAllowed = allowedForThisBucket;
+    }
+    if (raw > strictestAllowed) {
+      // Round up to next whole integer so the plan system can accept the value
+      const rounded = strictestAllowed === 0 ? 0 : Math.ceil(strictestAllowed);
+      const corrected = rounded === 0 ? "" : String(rounded);
+      setter(corrected);
+      // Force the visible box itself to match the corrected number right now.
+      // Without this, re-entering an already-corrected field with a number that
+      // corrects back down to that same value leaves the just-typed (wrong)
+      // number sitting on screen, since nothing about the stored value changed.
+      if (ref && ref.current) ref.current.value = corrected;
+      return;
     }
     setter(newVal);
     markDirty();
@@ -1066,8 +1085,8 @@ export default function App() {
   // (401k pre-tax + ESOP pre-tax) cannot exceed the standard $24,500 limit.
   // Catch-up dollars above $24,500 must be Roth. No restriction when FICA is No.
 
-  function handlePreTaxWithFicaCap(setter, fieldUsed, bucketChecks, newVal) {
-    handleRateChange(setter, fieldUsed, bucketChecks, newVal);
+  function handlePreTaxWithFicaCap(setter, fieldUsed, bucketChecks, newVal, ref) {
+    handleRateChange(setter, fieldUsed, bucketChecks, newVal, ref);
   }
 
   // ── Calculate ─────────────────────────────────────────────────────────────
@@ -1700,15 +1719,17 @@ export default function App() {
                   <div style={{ border: `1.5px solid ${T.amberBorder}`, borderTop: "none", borderRadius: `0 0 ${T.radius} ${T.radius}`, padding: "10px 12px", background: T.surface }}>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }} className="mobile-stack">
                       <PctInput label="Pre-tax" value={r401kPre} accentColor={T.navy}
+                        inputRef={r401kPreRef}
                         disabled={lock401kPre && p401kPre === 0}
                         disabledReason={usedNonEsop >= MAX_401K_PCT ? "Non-ESOP column limit reached" : usedTotal >= MAX_TOTAL_PCT ? "Overall 20% limit reached" : "401(k) 10% limit reached"}
-                        onChange={(v) => handlePreTaxWithFicaCap(setR401kPre, p401kPre, [[used401k, MAX_401K_PCT], [usedNonEsop, MAX_401K_PCT], [usedTotal, MAX_TOTAL_PCT]], v)}
+                        onChange={(v) => handlePreTaxWithFicaCap(setR401kPre, p401kPre, [[used401k, MAX_401K_PCT], [usedNonEsop, MAX_401K_PCT], [usedTotal, MAX_TOTAL_PCT]], v, r401kPreRef)}
                         tooltip="Reduces your taxable income now; pay taxes later when withdrawn as ordinary income."
                       />
                       <PctInput label="Roth after-tax" value={r401kRoth} accentColor={T.navy}
+                        inputRef={r401kRothRef}
                         disabled={lock401kRoth && p401kRoth === 0}
                         disabledReason={usedNonEsop >= MAX_401K_PCT ? "Non-ESOP column limit reached" : usedTotal >= MAX_TOTAL_PCT ? "Overall 20% limit reached" : "401(k) 10% limit reached"}
-                        onChange={(v) => handleRateChange(setR401kRoth, p401kRoth, [[used401k, MAX_401K_PCT], [usedNonEsop, MAX_401K_PCT], [usedTotal, MAX_TOTAL_PCT]], v)}
+                        onChange={(v) => handleRateChange(setR401kRoth, p401kRoth, [[used401k, MAX_401K_PCT], [usedNonEsop, MAX_401K_PCT], [usedTotal, MAX_TOTAL_PCT]], v, r401kRothRef)}
                         tooltip="Pay taxes now; earnings are tax-free if Roth account open for at least 5 years AND withdrawn after age 59½ or due to death or disability."
                       />
                     </div>
@@ -1750,15 +1771,17 @@ export default function App() {
                   <div style={{ border: `1.5px solid ${T.amberBorder}`, borderTop: "none", borderRadius: `0 0 ${T.radius} ${T.radius}`, padding: "10px 12px", background: T.surface }}>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }} className="mobile-stack">
                       <PctInput label="Pre-tax" value={rEsopPre} accentColor={T.navy}
+                        inputRef={rEsopPreRef}
                         disabled={lockEsopPre && pEsopPre === 0}
                         disabledReason={usedEsopCol >= MAX_ESOP_PCT ? "ESOP column limit reached" : usedTotal >= MAX_TOTAL_PCT ? "Overall 20% limit reached" : "ESOP 10% limit reached"}
-                        onChange={(v) => handlePreTaxWithFicaCap(setREsopPre, pEsopPre, [[usedEsop, MAX_ESOP_PCT], [usedEsopCol, MAX_ESOP_PCT], [usedTotal, MAX_TOTAL_PCT]], v)}
+                        onChange={(v) => handlePreTaxWithFicaCap(setREsopPre, pEsopPre, [[usedEsop, MAX_ESOP_PCT], [usedEsopCol, MAX_ESOP_PCT], [usedTotal, MAX_TOTAL_PCT]], v, rEsopPreRef)}
                         tooltip="Reduces your taxable income now; pay taxes later when withdrawn as ordinary income."
                       />
                       <PctInput label="Roth after-tax" value={rEsopRoth} accentColor={T.navy}
+                        inputRef={rEsopRothRef}
                         disabled={lockEsopRoth && pEsopRoth === 0}
                         disabledReason={usedEsopCol >= MAX_ESOP_PCT ? "ESOP column limit reached" : usedTotal >= MAX_TOTAL_PCT ? "Overall 20% limit reached" : "ESOP 10% limit reached"}
-                        onChange={(v) => handleRateChange(setREsopRoth, pEsopRoth, [[usedEsop, MAX_ESOP_PCT], [usedEsopCol, MAX_ESOP_PCT], [usedTotal, MAX_TOTAL_PCT]], v)}
+                        onChange={(v) => handleRateChange(setREsopRoth, pEsopRoth, [[usedEsop, MAX_ESOP_PCT], [usedEsopCol, MAX_ESOP_PCT], [usedTotal, MAX_TOTAL_PCT]], v, rEsopRothRef)}
                         tooltip="Pay taxes now; earnings are tax-free if Roth account open for at least 5 years AND withdrawn after age 59½ or due to death or disability."
                       />
                     </div>
@@ -1800,15 +1823,17 @@ export default function App() {
                   <div style={{ border: `1.5px solid ${T.skyBorder}`, borderTop: "none", borderRadius: `0 0 ${T.radius} ${T.radius}`, padding: "10px 12px", background: T.surface }}>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }} className="mobile-stack">
                       <PctInput label="Pre-tax" value={rSsepPre} accentColor={T.navy}
+                        inputRef={rSsepPreRef}
                         disabled={lockSsepPre && pSsepPre === 0}
                         disabledReason={pSsepPre >= MAX_SSEP_PCT ? "SSEP pre-tax 10% limit reached" : usedNonEsop >= MAX_401K_PCT ? "Non-ESOP column limit reached" : "Overall 20% limit reached"}
-                        onChange={(v) => handleRateChange(setRSsepPre, pSsepPre, [[pSsepPre, MAX_SSEP_PCT], [usedNonEsop, MAX_401K_PCT], [usedTotal, MAX_TOTAL_PCT]], v)}
+                        onChange={(v) => handleRateChange(setRSsepPre, pSsepPre, [[pSsepPre, MAX_SSEP_PCT], [usedNonEsop, MAX_401K_PCT], [usedTotal, MAX_TOTAL_PCT]], v, rSsepPreRef)}
                         tooltip="Reduces your taxable income now; pay taxes later when withdrawn as ordinary income."
                       />
                       <PctInput label="ESOP" value={rSsepEsop} accentColor={T.navy}
+                        inputRef={rSsepEsopRef}
                         disabled={lockSsepEsop && pSsepEsop === 0}
                         disabledReason={pSsepEsop >= MAX_SSEP_PCT ? "SSEP ESOP 10% limit reached" : usedEsopCol >= MAX_ESOP_PCT ? "ESOP column limit reached" : "Overall 20% limit reached"}
-                        onChange={(v) => handleRateChange(setRSsepEsop, pSsepEsop, [[pSsepEsop, MAX_SSEP_PCT], [usedEsopCol, MAX_ESOP_PCT], [usedTotal, MAX_TOTAL_PCT]], v)}
+                        onChange={(v) => handleRateChange(setRSsepEsop, pSsepEsop, [[pSsepEsop, MAX_SSEP_PCT], [usedEsopCol, MAX_ESOP_PCT], [usedTotal, MAX_TOTAL_PCT]], v, rSsepEsopRef)}
                         tooltip="Reduces your taxable income now; pay taxes later when withdrawn as ordinary income."
                       />
                     </div>
