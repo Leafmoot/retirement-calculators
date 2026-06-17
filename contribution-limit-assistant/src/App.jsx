@@ -58,6 +58,14 @@ function parse(str) {
   return isNaN(v) ? 0 : v;
 }
 
+// Inserts thousands separators into a raw numeric string (e.g. "1234.5" -> "1,234.5")
+function formatThousands(raw) {
+  if (raw === "") return "";
+  const parts = raw.split(".");
+  parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  return parts.join(".");
+}
+
 const EMPTY_ERR = {
   salary: "",
   age: "",
@@ -69,11 +77,11 @@ const EMPTY_ERR = {
 };
 
 const T = {
-  bg: "#F5F3EF",
+  bg: "#F4F4F4",
   surface: "#FFFFFF",
-  surfaceAlt: "#F9F7F4",
-  border: "#E2DDD7",
-  borderStrong: "#C8C0B5",
+  surfaceAlt: "#F8F8F8",
+  border: "#DDE3E8",
+  borderStrong: "#BCC5CE",
   text: "#1C1917",
   textSub: "#78716C",
   textMuted: "#A8A29E",
@@ -93,13 +101,13 @@ const T = {
   redLight: "#FEF2F2",
   green: "#16A34A",
   greenLight: "#F0FDF4",
-  // Button + totals — deep forest green
-  btn: "#166534",
-  btnHover: "#14532D",
-  btnLight: "#DCFCE7",
-  btnBorder: "#BBF7D0",
-  // Totals accent (Annual Limit, Total Remaining)
-  total: "#166534",
+  // Button + totals — Milliman brand blue
+  btn: "#0078D4",
+  btnHover: "#106EBE",
+  btnLight: "#E8F0FD",
+  // Darker variant of the brand blue — used as text/icon color on the light blue
+  // background above, since the brand blue itself doesn't have enough contrast there
+  btnText: "#005A9E",
   // Informational notice — calm slate blue
   info: "#1E40AF",
   infoLight: "#EFF6FF",
@@ -261,17 +269,24 @@ function Input({
         return;
       }
 
+      // Strip any commas before validating — they're reinserted for display below
+      const stripped = newValue.replace(/,/g, "");
+
       // For integers only (like age), don't allow decimal point
       if (integersOnly) {
-        if (!/^\d*$/.test(newValue)) {
+        if (!/^\d*$/.test(stripped)) {
           return; // Reject invalid input
         }
       } else {
         // Only allow numbers and one decimal point
-        if (!/^\d*\.?\d*$/.test(newValue)) {
+        if (!/^\d*\.?\d*$/.test(stripped)) {
           return; // Reject invalid input
         }
       }
+
+      // Dollar fields display with thousands separators as the user types
+      onChange(prefix === "$" ? formatThousands(stripped) : stripped);
+      return;
     }
 
     onChange(newValue);
@@ -441,7 +456,7 @@ function Select({ value, onChange, options }) {
                 fontSize: "0.875rem",
                 fontFamily: T.font,
                 fontWeight: o.value === value ? 600 : 400,
-                color: o.value === value ? T.btn : T.text,
+                color: o.value === value ? T.btnText : T.text,
                 background: o.value === value ? T.btnLight : T.surface,
                 border: "none",
                 outline: "none",
@@ -482,12 +497,18 @@ function TogglePair({ options, value, onChange, err }) {
               fontSize: "0.8rem",
               fontWeight: sel ? 600 : 400,
               fontFamily: T.font,
-              border: `1.5px solid ${sel ? T.btn : err ? T.red : T.border}`,
+              border: `1.5px solid ${sel ? T.btnText : err ? T.red : T.border}`,
               borderRadius: T.radius,
               background: sel ? T.btnLight : err ? T.redLight : T.surface,
-              color: sel ? T.btn : err ? T.red : T.textSub,
+              color: sel ? T.btnText : err ? T.red : T.textSub,
               transition: "all 0.15s",
               lineHeight: 1.4,
+            }}
+            onMouseEnter={(e) => {
+              if (!sel) e.currentTarget.style.background = T.surfaceAlt;
+            }}
+            onMouseLeave={(e) => {
+              if (!sel) e.currentTarget.style.background = err ? T.redLight : T.surface;
             }}
           >
             {opt.label}
@@ -756,7 +777,7 @@ function EmptyResults({ isCalculating }) {
               width="4"
               height="10"
               rx="1"
-              fill={T.btn}
+              fill={T.btnText}
               opacity="0.5"
               style={
                 isCalculating
@@ -773,7 +794,7 @@ function EmptyResults({ isCalculating }) {
               width="4"
               height="15"
               rx="1"
-              fill={T.btn}
+              fill={T.btnText}
               opacity="0.75"
               style={
                 isCalculating
@@ -790,7 +811,7 @@ function EmptyResults({ isCalculating }) {
               width="4"
               height="19"
               rx="1"
-              fill={T.btn}
+              fill={T.btnText}
               style={
                 isCalculating
                   ? {
@@ -889,11 +910,11 @@ function ProjectionBlock({ salary, age, fica, strategy }) {
         <SummaryLine
           label={proj.rothOnly ? "Roth (After-Tax)" : "Pre-Tax (Traditional)"}
           value={`${proj.pct}%`}
-          indent bold color={T.total}
+          indent bold
         />
       )}
       <div style={{ fontSize: "0.72rem", color: T.textSub, fontFamily: T.font, lineHeight: 1.5, marginTop: 8, paddingLeft: 12 }}>
-        Estimated rates at age {proj.nextAge} over a full 26-period year, assuming current salary and next year's IRS limits carry forward.
+        Estimated rates at age {proj.nextAge} over a full 26-period year, assuming current salary and this year's IRS limits carry forward.
         {proj.limitChanged && (
           <span style={{ color: proj.limitDirection === "increases" ? T.green : T.amber, fontWeight: 600 }}>
             {" "}Your annual limit {proj.limitDirection} to {fc(proj.nextMaxAllowed)} at age {proj.nextAge}.
@@ -1638,9 +1659,8 @@ export default function App() {
           position: "relative",
           zIndex: 1,
           flexShrink: 0,
-          padding: "10px 20px 8px",
-          borderBottom: `1px solid ${T.border}`,
-          background: T.surfaceAlt,
+          padding: "14px 20px",
+          background: T.btn,
           display: "flex",
           alignItems: "center",
         }}
@@ -1650,11 +1670,11 @@ export default function App() {
             margin: 0,
             fontSize: isMobile ? "1rem" : "1.1rem",
             fontWeight: 800,
-            color: T.text,
+            color: "#FFFFFF",
             letterSpacing: "-0.03em",
           }}
         >
-          {PLAN_YEAR} Contribution Limit Assistant
+          Maximum Contribution Calculator
         </h1>
       </div>
 
@@ -1828,6 +1848,85 @@ export default function App() {
               </div>
             </div>
 
+            {/* Election type */}
+            <div style={{ marginBottom: 10 }}>
+              <Label tooltip="Check your plan's enrollment portal or ask HR if you're not sure.">
+                How does your plan accept elections?
+              </Label>
+              <div style={{ display: "flex", gap: 8, marginTop: 5 }}>
+                {[
+                  { label: "Percentage (%)", val: "pct" },
+                  { label: "Dollar amount ($)", val: "dollar" },
+                ].map((opt) => {
+                  const sel = contribMode === opt.val;
+                  return (
+                    <button
+                      key={opt.val}
+                      onClick={() => { setContribMode(opt.val); markDirty(); }}
+                      style={{
+                        flex: 1, padding: "8px 8px", cursor: "pointer",
+                        fontSize: "0.8rem", fontWeight: sel ? 600 : 400, fontFamily: T.font,
+                        border: `1.5px solid ${sel ? T.btnText : T.border}`,
+                        borderRadius: T.radius,
+                        background: sel ? T.btnLight : T.surface,
+                        color: sel ? T.btnText : T.textSub,
+                        transition: "all 0.15s",
+                      }}
+                      onMouseEnter={(e) => { if (!sel) e.currentTarget.style.background = T.surfaceAlt; }}
+                      onMouseLeave={(e) => { if (!sel) e.currentTarget.style.background = T.surface; }}
+                    >
+                      {opt.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Contribution Strategy - Different labels based on age */}
+            {catchUpAge ? (
+              <div style={{ marginBottom: 10 }}>
+                <Label
+                  tooltip={
+                    fica === true
+                      ? "Catch-up must be Roth since your FICA wages exceeded $150,000. Base contributions can still be any mix."
+                      : fica === false
+                      ? "Your FICA wages were $150,000 or less — you have full flexibility for both base and catch-up contributions."
+                      : "If your FICA wages exceeded $150,000, catch-up must be Roth. Base contributions can always be any mix."
+                  }
+                >
+                  How do you want to contribute?
+                </Label>
+                <TogglePair
+                  options={[
+                    { label: "Pre-Tax / Roth Catch-Up", val: "flexible" },
+                    { label: "All Roth", val: "roth-only" },
+                  ]}
+                  value={strategy}
+                  onChange={(v) => {
+                    setStrategy(v);
+                    markDirty();
+                  }}
+                />
+              </div>
+            ) : (
+              <div style={{ marginBottom: 10 }}>
+                <Label tooltip="Pre-Tax reduces taxable income now. Roth contributions are after-tax but grow tax-free.">
+                  How do you want to contribute?
+                </Label>
+                <TogglePair
+                  options={[
+                    { label: "Pre-Tax (Traditional)", val: "flexible" },
+                    { label: "Roth (After-Tax)", val: "roth-only" },
+                  ]}
+                  value={strategy}
+                  onChange={(v) => {
+                    setStrategy(v);
+                    markDirty();
+                  }}
+                />
+              </div>
+            )}
+
             {/* YTD contributions */}
             <div style={{ display: "flex", alignItems: "center", gap: 6, margin: "14px 0 10px" }}>
               <span style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textMuted, fontFamily: T.font, whiteSpace: "nowrap" }}>
@@ -1900,51 +1999,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* Contribution Strategy - Different labels based on age */}
-            {catchUpAge ? (
-              <div style={{ marginBottom: 10 }}>
-                <Label
-                  tooltip={
-                    fica === true
-                      ? "Catch-up must be Roth since your FICA wages exceeded $150,000. Base contributions can still be any mix."
-                      : fica === false
-                      ? "Your FICA wages were $150,000 or less — you have full flexibility for both base and catch-up contributions."
-                      : "If your FICA wages exceeded $150,000, catch-up must be Roth. Base contributions can always be any mix."
-                  }
-                >
-                  How do you want to contribute?
-                </Label>
-                <TogglePair
-                  options={[
-                    { label: "Pre-Tax / Roth Catch-Up", val: "flexible" },
-                    { label: "All Roth", val: "roth-only" },
-                  ]}
-                  value={strategy}
-                  onChange={(v) => {
-                    setStrategy(v);
-                    markDirty();
-                  }}
-                />
-              </div>
-            ) : (
-              <div style={{ marginBottom: 10 }}>
-                <Label tooltip="Pre-Tax reduces taxable income now. Roth contributions are after-tax but grow tax-free.">
-                  How do you want to contribute?
-                </Label>
-                <TogglePair
-                  options={[
-                    { label: "Pre-Tax (Traditional)", val: "flexible" },
-                    { label: "Roth (After-Tax)", val: "roth-only" },
-                  ]}
-                  value={strategy}
-                  onChange={(v) => {
-                    setStrategy(v);
-                    markDirty();
-                  }}
-                />
-              </div>
-            )}
-
             {/* Contribution Goal */}
             <div style={{ display: "flex", alignItems: "center", gap: 6, margin: "14px 0 10px" }}>
               <span style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textMuted, fontFamily: T.font, whiteSpace: "nowrap" }}>
@@ -1965,10 +2019,10 @@ export default function App() {
               style={{
                 width: "100%", boxSizing: "border-box", padding: "9px 12px",
                 fontSize: "0.875rem", fontFamily: T.font,
-                color: useCustomLimit ? T.btn : T.text,
+                color: useCustomLimit ? T.btnText : T.text,
                 fontWeight: useCustomLimit ? 600 : 400,
                 background: useCustomLimit ? T.btnLight : T.surface,
-                border: `1.5px solid ${useCustomLimit ? T.btn : T.border}`,
+                border: `1.5px solid ${useCustomLimit ? T.btnText : T.border}`,
                 borderRadius: T.radius, outline: "none", cursor: "pointer",
                 textAlign: "left", display: "flex", alignItems: "center",
                 justifyContent: "space-between", transition: "all 0.15s",
@@ -1980,7 +2034,7 @@ export default function App() {
               <span>Set a target</span>
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none"
                 style={{ flexShrink: 0, transform: useCustomLimit ? "rotate(180deg)" : "none", transition: "transform 0.15s" }}>
-                <path d="M2 4l4 4 4-4" stroke={useCustomLimit ? T.btn : T.textSub} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M2 4l4 4 4-4" stroke={useCustomLimit ? T.btnText : T.textSub} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </button>
             {useCustomLimit && (
@@ -2003,38 +2057,6 @@ export default function App() {
                 </div>
               </div>
             )}
-
-            {/* Election type */}
-            <div style={{ marginBottom: 10, marginTop: 14 }}>
-              <Label tooltip="Check your plan's enrollment portal or ask HR if you're not sure.">
-                How does your plan accept elections?
-              </Label>
-              <div style={{ display: "flex", gap: 8, marginTop: 5 }}>
-                {[
-                  { label: "Percentage (%)", val: "pct" },
-                  { label: "Dollar amount ($)", val: "dollar" },
-                ].map((opt) => {
-                  const sel = contribMode === opt.val;
-                  return (
-                    <button
-                      key={opt.val}
-                      onClick={() => { setContribMode(opt.val); markDirty(); }}
-                      style={{
-                        flex: 1, padding: "8px 8px", cursor: "pointer",
-                        fontSize: "0.8rem", fontWeight: sel ? 600 : 400, fontFamily: T.font,
-                        border: `1.5px solid ${sel ? T.btn : T.border}`,
-                        borderRadius: T.radius,
-                        background: sel ? T.btnLight : T.surface,
-                        color: sel ? T.btn : T.textSub,
-                        transition: "all 0.15s",
-                      }}
-                    >
-                      {opt.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
 
           </div>
 
@@ -2061,6 +2083,7 @@ export default function App() {
         </div>
 
         {/* ── RIGHT: Results ── */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         <div
           ref={resultRef}
           style={{
@@ -2126,8 +2149,8 @@ export default function App() {
                     }}
                   >
                     <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
-                      <path d="M20 11A8 8 0 1 0 4.93 17" stroke={T.btn} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
-                      <path d="M20 7v4h-4" stroke={T.btn} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M20 11A8 8 0 1 0 4.93 17" stroke={T.btnText} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M20 7v4h-4" stroke={T.btnText} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                   </div>
                   <div
@@ -2346,13 +2369,17 @@ export default function App() {
                       fontWeight: 700,
                       color: T.text,
                       fontFamily: T.font,
-                      padding: "14px 16px",
+                      padding: "9px 14px",
+                      background: "transparent",
                       userSelect: "none",
                       listStyle: "none",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "space-between",
+                      transition: "background 0.15s",
                     }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = T.border; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
                   >
                     <span>Calculation Breakdown</span>
                     <svg
@@ -2388,7 +2415,7 @@ export default function App() {
                     <SummaryLine
                       label={result.usingCustomLimit ? "Your Goal" : "Total Limit"}
                       value={fc(result.annualLimit)}
-                      indent bold color={T.total}
+                      indent bold
                     />
 
                     {/* Section: Contributed So Far */}
@@ -2409,6 +2436,12 @@ export default function App() {
               </div>
             ) : result.split ? (
               <div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, margin: "0 0 8px" }}>
+                  <span style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.text, fontFamily: T.font, whiteSpace: "nowrap" }}>
+                    Rates to Reach Your {result.usingCustomLimit ? "Goal" : "Limit"}
+                  </span>
+                  <div style={{ flex: 1, height: 1, background: T.border }} />
+                </div>
                 <div
                   style={{
                     display: "flex",
@@ -2498,13 +2531,17 @@ export default function App() {
                       fontWeight: 700,
                       color: T.text,
                       fontFamily: T.font,
-                      padding: "14px 16px",
+                      padding: "9px 14px",
+                      background: "transparent",
                       userSelect: "none",
                       listStyle: "none",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "space-between",
+                      transition: "background 0.15s",
                     }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = T.border; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
                   >
                     <span>Calculation Breakdown</span>
                     <svg
@@ -2544,7 +2581,7 @@ export default function App() {
                     <SummaryLine
                       label={result.usingCustomLimit ? "Your Goal" : "Total Limit"}
                       value={fc(result.annualLimit)}
-                      indent bold color={T.total}
+                      indent bold
                     />
 
                     {/* Section: Contributed So Far */}
@@ -2569,6 +2606,12 @@ export default function App() {
               </div>
             ) : (
               <div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, margin: "0 0 8px" }}>
+                  <span style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.text, fontFamily: T.font, whiteSpace: "nowrap" }}>
+                    Rates to Reach Your {result.usingCustomLimit ? "Goal" : "Limit"}
+                  </span>
+                  <div style={{ flex: 1, height: 1, background: T.border }} />
+                </div>
                 <div
                   style={{
                     display: "flex",
@@ -2666,13 +2709,17 @@ export default function App() {
                       fontWeight: 700,
                       color: T.text,
                       fontFamily: T.font,
-                      padding: "14px 16px",
+                      padding: "9px 14px",
+                      background: "transparent",
                       userSelect: "none",
                       listStyle: "none",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "space-between",
+                      transition: "background 0.15s",
                     }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = T.border; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
                   >
                     <span>Calculation Breakdown</span>
                     <svg
@@ -2716,7 +2763,7 @@ export default function App() {
                     <SummaryLine
                       label={result.usingCustomLimit ? "Your Goal" : "Total Limit"}
                       value={fc(result.annualLimit)}
-                      indent bold color={T.total}
+                      indent bold
                     />
 
                     {/* Section: Contributed So Far */}
@@ -2739,31 +2786,26 @@ export default function App() {
               </div>
             )}
           </div>
+        </div>
 
-          {/* Footer disclaimer */}
-          <div
-            style={{
-              flexShrink: 0,
-              padding: "8px 16px",
-              borderTop: `1px solid ${T.border}`,
-              background: T.surfaceAlt,
-            }}
-          >
-            <div
-              style={{
-                fontSize: "0.64rem",
-                color: T.textMuted,
-                lineHeight: 1.55,
-              }}
-            >
-              {result?.contribMode === "dollar"
-                ? "Dollar amounts rounded up to nearest whole dollar."
-                : "Rates rounded up to nearest whole %."}{" "}
-              Based on {PLAN_YEAR} IRS limits. For educational use only — not
-              financial or tax advice. Consult your plan administrator or a tax
-              professional for guidance specific to your situation.
-            </div>
-          </div>
+        {/* Footer disclaimer — sits below the results card, not inside it */}
+        <div
+          style={{
+            padding: "0 4px",
+            fontSize: "0.64rem",
+            color: T.textMuted,
+            lineHeight: 1.55,
+          }}
+        >
+          {result?.contribMode === "dollar"
+            ? "Dollar amounts rounded up to nearest whole dollar."
+            : "Rates rounded up to nearest whole %."}{" "}
+          Based on {PLAN_YEAR} IRS limits. For educational use only — not
+          financial or tax advice. Consult your plan administrator or a tax
+          professional for guidance specific to your situation.
+          <br />
+          Last updated: June 2026
+        </div>
         </div>
       </div>
     </div>
