@@ -2056,23 +2056,30 @@ export default function App() {
                         <SummaryLine label="Total limit" value={fc(result.electiveLimit)} indent bold />
                       )}
 
-                      {/* 2. Contributed Year-to-Date */}
-                      <Divider label="Contributed Year-to-Date" />
-                      {result.ytd401kPre  > 0 && <SummaryLine label="401(k) pre-tax"        value={fc(result.ytd401kPre)}  indent />}
-                      {result.ytd401kRoth > 0 && <SummaryLine label="401(k) Roth after-tax" value={fc(result.ytd401kRoth)} indent />}
-                      {result.ytdEsopPre  > 0 && <SummaryLine label="ESOP pre-tax"          value={fc(result.ytdEsopPre)}  indent />}
-                      {result.ytdEsopRoth > 0 && <SummaryLine label="ESOP Roth after-tax"   value={fc(result.ytdEsopRoth)} indent />}
-                      {result.ytdQualTotal === 0 && <SummaryLine label="Nothing contributed yet" value="—" indent />}
-
-                      {/* 3. Available to Contribute */}
-                      <Divider label="Available to Contribute" />
-                      {result.ficaRothRequired ? (
+                      {/* 2. Contributed Year-to-Date — omitted entirely when nothing has been contributed yet */}
+                      {result.ytdQualTotal > 0 && (
                         <>
-                          <SummaryLine label="Pre-tax"        value={fc(result.preTaxRoomLeft)} indent />
-                          <SummaryLine label="Roth catch-up"  value={fc(result.rothRoomLeft)}   indent />
+                          <Divider label="Contributed Year-to-Date" />
+                          {result.ytd401kPre  > 0 && <SummaryLine label="401(k) pre-tax"        value={fc(result.ytd401kPre)}  indent />}
+                          {result.ytd401kRoth > 0 && <SummaryLine label="401(k) Roth after-tax" value={fc(result.ytd401kRoth)} indent />}
+                          {result.ytdEsopPre  > 0 && <SummaryLine label="ESOP pre-tax"          value={fc(result.ytdEsopPre)}  indent />}
+                          {result.ytdEsopRoth > 0 && <SummaryLine label="ESOP Roth after-tax"   value={fc(result.ytdEsopRoth)} indent />}
                         </>
-                      ) : (
-                        <SummaryLine label="Remaining this year" value={fc(result.effectiveQualLimit)} indent bold />
+                      )}
+
+                      {/* 3. Available to Contribute — omitted when nothing has been entered for year-to-date contributions, since it would otherwise just repeat the limits already shown above. A savings rate has no bearing on this figure. */}
+                      {result.ytdQualTotal > 0 && (
+                        <>
+                          <Divider label="Available to Contribute" />
+                          {result.ficaRothRequired ? (
+                            <>
+                              <SummaryLine label="Pre-tax"        value={fc(result.preTaxRoomLeft)} indent />
+                              <SummaryLine label="Roth catch-up"  value={fc(result.rothRoomLeft)}   indent />
+                            </>
+                          ) : (
+                            <SummaryLine label="Remaining this year" value={fc(result.effectiveQualLimit)} indent bold />
+                          )}
+                        </>
                       )}
 
                       {/* 4. On Track to Contribute — per-paycheck figures folded into the math */}
@@ -2161,8 +2168,8 @@ export default function App() {
                         </>
                       )}
 
-                      {/* 6. Available to Contribute */}
-                      {(result.unusedQual >= 1 || result.unusedPreTax >= 1 || result.unusedRoth >= 1) && (
+                      {/* 6. Available to Contribute — only relevant once there's an actual projection to report leftover room against */}
+                      {periodsLeft > 0 && result.dQualEmployee > 0 && (result.unusedQual >= 1 || result.unusedPreTax >= 1 || result.unusedRoth >= 1) && (
                         <>
                           <Divider label="Available to Contribute" />
                           {result.ficaRothRequired ? (
@@ -2231,11 +2238,14 @@ export default function App() {
                       hoverBg="#A8E4F5"
                       borderColor={T.skyBorder}
                     >
-                      {/* 1. Contributed Year-to-Date (SSEP has no IRS dollar limit) */}
-                      <Divider label="Contributed Year-to-Date" />
-                      {result.ytdSsepPre  > 0 && <SummaryLine label="SSEP pre-tax" value={fc(result.ytdSsepPre)}  indent />}
-                      {result.ytdSsepEsop > 0 && <SummaryLine label="SSEP ESOP"    value={fc(result.ytdSsepEsop)} indent />}
-                      {result.ytdSsepTotal === 0 && <SummaryLine label="Nothing contributed yet" value="—" indent />}
+                      {/* 1. Contributed Year-to-Date (SSEP has no IRS dollar limit) — omitted entirely when nothing has been contributed yet */}
+                      {result.ytdSsepTotal > 0 && (
+                        <>
+                          <Divider label="Contributed Year-to-Date" />
+                          {result.ytdSsepPre  > 0 && <SummaryLine label="SSEP pre-tax" value={fc(result.ytdSsepPre)}  indent />}
+                          {result.ytdSsepEsop > 0 && <SummaryLine label="SSEP ESOP"    value={fc(result.ytdSsepEsop)} indent />}
+                        </>
+                      )}
 
                       {/* 2. On Track to Contribute — per-paycheck figures folded into the math */}
                       {periodsLeft > 0 && result.dSsepTotal > 0 && (
