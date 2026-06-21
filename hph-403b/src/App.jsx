@@ -505,93 +505,93 @@ function SummaryLine({ label, value, color, bold, indent, dimmed }) {
   );
 }
 
-function StatCard({ label, value, sub, subLines, color, small }) {
+function RateCard({ label, pctValue, dollarValue, checksLabel, checksValue, wide }) {
+  const eyebrowStyle = {
+    fontSize: "0.62rem",
+    fontWeight: 700,
+    letterSpacing: "0.06em",
+    textTransform: "uppercase",
+    color: T.textSub,
+    fontFamily: T.font,
+    marginBottom: 4,
+    lineHeight: 1.2,
+    minHeight: wide ? "auto" : "1.5rem",
+    display: "flex",
+    alignItems: "flex-start",
+    justifyContent: "center",
+  };
+  const primaryValueStyle = {
+    fontSize: "1.55rem",
+    fontWeight: 600,
+    color: T.text,
+    lineHeight: 1,
+    fontFamily: T.font,
+    letterSpacing: "-0.02em",
+    fontVariantNumeric: "tabular-nums",
+    marginTop: "-0.3rem",
+  };
+  const secondaryValueStyle = {
+    fontSize: "1.25rem",
+    fontWeight: 600,
+    color: T.text,
+    lineHeight: 1,
+    fontFamily: T.font,
+    letterSpacing: "-0.02em",
+    fontVariantNumeric: "tabular-nums",
+  };
+  const wideValueStyle = {
+    fontSize: "1.55rem",
+    fontWeight: 600,
+    color: T.text,
+    lineHeight: 1,
+    fontFamily: T.font,
+    letterSpacing: "-0.02em",
+    fontVariantNumeric: "tabular-nums",
+    marginTop: "4px",
+  };
+  const dividerStyle = { width: 1, background: T.border, margin: "2px 6px" };
   return (
     <div
       style={{
-        background: "#FFFFFF",
+        background: T.surface,
         borderRadius: "8px",
-        border: "1px solid #E5E7EB",
-        padding: small ? "10px 10px" : "12px 12px",
+        border: `1px solid ${T.border}`,
+        padding: "12px 10px",
         flex: 1,
         minWidth: 0,
         overflow: "hidden",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        boxShadow:
-          "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1)",
+        boxShadow: T.shadow,
       }}
       className="mobile-padding-sm print-break-avoid"
     >
-      <div style={{ width: "100%", textAlign: "center" }}>
-        <div
-          style={{
-            fontSize: "0.78rem",
-            fontWeight: 600,
-            letterSpacing: "0.01em",
-            color: "#64748B",
-            fontFamily: T.font,
-            marginBottom: 6,
-          }}
-        >
-          {label}
+      <div
+        style={{
+          fontSize: "0.72rem",
+          fontWeight: 600,
+          letterSpacing: "0.01em",
+          color: T.textSub,
+          fontFamily: T.font,
+          marginBottom: 10,
+          textAlign: "center",
+        }}
+      >
+        {label}
+      </div>
+      <div style={{ display: "flex", alignItems: "stretch" }}>
+        <div style={{ flex: 1, textAlign: "center", minWidth: 0 }}>
+          <div style={eyebrowStyle}>Rate</div>
+          <div style={wide ? wideValueStyle : primaryValueStyle}>{pctValue}</div>
         </div>
-        <div
-          style={{
-            fontSize: small ? "1.8rem" : "2.5rem",
-            fontWeight: 500,
-            color: "#1E293B",
-            lineHeight: 1,
-            fontFamily: T.font,
-            letterSpacing: "-0.03em",
-            fontVariantNumeric: "tabular-nums",
-            marginBottom: 4,
-          }}
-          className="mobile-text-sm"
-        >
-          {value}
+        <div style={dividerStyle} />
+        <div style={{ flex: 1, textAlign: "center", minWidth: 0 }}>
+          <div style={eyebrowStyle}>Per Paycheck</div>
+          <div style={wide ? wideValueStyle : primaryValueStyle}>{dollarValue}</div>
         </div>
-        {sub && (
-          <div
-            style={{
-              fontSize: "0.8rem",
-              color: "#64748B",
-              fontFamily: T.font,
-              lineHeight: 1.5,
-            }}
-          >
-            {sub}
-          </div>
-        )}
-        {subLines && subLines.length > 0 && (
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: 4,
-              marginTop: sub ? 0 : 0,
-            }}
-          >
-            {subLines.map((line, i) => {
-              const text = typeof line === "string" ? line : line.text;
-              return (
-                <div
-                  key={i}
-                  style={{
-                    fontSize: "0.8rem",
-                    color: "#64748B",
-                    fontFamily: T.font,
-                    lineHeight: 1.5,
-                  }}
-                >
-                  {text}
-                </div>
-              );
-            })}
-          </div>
-        )}
+        <div style={dividerStyle} />
+        <div style={{ flex: 1, textAlign: "center", minWidth: 0 }}>
+          <div style={eyebrowStyle}>{checksLabel}</div>
+          <div style={wide ? wideValueStyle : secondaryValueStyle}>{checksValue}</div>
+        </div>
       </div>
     </div>
   );
@@ -857,16 +857,15 @@ function ProjectionBlock({ salary, age, fica, strategy }) {
       <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4 }}>Next Year Projection</div>
       {proj.split ? (
         <>
-          <SummaryLine label="Pre-Tax (Traditional)" value={`${proj.prePct}%`} indent bold />
+          <SummaryLine label="Pre-Tax" value={`${proj.prePct}%`} indent bold />
           <SummaryLine label={`Roth Catch-Up (${proj.nextCatchUpType})`} value={`${proj.rPct}%`} indent bold />
         </>
       ) : (
         <SummaryLine
-          label={proj.rothOnly ? "Roth (After-Tax)" : "Pre-Tax (Traditional)"}
+          label={proj.rothOnly ? "Roth" : "Pre-Tax"}
           value={`${proj.pct}%`}
           indent
           bold
-          color={"#0099C8"}
         />
       )}
       <div style={{ fontSize: "0.72rem", color: T.textSub, fontFamily: T.font, lineHeight: 1.5, marginTop: 8, paddingLeft: 12 }}>
@@ -888,47 +887,6 @@ function ProjectionBlock({ salary, age, fica, strategy }) {
 
 function ResultNotices({ result }) {
   const notes = [];
-
-  // Ages 60–63 enhanced catch-up (REMOVED "SECURE 2.0" JARGON)
-  if (result.is6063) {
-    notes.push(
-      <NoteBox key="6063" color="#5B21B6" bg="#FAF5FF" border="#E9D5FF">
-        <strong>Enhanced catch-up (ages 60–63):</strong> Because you're between
-        ages 60 and 63, your catch-up limit is {fc(LIMITS.catchUp6063)} — higher
-        than the standard {fc(LIMITS.catchUp50)} that applies at other catch-up
-        eligible ages. This enhanced window closes the year you turn 64, at
-        which point your catch-up reverts to {fc(LIMITS.catchUp50)}.
-      </NoteBox>
-    );
-  }
-
-  // Age 50–59 standard catch-up notice
-  if (
-    result.catchUpAmt === LIMITS.catchUp50 &&
-    !result.is6063 &&
-    !result.ageOver63
-  ) {
-    notes.push(
-      <NoteBox key="50plus" color="#166534" bg="#F0FDF4" border="#BBF7D0">
-        <strong>Catch-up eligible (Age 50+):</strong> Your limit includes an
-        additional {fc(LIMITS.catchUp50)} catch-up on top of the{" "}
-        {fc(LIMITS.standard)} base.
-      </NoteBox>
-    );
-  }
-
-  // Age 64+ — back to standard catch-up after enhanced window closes
-  if (result.ageOver63 && result.catchUpAmt === LIMITS.catchUp50) {
-    notes.push(
-      <NoteBox key="over63" color="#0F766E" bg="#F0FDFA" border="#99F6E4">
-        <strong>Standard catch-up (Age 64+):</strong> Your limit includes the
-        standard {fc(LIMITS.catchUp50)} catch-up. The enhanced{" "}
-        {fc(LIMITS.catchUp6063)} limit available between ages 60–63 no longer
-        applies — you've returned to the standard catch-up amount that continues
-        from age 64 onward.
-      </NoteBox>
-    );
-  }
 
   // Split path: base limit flexibility
   if (result.split) {
@@ -964,6 +922,47 @@ function ResultNotices({ result }) {
     }
     // Don't show flexibility notice when FICA > 150k but using Roth-only strategy
     // (that scenario requires catch-up to be Roth, even though we're showing single card)
+  }
+
+  // Ages 60–63 enhanced catch-up (REMOVED "SECURE 2.0" JARGON)
+  if (result.is6063) {
+    notes.push(
+      <NoteBox key="6063" color="#5B21B6" bg="#FAF5FF" border="#E9D5FF">
+        <strong>Enhanced catch-up (ages 60–63):</strong> Because you're between
+        ages 60 and 63, your catch-up limit is {fc(LIMITS.catchUp6063)} — higher
+        than the standard {fc(LIMITS.catchUp50)} that applies at other catch-up
+        eligible ages. This enhanced window closes the year you turn 64, at
+        which point your catch-up reverts to {fc(LIMITS.catchUp50)}.
+      </NoteBox>
+    );
+  }
+
+  // Age 50–59 standard catch-up notice
+  if (
+    result.catchUpAmt === LIMITS.catchUp50 &&
+    !result.is6063 &&
+    !result.ageOver63
+  ) {
+    notes.push(
+      <NoteBox key="50plus" color="#166534" bg="#F0FDF4" border="#BBF7D0">
+        <strong>Catch-up eligible (age 50+):</strong> Your limit includes an
+        additional {fc(LIMITS.catchUp50)} catch-up on top of the{" "}
+        {fc(LIMITS.standard)} base.
+      </NoteBox>
+    );
+  }
+
+  // Age 64+ — back to standard catch-up after enhanced window closes
+  if (result.ageOver63 && result.catchUpAmt === LIMITS.catchUp50) {
+    notes.push(
+      <NoteBox key="over63" color="#0F766E" bg="#F0FDFA" border="#99F6E4">
+        <strong>Standard catch-up (age 64+):</strong> Your limit includes the
+        standard {fc(LIMITS.catchUp50)} catch-up. The enhanced{" "}
+        {fc(LIMITS.catchUp6063)} limit available between ages 60–63 no longer
+        applies — you've returned to the standard catch-up amount that continues
+        from age 64 onward.
+      </NoteBox>
+    );
   }
 
   if (notes.length === 0) return null;
@@ -1673,8 +1672,8 @@ export default function App() {
                 </Label>
                 <TogglePair
                   options={[
-                    { label: "Pre-Tax (Traditional)", val: "flexible" },
-                    { label: "Roth (After-Tax)", val: "roth-only" },
+                    { label: "Pre-Tax", val: "flexible" },
+                    { label: "Roth", val: "roth-only" },
                   ]}
                   value={strategy}
                   onChange={(v) => {
@@ -1704,7 +1703,7 @@ export default function App() {
               >
                 <div>
                   <div style={{ fontSize: "0.71rem", fontWeight: 600, color: T.textSub, marginBottom: 3, fontFamily: T.font }}>
-                    Pre-Tax (Traditional)
+                    Pre-Tax
                   </div>
                   <Input
                     value={ytdPre}
@@ -1720,7 +1719,7 @@ export default function App() {
                 </div>
                 <div>
                   <div style={{ fontSize: "0.71rem", fontWeight: 600, color: T.textSub, marginBottom: 3, fontFamily: T.font }}>
-                    Roth (After-Tax)
+                    Roth
                   </div>
                   <Input
                     value={ytdRoth}
@@ -2065,12 +2064,11 @@ export default function App() {
             ) : result.maxed ? (
               <div>
                 <div style={{ textAlign: "center", padding: "16px 0 12px" }}>
-                  <div style={{ fontSize: "2rem", marginBottom: 6 }}>🎉</div>
                   <div
                     style={{
                       fontSize: "1.1rem",
                       fontWeight: 800,
-                      color: "#1E293B",
+                      color: T.text,
                       letterSpacing: "-0.02em",
                       marginBottom: 5,
                     }}
@@ -2206,25 +2204,26 @@ export default function App() {
                   style={{
                     display: "flex",
                     gap: 10,
-                    marginBottom: 8,
+                    marginBottom: 10,
                     flexWrap: isMobile ? "wrap" : "nowrap",
                   }}
                 >
-                  <StatCard
-                    label="Pre-Tax Contribution (Traditional)"
-                    value={`${result.prePct}%`}
-                    subLines={[
-                      `${result.preChecks} paychecks to ${result.usingCustomLimit ? "goal" : "limit"}`,
-                    ]}
+                  <RateCard
+                    label="Pre-Tax Contribution"
+                    pctValue={`${result.prePct}%`}
+                    dollarValue={fc(ceilDollar(result.preDpc))}
+                    checksLabel={`Paychecks to ${result.usingCustomLimit ? "Goal" : "Limit"}`}
+                    checksValue={`${result.preChecks}`}
                   />
-                  <StatCard
-                    label="Roth Catch-Up (After-Tax)"
-                    value={`${result.rPct}%`}
-                    subLines={[
-                      `${result.rChecks} paychecks to ${result.usingCustomLimit ? "goal" : "limit"}`,
-                    ]}
+                  <RateCard
+                    label="Roth Contribution"
+                    pctValue={`${result.rPct}%`}
+                    dollarValue={fc(ceilDollar(result.rDpc))}
+                    checksLabel={`Paychecks to ${result.usingCustomLimit ? "Goal" : "Limit"}`}
+                    checksValue={`${result.rChecks}`}
                   />
                 </div>
+                <ResultNotices result={result} />
                 {/* Collapsible Details */}
                 <details
                   style={{
@@ -2272,12 +2271,12 @@ export default function App() {
                     {/* Section: Per Paycheck */}
                     <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>Per Paycheck</div>
                     <SummaryLine
-                      label="Pre-Tax (Traditional)"
+                      label="Pre-Tax"
                       value={fc(ceilDollar(result.preDpc))}
                       indent
                     />
                     <SummaryLine
-                      label="Roth Catch-Up (After-Tax)"
+                      label="Roth"
                       value={fc(ceilDollar(result.rDpc))}
                       indent
                     />
@@ -2318,51 +2317,51 @@ export default function App() {
                       value={fc(result.annualLimit)}
                       indent
                       bold
-                      color={"#0099C8"}
                     />
-                    {/* Section: Contributed So Far */}
-                    <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>Contributed So Far</div>
-                    <SummaryLine
-                      label="Pre-Tax (Traditional) — YTD"
-                      value={fc(result.yPre)}
-                      indent
-                      dimmed={result.yPre === 0}
-                    />
-                    <SummaryLine
-                      label="Roth (After-Tax) — YTD"
-                      value={fc(result.yRoth)}
-                      indent
-                      dimmed={result.yRoth === 0}
-                    />
-                    <SummaryLine
-                      label="Total Contributed (YTD)"
-                      value={fc(result.yPre + result.yRoth)}
-                      indent
-                      bold
-                    />
-                    {/* Section: Remaining Capacity */}
-                    <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>Remaining Capacity</div>
-                    <SummaryLine
-                      label="Pre-Tax Remaining"
-                      value={fc(result.stdRem)}
-                      indent
-                      dimmed={result.stdRem === 0}
-                    />
-                    <SummaryLine
-                      label="Roth Remaining"
-                      value={fc(result.cuRem)}
-                      indent
-                      dimmed={result.cuRem === 0}
-                    />
-                    <SummaryLine
-                      label="Total Remaining"
-                      value={fc(result.totRem)}
-                      indent
-                      bold
-                    />
-                    <div style={{ fontSize: "0.72rem", color: T.textSub, fontFamily: T.font, lineHeight: 1.5, marginTop: 8, paddingLeft: 12 }}>
-                      {`Electing the rates shown above each paycheck will reach your ${result.usingCustomLimit ? "goal" : "limit"} of ${fc(result.annualLimit)} by year end.`}
-                    </div>
+                    {(result.yPre > 0 || result.yRoth > 0) && (
+                      <>
+                        {/* Section: Year-to-Date Contributions */}
+                        <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>Year-to-Date Contributions</div>
+                        <SummaryLine
+                          label="Pre-Tax"
+                          value={fc(result.yPre)}
+                          indent
+                          dimmed={result.yPre === 0}
+                        />
+                        <SummaryLine
+                          label="Roth"
+                          value={fc(result.yRoth)}
+                          indent
+                          dimmed={result.yRoth === 0}
+                        />
+                        <SummaryLine
+                          label="Total Contributed"
+                          value={fc(result.yPre + result.yRoth)}
+                          indent
+                          bold
+                        />
+                        {/* Section: Remaining Capacity */}
+                        <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>Remaining Capacity</div>
+                        <SummaryLine
+                          label="Pre-Tax Remaining"
+                          value={fc(result.stdRem)}
+                          indent
+                          dimmed={result.stdRem === 0}
+                        />
+                        <SummaryLine
+                          label="Roth Remaining"
+                          value={fc(result.cuRem)}
+                          indent
+                          dimmed={result.cuRem === 0}
+                        />
+                        <SummaryLine
+                          label="Total Remaining"
+                          value={fc(result.totRem)}
+                          indent
+                          bold
+                        />
+                      </>
+                    )}
                     {/* Next-year projection */}
                     <ProjectionBlock salary={salary} age={age} fica={result.fica} strategy={result.strategy} />
                   </div>
@@ -2398,28 +2397,24 @@ export default function App() {
                   )}
                 </div>
                 )}
-                <ResultNotices result={result} />
               </div>
             ) : (
               <div>
-                <div
-                  style={{
-                    display: "flex",
-                    gap: 10,
-                    marginBottom: 8,
-                    flexWrap: isMobile ? "wrap" : "nowrap",
-                  }}
-                >
-                  <StatCard
+                <div style={{ marginBottom: 8 }}>
+                  <RateCard
                     label={
                       result.rothOnlyMode
-                        ? "Roth Contribution (After-Tax)"
-                        : "Pre-Tax Contribution (Traditional)"
+                        ? "Roth Contribution"
+                        : "Pre-Tax Contribution"
                     }
-                    value={`${result.pct}%`}
-                    subLines={[`${result.checks} paychecks remaining`]}
+                    pctValue={`${result.pct}%`}
+                    dollarValue={fc(ceilDollar(result.dpc))}
+                    checksLabel={`Paychecks to ${result.usingCustomLimit ? "Goal" : "Limit"}`}
+                    checksValue={`${result.checks}`}
+                    wide
                   />
                 </div>
+                <ResultNotices result={result} />
                 {/* Collapsible Details */}
                 <details
                   style={{
@@ -2464,18 +2459,6 @@ export default function App() {
                     </svg>
                   </summary>
                   <div style={{ padding: "0 14px 14px" }}>
-                    {/* Section: Per Paycheck */}
-                    <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>Per Paycheck</div>
-                    <SummaryLine
-                      label={
-                        result.rothOnlyMode
-                          ? "Roth Contribution (After-Tax)"
-                          : "Pre-Tax Contribution (Traditional)"
-                      }
-                      value={fc(ceilDollar(result.dpc))}
-                      indent
-                      bold
-                    />
                     {/* Section: Annual Limit */}
                     <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>Annual Limit</div>
                     {!result.usingCustomLimit && (
@@ -2509,42 +2492,44 @@ export default function App() {
                       value={fc(result.annualLimit)}
                       indent
                       bold
-                      color={"#0099C8"}
                     />
-                    {/* Section: Contributed So Far */}
-                    <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>Contributed So Far</div>
-                    <SummaryLine
-                      label="Pre-Tax (Traditional) — YTD"
-                      value={fc(result.yPre)}
-                      indent
-                      dimmed={result.yPre === 0}
-                    />
-                    <SummaryLine
-                      label="Roth (After-Tax) — YTD"
-                      value={fc(result.yRoth)}
-                      indent
-                      dimmed={result.yRoth === 0}
-                    />
-                    <SummaryLine
-                      label="Total Contributed (YTD)"
-                      value={fc(result.totYtd)}
-                      indent
-                      bold
-                    />
-                    {/* Section: Remaining Capacity */}
-                    <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>Remaining Capacity</div>
-                    <SummaryLine
-                      label="Total Remaining"
-                      value={fc(result.rem)}
-                      indent
-                      bold
-                    />
-                    <div style={{ fontSize: "0.72rem", color: T.textSub, fontFamily: T.font, lineHeight: 1.5, marginTop: 8, paddingLeft: 12 }}>
-                      {result.rem <= 0
-                        ? `You have reached your ${result.usingCustomLimit ? "goal" : "limit"} of ${fc(result.annualLimit)} for the year. No further contributions are needed.`
-                        : `Electing the rate shown above each paycheck will reach your ${result.usingCustomLimit ? "goal" : "limit"} of ${fc(result.annualLimit)} by year end.`
-                      }
-                    </div>
+                    {(result.yPre > 0 || result.yRoth > 0) && (
+                      <>
+                        {/* Section: Year-to-Date Contributions */}
+                        <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>Year-to-Date Contributions</div>
+                        <SummaryLine
+                          label="Pre-Tax"
+                          value={fc(result.yPre)}
+                          indent
+                          dimmed={result.yPre === 0}
+                        />
+                        <SummaryLine
+                          label="Roth"
+                          value={fc(result.yRoth)}
+                          indent
+                          dimmed={result.yRoth === 0}
+                        />
+                        <SummaryLine
+                          label="Total Contributed"
+                          value={fc(result.totYtd)}
+                          indent
+                          bold
+                        />
+                        {/* Section: Remaining Capacity */}
+                        <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>Remaining Capacity</div>
+                        <SummaryLine
+                          label="Total Remaining"
+                          value={fc(result.rem)}
+                          indent
+                          bold
+                        />
+                      </>
+                    )}
+                    {result.rem <= 0 && (
+                      <div style={{ fontSize: "0.72rem", color: T.textSub, fontFamily: T.font, lineHeight: 1.5, marginTop: 8, paddingLeft: 12 }}>
+                        {`You have reached your ${result.usingCustomLimit ? "goal" : "limit"} of ${fc(result.annualLimit)} for the year. No further contributions are needed.`}
+                      </div>
+                    )}
                     {/* Next-year projection */}
                     <ProjectionBlock salary={salary} age={age} fica={result.fica} strategy={result.strategy} />
                   </div>
@@ -2601,7 +2586,6 @@ export default function App() {
                   )}
                 </div>
                 )}
-                <ResultNotices result={result} />
               </div>
             )}
           </div>
