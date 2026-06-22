@@ -139,9 +139,9 @@ const T = {
   blue: "#1D4ED8", blueLight: "#EFF6FF",
   red: "#DC2626", redLight: "#FEF2F2",
   green: "#16A34A", greenLight: "#F0FDF4",
-  btn: "#166534", btnHover: "#14532D", btnLight: "#DCFCE7", btnBorder: "#BBF7D0",
+  btn: "#2E7D32", btnHover: "#1B5E20", btnLight: "#DCFCE7", btnBorder: "#BBF7D0",
   slate: "#3A3739", slateLight: "#F5F3EF", slateBorder: "#C8C0B5",
-  total: "#166534",
+  total: "#2E7D32",
   shadow: "0 1px 3px rgba(0,0,0,0.08)",
   shadowMd: "0 4px 12px rgba(0,0,0,0.08)",
   radius: "10px", radiusLg: "16px",
@@ -357,7 +357,7 @@ function ExpandRow({ label, hint, tooltip, isOpen, onToggle, marginTop = 0, colo
         marginTop,
         boxShadow: isOpen ? `0 0 0 3px ${c.activeBg}` : "none",
       }}
-      onMouseEnter={(e) => { if (!showActive) e.currentTarget.style.background = T.surfaceAlt; }}
+      onMouseEnter={(e) => { e.currentTarget.style.background = showActive ? c.activeBorder : T.surfaceAlt; }}
       onMouseLeave={(e) => { e.currentTarget.style.background = showActive ? c.activeBg : T.surface; }}
     >
       <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -675,7 +675,14 @@ export default function App() {
       const dpc457bRaw = periodsLeft > 0 && rem457b > 0 ? Math.ceil((rem457b / periodsLeft) * 100) / 100 : 0;
       const dpc457b = Math.min(dpc457bRaw, remaining457bDpc);
       const checks457b = dpc457b > 0 ? Math.ceil(rem457b / dpc457b) : 0;
-      const notNeeded457b = include457b && rem457bMax > 0 && rem457b === 0;
+      const notNeeded457b = include457b && rem457bMax > 0 && rem457b === 0 && usingTarget && salaryRoomFor457b > 0;
+      const notNeeded457bReason = notNeeded457b
+        ? afterTax401aAllocated > 0
+          ? "goal met by 403(b) and 401(a)"
+          : afterTax403bAllocated > 0
+          ? "goal met by 403(b)"
+          : "goal met by 403(b)"
+        : null;
 
       // Determine whether elective is shown as split or single rate
       const electiveSplit = rothRequired && strategy !== "roth-only" && catchUp > 0 && !electiveNotNeeded && electiveRem > 0;
@@ -700,7 +707,7 @@ export default function App() {
         afterTax401aLimit, afterTax401aRem,
         afterTax401aPct, afterTax401aDpc, afterTax401aChecks, afterTax401aNotNeeded,
         ytd401aAfterTaxAmt,
-        rem457b, dpc457b, checks457b, notNeeded457b, ytd457bAmt,
+        rem457b, dpc457b, checks457b, notNeeded457b, notNeeded457bReason, ytd457bAmt,
         include457b,
         // Salary is the binding constraint only when no target is set (or target exceeds salary cap)
         salaryCapping: w < maxEmployee && (!usingTarget || parse(targetAmount) > w),
@@ -739,8 +746,8 @@ export default function App() {
 
       <div style={{ position: "fixed", inset: 0, opacity: 0.025, pointerEvents: "none", zIndex: 0, backgroundImage: "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")" }} />
 
-      <div style={{ position: "relative", zIndex: 1, flexShrink: 0, padding: "10px 20px 8px", borderBottom: `1px solid ${T.border}`, background: T.surfaceAlt, display: "flex", alignItems: "center" }}>
-        <h1 style={{ margin: 0, fontSize: isMobile ? "1rem" : "1.1rem", fontWeight: 800, color: T.text, letterSpacing: "-0.03em" }}>
+      <div style={{ position: "relative", zIndex: 1, flexShrink: 0, padding: "10px 20px 8px", borderBottom: `1px solid #1B5E20`, background: "#2E7D32", display: "flex", alignItems: "center" }}>
+        <h1 style={{ margin: 0, fontSize: isMobile ? "1rem" : "1.1rem", fontWeight: 800, color: "#FFFFFF", letterSpacing: "-0.03em" }}>
           Baptist Health Maximum Contribution Calculator
         </h1>
       </div>
@@ -956,7 +963,7 @@ export default function App() {
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               <button type="button" onClick={() => { setInclude457b(v => !v); markDirty(); }} style={{
                 width: "100%", boxSizing: "border-box", padding: "9px 12px",
-                fontSize: "0.875rem", fontFamily: T.font,
+                fontSize: "0.8rem", fontFamily: T.font,
                 color: include457b ? T.preTax : T.red,
                 fontWeight: 600,
                 background: include457b ? T.preTaxLight : T.redLight,
@@ -965,6 +972,8 @@ export default function App() {
                 textAlign: "left", display: "flex", alignItems: "center",
                 justifyContent: "space-between", transition: "all 0.15s",
               }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = include457b ? T.preTaxBorder : "#FECACA"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = include457b ? T.preTaxLight : T.redLight; }}
               >
                 <span>457(b)</span>
                 <span style={{ fontSize: "0.72rem", fontWeight: 600, color: include457b ? T.preTax : T.red }}>
@@ -1101,7 +1110,7 @@ export default function App() {
                             : "Elective — Pre-Tax"}
                         </div>
                         {result.electiveNotNeeded
-                          ? <div style={{ fontSize: "0.82rem", fontWeight: 600, color: T.textMuted, fontFamily: T.font, lineHeight: 1.4 }}>Not needed — goal met by other plans</div>
+                          ? <div style={{ fontSize: "0.78rem", fontWeight: 500, color: T.textMuted, fontFamily: T.font, lineHeight: 1.4 }}>Not needed — goal met by other plans</div>
                           : result.electiveRem <= 0 && !result.electiveSalaryCapped
                           ? <div style={{ fontSize: "1.1rem", fontWeight: 700, color: T.green, fontFamily: T.font }}>Limit reached ✓</div>
                           : result.electiveSplit
@@ -1117,7 +1126,7 @@ export default function App() {
                                 {result.electiveChecks > 0 && <div style={{ fontSize: "0.72rem", color: T.textSub, fontFamily: T.font, flexShrink: 0 }}>{result.electiveChecks} paychecks</div>}
                               </div>
                               {result.electiveSalaryCapped && (
-                                <div style={{ fontSize: "0.7rem", color: T.amber, fontFamily: T.font, display: "flex", alignItems: "center", gap: 3, marginTop: 6 }}>
+                                <div style={{ fontSize: "0.78rem", fontWeight: 500, color: T.amber, fontFamily: T.font, display: "flex", alignItems: "center", gap: 3, marginTop: 6 }}>
                                   Limited by salary
                                   <InfoTooltip text={`Your annual salary of ${fc(result.salary)} limits total employee contributions across all plans. IRS limits would otherwise allow more.`} />
                                 </div>
@@ -1144,7 +1153,7 @@ export default function App() {
                         <div style={{ background: T.greenLight, padding: "0 14px 8px" }}>
                           <div style={{ fontSize: "0.72rem", fontWeight: 600, color: T.textSub, fontFamily: T.font, marginBottom: 3 }}>After-Tax (Mega Roth)</div>
                           {result.afterTax403bNotNeeded
-                            ? <div style={{ fontSize: "0.82rem", fontWeight: 600, color: T.textMuted, fontFamily: T.font, lineHeight: 1.4 }}>Not needed — goal met</div>
+                            ? <div style={{ fontSize: "0.78rem", fontWeight: 500, color: T.textMuted, fontFamily: T.font, lineHeight: 1.4 }}>Not needed — goal met</div>
                             : result.afterTax403bRem <= 0 && !result.afterTax403bSalaryCapped
                             ? <div style={{ fontSize: "1.1rem", fontWeight: 700, color: T.green, fontFamily: T.font }}>Limit reached ✓</div>
                             : <>
@@ -1153,7 +1162,7 @@ export default function App() {
                                   {result.afterTax403bChecks > 0 && <div style={{ fontSize: "0.72rem", color: T.textSub, fontFamily: T.font, flexShrink: 0 }}>{result.afterTax403bChecks} paychecks</div>}
                                 </div>
                                 {result.afterTax403bSalaryCapped && (
-                                  <div style={{ fontSize: "0.7rem", color: T.amber, fontFamily: T.font, display: "flex", alignItems: "center", gap: 3, marginTop: 6 }}>
+                                  <div style={{ fontSize: "0.78rem", fontWeight: 500, color: T.amber, fontFamily: T.font, display: "flex", alignItems: "center", gap: 3, marginTop: 6 }}>
                                     Limited by salary
                                     <InfoTooltip text={`Your annual salary of ${fc(result.salary)} limits total employee contributions across all plans. IRS limits would otherwise allow more.`} />
                                   </div>
@@ -1168,7 +1177,7 @@ export default function App() {
                         <div style={{ background: T.greenLight, padding: "0 14px 8px" }}>
                           <div style={{ fontSize: "0.72rem", fontWeight: 600, color: T.textSub, fontFamily: T.font, marginBottom: 3 }}>After-Tax (Mega Roth)</div>
                           {result.afterTax403bNotNeeded
-                            ? <div style={{ fontSize: "0.82rem", fontWeight: 600, color: T.textMuted, fontFamily: T.font, lineHeight: 1.4 }}>Not needed — goal met</div>
+                            ? <div style={{ fontSize: "0.78rem", fontWeight: 500, color: T.textMuted, fontFamily: T.font, lineHeight: 1.4 }}>Not needed — goal met</div>
                             : result.afterTax403bRem <= 0 && !result.afterTax403bSalaryCapped
                             ? <div style={{ fontSize: "1.1rem", fontWeight: 700, color: T.green, fontFamily: T.font }}>Limit reached ✓</div>
                             : <>
@@ -1177,7 +1186,7 @@ export default function App() {
                                   {result.afterTax403bChecks > 0 && <div style={{ fontSize: "0.72rem", color: T.textSub, fontFamily: T.font, flexShrink: 0 }}>{result.afterTax403bChecks} paychecks</div>}
                                 </div>
                                 {result.afterTax403bSalaryCapped && (
-                                  <div style={{ fontSize: "0.7rem", color: T.amber, fontFamily: T.font, display: "flex", alignItems: "center", gap: 3, marginTop: 6 }}>
+                                  <div style={{ fontSize: "0.78rem", fontWeight: 500, color: T.amber, fontFamily: T.font, display: "flex", alignItems: "center", gap: 3, marginTop: 6 }}>
                                     Limited by salary
                                     <InfoTooltip text={`Your annual salary of ${fc(result.salary)} limits total employee contributions across all plans. IRS limits would otherwise allow more.`} />
                                   </div>
@@ -1326,7 +1335,7 @@ export default function App() {
                     <div style={{ padding: "0 14px 8px" }}>
                         <div style={{ fontSize: "0.72rem", fontWeight: 600, color: T.textSub, fontFamily: T.font, marginBottom: 3 }}>After-Tax Employee (Mega Roth)</div>
                         {result.afterTax401aNotNeeded
-                          ? <div style={{ fontSize: "0.82rem", fontWeight: 600, color: T.textMuted, fontFamily: T.font, lineHeight: 1.4 }}>Not needed — goal met by 403(b)</div>
+                          ? <div style={{ fontSize: "0.78rem", fontWeight: 500, color: T.textMuted, fontFamily: T.font, lineHeight: 1.4 }}>Not needed — goal met by 403(b)</div>
                           : result.afterTax401aRem <= 0 && !result.afterTax401aSalaryCapped
                           ? <div style={{ fontSize: "1.1rem", fontWeight: 700, color: T.green, fontFamily: T.font }}>Limit reached ✓</div>
                           : <>
@@ -1335,7 +1344,7 @@ export default function App() {
                                 {result.afterTax401aChecks > 0 && <div style={{ fontSize: "0.72rem", color: T.textSub, fontFamily: T.font, flexShrink: 0 }}>{result.afterTax401aChecks} paychecks</div>}
                               </div>
                               {result.afterTax401aSalaryCapped && (
-                                <div style={{ fontSize: "0.7rem", color: T.amber, fontFamily: T.font, display: "flex", alignItems: "center", gap: 3, marginTop: 6, flexShrink: 0 }}>
+                                <div style={{ fontSize: "0.78rem", fontWeight: 500, color: T.amber, fontFamily: T.font, display: "flex", alignItems: "center", gap: 3, marginTop: 6, flexShrink: 0 }}>
                                   Limited by salary
                                   <InfoTooltip text={`Your annual salary of ${fc(result.salary)} limits total employee contributions across all plans. IRS limits would otherwise allow more.`} />
                                 </div>
@@ -1400,7 +1409,7 @@ export default function App() {
                       <div style={{ padding: "0 14px 8px" }}>
                         <div style={{ fontSize: "0.72rem", fontWeight: 600, color: T.textSub, fontFamily: T.font, marginBottom: 3 }}>Pre-Tax — Dollar Amount Election</div>
                         {result.notNeeded457b
-                          ? <div style={{ fontSize: "0.82rem", fontWeight: 600, color: T.textMuted, fontFamily: T.font, lineHeight: 1.4 }}>Not needed — goal met by higher-priority plans</div>
+                          ? <div style={{ fontSize: "0.78rem", fontWeight: 500, color: T.textMuted, fontFamily: T.font, lineHeight: 1.4 }}>Not needed — {result.notNeeded457bReason}</div>
                           : result.rem457b <= 0 && !result.salary457bCapped
                           ? <div style={{ fontSize: "1.1rem", fontWeight: 700, color: T.green, fontFamily: T.font }}>Limit reached ✓</div>
                           : <>
@@ -1409,7 +1418,7 @@ export default function App() {
                                 {result.checks457b > 0 && <div style={{ fontSize: "0.72rem", color: T.textSub, fontFamily: T.font, flexShrink: 0 }}>{result.checks457b} paychecks</div>}
                               </div>
                               {result.salary457bCapped && (
-                                <div style={{ fontSize: "0.7rem", color: T.amber, fontFamily: T.font, display: "flex", alignItems: "center", gap: 3, marginTop: 6 }}>
+                                <div style={{ fontSize: "0.78rem", fontWeight: 500, color: T.amber, fontFamily: T.font, display: "flex", alignItems: "center", gap: 3, marginTop: 6 }}>
                                   Limited by salary
                                   <InfoTooltip text={`Your annual salary of ${fc(result.salary)} limits total employee contributions across all plans. IRS limits would otherwise allow more.`} />
                                 </div>
