@@ -68,6 +68,14 @@ function parse(str) {
   return isNaN(v) ? 0 : v;
 }
 
+// Inserts thousands separators into a raw numeric string (e.g. "1234.5" -> "1,234.5")
+function formatThousands(raw) {
+  if (raw === "") return "";
+  const parts = raw.split(".");
+  parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  return parts.join(".");
+}
+
 const EMPTY_ERR = {
   salary: "",
   filingStatus: "",
@@ -77,11 +85,11 @@ const EMPTY_ERR = {
 };
 
 const T = {
-  bg: "#F5F3EF",
+  bg: "#F4F4F4",
   surface: "#FFFFFF",
-  surfaceAlt: "#F9F7F4",
-  border: "#E2DDD7",
-  borderStrong: "#C8C0B5",
+  surfaceAlt: "#F8F8F8",
+  border: "#DDE3E8",
+  borderStrong: "#BCC5CE",
   text: "#1C1917",
   textSub: "#78716C",
   textMuted: "#A8A29E",
@@ -101,13 +109,13 @@ const T = {
   redLight: "#FEF2F2",
   green: "#16A34A",
   greenLight: "#F0FDF4",
-  // Button + totals — deep forest green
-  btn: "#166534",
-  btnHover: "#14532D",
-  btnLight: "#DCFCE7",
-  btnBorder: "#BBF7D0",
-  // Totals accent (Annual Limit, Total Remaining)
-  total: "#166534",
+  // Button + totals — Milliman brand blue
+  btn: "#0078D4",
+  btnHover: "#106EBE",
+  btnLight: "#E8F0FD",
+  // Darker variant of the brand blue — used as text/icon color on the light blue
+  // background above, since the brand blue itself doesn't have enough contrast there
+  btnText: "#005A9E",
   // Informational notice — calm slate blue
   info: "#1E40AF",
   infoLight: "#EFF6FF",
@@ -275,8 +283,8 @@ function Input({
           return; // Reject invalid input
         }
       } else {
-        // Only allow numbers and one decimal point
-        if (!/^\d*\.?\d*$/.test(newValue)) {
+        // Only allow numbers and one decimal point (strip commas first so formatted values pass)
+        if (!/^[\d,]*\.?\d*$/.test(newValue)) {
           return; // Reject invalid input
         }
       }
@@ -430,7 +438,8 @@ function Select({ value, onChange, options }) {
             border: `1.5px solid ${T.border}`,
             borderRadius: T.radius,
             boxShadow: "0 4px 16px rgba(0,0,0,0.1)",
-            overflow: "hidden",
+            overflow: "auto",
+            maxHeight: 200,
           }}
         >
           {options.map((o) => (
@@ -443,7 +452,7 @@ function Select({ value, onChange, options }) {
               }}
               style={{
                 width: "100%",
-                padding: "9px 12px",
+                padding: "7px 12px",
                 textAlign: "left",
                 cursor: "pointer",
                 fontSize: "0.875rem",
@@ -519,7 +528,7 @@ function Divider({ label }) {
       {label && (
         <span
           style={{
-            fontSize: "0.8rem",
+            fontSize: "0.68rem",
             fontWeight: 700,
             letterSpacing: "0.08em",
             textTransform: "uppercase",
@@ -599,7 +608,7 @@ function StatCard({ label, value, sub, subLines, color, small }) {
             fontSize: "0.8rem",
             fontWeight: 600,
             letterSpacing: "0.01em",
-            color: "#64748B",
+            color: T.textSub,
             fontFamily: T.font,
             marginBottom: 6,
           }}
@@ -610,7 +619,7 @@ function StatCard({ label, value, sub, subLines, color, small }) {
           style={{
             fontSize: small ? "1.8rem" : "2.5rem",
             fontWeight: 600,
-            color: "#1E293B",
+            color: T.text,
             lineHeight: 1,
             fontFamily: T.font,
             letterSpacing: "-0.03em",
@@ -625,7 +634,7 @@ function StatCard({ label, value, sub, subLines, color, small }) {
           <div
             style={{
               fontSize: "0.8rem",
-              color: "#64748B",
+              color: T.textSub,
               fontFamily: T.font,
               lineHeight: 1.5,
             }}
@@ -649,7 +658,7 @@ function StatCard({ label, value, sub, subLines, color, small }) {
                   key={i}
                   style={{
                     fontSize: "0.85rem",
-                    color: "#64748B",
+                    color: T.textSub,
                     fontFamily: T.font,
                     lineHeight: 1.5,
                   }}
@@ -811,7 +820,7 @@ function EmptyResults({ isCalculating }) {
               lineHeight: 1.55,
             }}
           >
-            Enter your salary and contribution rates to see the per-paycheck cost of your retirement contributions — including how much pre-tax saving reduces your take-home pay.
+            Enter your salary and contribution rates to see your per-paycheck cost — and how much pre-tax saving puts back in your pocket.
           </div>
         )}
       </div>
@@ -1077,9 +1086,9 @@ export default function App() {
           position: "relative",
           zIndex: 1,
           flexShrink: 0,
-          padding: "10px 20px 8px",
-          borderBottom: `1px solid ${T.border}`,
-          background: T.surfaceAlt,
+          padding: "12px 20px 10px",
+          borderBottom: `1px solid ${T.borderStrong}`,
+          background: T.btn,
           display: "flex",
           alignItems: "center",
         }}
@@ -1089,7 +1098,7 @@ export default function App() {
             margin: 0,
             fontSize: isMobile ? "1rem" : "1.1rem",
             fontWeight: 800,
-            color: T.text,
+            color: "#FFFFFF",
             letterSpacing: "-0.03em",
           }}
         >
@@ -1125,14 +1134,12 @@ export default function App() {
             boxShadow: T.shadowMd,
             display: "flex",
             flexDirection: "column",
-            overflow: "hidden",
             minHeight: isMobile ? "auto" : 0,
           }}
         >
           <div
             style={{
               flex: 1,
-              overflowY: isMobile ? "visible" : "auto",
               padding: "12px 16px",
             }}
           >
@@ -1153,7 +1160,9 @@ export default function App() {
                 <Input
                   value={salary}
                   onChange={(v) => {
-                    setSalary(v);
+                    // Strip existing commas, then re-insert them
+                    const raw = v.replace(/,/g, "");
+                    setSalary(formatThousands(raw));
                     markDirty();
                   }}
                   placeholder=""
@@ -1256,6 +1265,7 @@ export default function App() {
               background: T.surface,
               display: "flex",
               gap: 6,
+              borderRadius: `0 0 ${T.radiusLg} ${T.radiusLg}`,
             }}
             className="no-print"
           >
@@ -1338,9 +1348,11 @@ export default function App() {
               Clear
             </button>
           </div>
+
         </div>
 
         {/* RIGHT: Results */}
+        <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
         <div
           style={{
             background: T.surface,
@@ -1411,7 +1423,7 @@ export default function App() {
           <div
             style={{
               overflowY: (isMobile || !result) ? "hidden" : "auto",
-              padding: "16px",
+              padding: "12px 16px 16px",
             }}
           >
 
@@ -1422,31 +1434,22 @@ export default function App() {
                 style={{ display: "flex", flexDirection: "column", gap: 16 }}
               >
                 {/* Unified Summary Bar */}
-                <div
-                  style={{
-                    background: "#FFFFFF",
-                    borderRadius: "8px",
-                    border: "1px solid #E5E7EB",
-                    boxShadow: "0 1px 3px 0 rgba(0,0,0,0.1), 0 1px 2px -1px rgba(0,0,0,0.1)",
-                    overflow: "hidden",
-                  }}
-                  className="print-break-avoid"
-                >
-                  {/* Header strip */}
-                  <div style={{
-                    padding: "7px 16px 6px",
-                    borderBottom: `1px solid ${T.border}`,
-                    fontSize: "0.68rem",
-                    fontWeight: 700,
-                    letterSpacing: "0.08em",
-                    textTransform: "uppercase",
-                    color: T.textSub,
-                    fontFamily: T.font,
-                    display: "flex",
-                    alignItems: "center",
-                  }}>
-                    Per Paycheck Summary
+                <div className="print-break-avoid">
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
+                    <span style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, whiteSpace: "nowrap" }}>
+                      Per Paycheck Summary
+                    </span>
+                    <div style={{ flex: 1, height: 1, background: T.border }} />
                   </div>
+                  <div
+                    style={{
+                      background: T.surface,
+                      borderRadius: T.radius,
+                      border: `1px solid ${T.border}`,
+                      boxShadow: T.shadow,
+                      overflow: "hidden",
+                    }}
+                  >
                   <div style={{
                     display: "grid",
                     gridTemplateColumns: "minmax(210px, 1fr) 1px minmax(210px, 1fr) 1px minmax(210px, 1fr)",
@@ -1455,7 +1458,7 @@ export default function App() {
                   >
                   {/* Column 1 — Total Contribution */}
                   <div style={{ padding: "12px 8px", textAlign: "center" }}>
-                    <div style={{ fontSize: "0.78rem", fontWeight: 600, color: "#64748B", fontFamily: T.font, marginBottom: 4, letterSpacing: "0.01em", display: "flex", alignItems: "center", justifyContent: "center", gap: 2 }}>
+                    <div style={{ fontSize: "0.78rem", fontWeight: 600, color: T.textSub, fontFamily: T.font, marginBottom: 4, letterSpacing: "0.01em", display: "flex", alignItems: "center", justifyContent: "center", gap: 2 }}>
                       {result.preTaxContribution > 0 && result.rothContribution > 0
                         ? "Total Contribution"
                         : result.preTaxContribution > 0
@@ -1463,7 +1466,7 @@ export default function App() {
                         : "Roth Contribution"}
                       <InfoTooltip text="The amount going into your retirement account each paycheck." />
                     </div>
-                    <div style={{ fontSize: "1.9rem", fontWeight: 600, color: "#1E293B", lineHeight: 1, fontFamily: T.font, letterSpacing: "-0.03em", fontVariantNumeric: "tabular-nums", marginBottom: 4 }} className="mobile-text-sm">
+                    <div style={{ fontSize: "1.9rem", fontWeight: 600, color: T.text, lineHeight: 1, fontFamily: T.font, letterSpacing: "-0.03em", fontVariantNumeric: "tabular-nums", marginBottom: 4 }} className="mobile-text-sm">
                       {fc(result.totalContribution)}
                     </div>
                     {result.preTaxContribution > 0 && result.rothContribution > 0 && (
@@ -1482,11 +1485,11 @@ export default function App() {
                   </div>
 
                   {/* Vertical Divider */}
-                  <div style={{ background: "#E5E7EB" }} />
+                  <div style={{ background: T.border }} />
 
                   {/* Column 2 — Tax Savings */}
                   <div style={{ padding: "12px 8px", textAlign: "center" }}>
-                    <div style={{ fontSize: "0.78rem", fontWeight: 600, color: "#64748B", fontFamily: T.font, marginBottom: 4, letterSpacing: "0.01em", display: "flex", alignItems: "center", justifyContent: "center", gap: 2 }}>
+                    <div style={{ fontSize: "0.78rem", fontWeight: 600, color: T.textSub, fontFamily: T.font, marginBottom: 4, letterSpacing: "0.01em", display: "flex", alignItems: "center", justifyContent: "center", gap: 2 }}>
                       Tax Savings
                       <InfoTooltip text="When you contribute pre-tax, your taxable income goes down — which means less taken out for federal taxes. This is how much you save." />
                     </div>
@@ -1509,15 +1512,15 @@ export default function App() {
                   </div>
 
                   {/* Vertical Divider */}
-                  <div style={{ background: "#E5E7EB" }} />
+                  <div style={{ background: T.border }} />
 
                   {/* Column 3 — True Cost */}
                   <div style={{ padding: "12px 8px", textAlign: "center" }}>
-                    <div style={{ fontSize: "0.78rem", fontWeight: 600, color: "#64748B", fontFamily: T.font, marginBottom: 4, letterSpacing: "0.01em", display: "flex", alignItems: "center", justifyContent: "center", gap: 2 }}>
+                    <div style={{ fontSize: "0.78rem", fontWeight: 600, color: T.textSub, fontFamily: T.font, marginBottom: 4, letterSpacing: "0.01em", display: "flex", alignItems: "center", justifyContent: "center", gap: 2 }}>
                       True Cost
                       <InfoTooltip text="What contributing actually costs you out of pocket. It is lower than your total contribution because the tax savings offset part of it." />
                     </div>
-                    <div style={{ fontSize: "1.9rem", fontWeight: 600, color: "#1E293B", lineHeight: 1, fontFamily: T.font, letterSpacing: "-0.03em", fontVariantNumeric: "tabular-nums", marginBottom: 4 }} className="mobile-text-sm">
+                    <div style={{ fontSize: "1.9rem", fontWeight: 600, color: T.text, lineHeight: 1, fontFamily: T.font, letterSpacing: "-0.03em", fontVariantNumeric: "tabular-nums", marginBottom: 4 }} className="mobile-text-sm">
                       {fc(result.totalTrueCost)}
                     </div>
                     {result.preTaxContribution > 0 && result.rothContribution > 0 && (
@@ -1535,6 +1538,7 @@ export default function App() {
                     )}
                   </div>
                   </div>
+                  </div>
                 </div>
 
                 {/* Collapsible Annual Totals */}
@@ -1550,7 +1554,7 @@ export default function App() {
                 >
                   <summary
                     style={{
-                      padding: "14px 16px",
+                      padding: "10px 16px",
                       cursor: "pointer",
                       fontSize: "0.8rem",
                       fontWeight: 700,
@@ -1561,6 +1565,15 @@ export default function App() {
                       alignItems: "center",
                       justifyContent: "space-between",
                       userSelect: "none",
+                      transition: "background 0.15s, color 0.15s",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = T.btnLight;
+                      e.currentTarget.style.color = T.btnText;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = "transparent";
+                      e.currentTarget.style.color = T.text;
                     }}
                   >
                     <span>Calculation Breakdown</span>
@@ -1707,10 +1720,28 @@ export default function App() {
                   rate based on your salary and filing status. State taxes not
                   included.
                 </NoteBox>
+
               </div>
             )}
           </div>
+        </div>{/* end right card */}
+
+        {/* Footer disclaimer — right column, matches HPH */}
+        <div
+          style={{
+            fontSize: "0.64rem",
+            color: T.textMuted,
+            lineHeight: 1.55,
+            padding: "6px 4px 0",
+            fontFamily: T.font,
+          }}
+          className="no-print"
+        >
+          Estimates are based on federal marginal tax rates and do not account for state or local taxes, Social Security or Medicare withholding, or other deductions. For educational use only — not financial or tax advice. Consult a qualified tax or financial professional for guidance specific to your situation.{" "}
+          <br />Last updated: June 2026
         </div>
+        </div>{/* end right column wrapper */}
+
       </div>
     </div>
   );
