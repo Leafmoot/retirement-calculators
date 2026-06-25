@@ -2263,10 +2263,17 @@ export default function App() {
 
                 {/* Collapsible total summary */}
                 <SummaryPanel isOpen={showTotalSummary} onToggle={() => setShowTotalSummary(v => !v)}>
-                  <Divider label="Contributions" />
+                  <Divider label="On Track to Contribute" />
                   {result.hasQualContribs && <SummaryLine label="401(k)/ESOP" value={fc(result.onTrackQualTotal)} indent />}
                   {result.hasSsepContribs && <SummaryLine label="SSEP" value={fc(result.onTrackSsepTotal)} indent />}
-                  {result.dEmployeeTotal > 0 && <SummaryLine label="Total employee contributions" value={fc(result.onTrackQualTotal + result.onTrackSsepTotal)} indent bold />}
+                  {(result.ytdQualTotal > 0 || result.ytdSsepTotal > 0) && (
+                    <>
+                      <Divider label="Contributed Year-to-Date" />
+                      {result.ytdQualTotal > 0 && <SummaryLine label="401(k)/ESOP (YTD)" value={fc(result.ytdQualTotal)} indent />}
+                      {result.ytdSsepTotal > 0 && <SummaryLine label="SSEP (YTD)" value={fc(result.ytdSsepTotal)} indent />}
+                    </>
+                  )}
+                  {result.dEmployeeTotal > 0 && <SummaryLine label="Total employee contributions" value={fc(result.onTrackQualTotal + result.onTrackSsepTotal)} bold />}
                   <div style={{ marginTop: 8, fontSize: "0.68rem", color: T.textMuted, fontFamily: T.font, lineHeight: 1.5 }}>
                     Annual estimates based on {fc(result.base)} base compensation. Actual contributions may vary.
                   </div>
