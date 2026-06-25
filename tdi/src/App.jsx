@@ -643,11 +643,11 @@ function DetailPanel({ label, isOpen, onToggle, hoverBg, restBg, borderColor, ch
 // ── Expandable Summary Panel ──────────────────────────────────────────────────
 function SummaryPanel({ isOpen, onToggle, children }) {
   return (
-    <div style={{ background: T.surfaceAlt, border: `1px solid ${T.border}`, borderRadius: T.radius, overflow: "hidden" }}>
+    <div style={{ borderTop: `1px solid ${T.border}`, marginTop: 0 }}>
       <button type="button" onClick={onToggle} aria-expanded={isOpen} aria-label="Total contributions summary"
         style={{
           width: "100%", boxSizing: "border-box", padding: "10px 14px",
-          fontSize: "0.8rem", fontFamily: T.font, fontWeight: 700,
+          fontSize: "0.75rem", fontFamily: T.font, fontWeight: 700,
           color: T.navy, background: T.surfaceAlt, border: "none",
           outline: "none", cursor: "pointer", textAlign: "left",
           display: "flex", alignItems: "center", justifyContent: "space-between",
@@ -664,7 +664,7 @@ function SummaryPanel({ isOpen, onToggle, children }) {
         </svg>
       </button>
       {isOpen && (
-        <div style={{ padding: "0 14px 12px" }}>
+        <div style={{ background: "#F9FAFB", borderTop: `1px solid ${T.border}`, padding: "12px 14px" }}>
           {children}
         </div>
       )}
@@ -2238,6 +2238,13 @@ export default function App() {
                       hoverBg="#A8E4F5"
                       borderColor={T.skyBorder}
                     >
+                      {/* Empty state — no rates and no YTD entered */}
+                      {result.ytdSsepTotal === 0 && result.dSsepTotal === 0 && (
+                        <div style={{ fontSize: "0.75rem", color: T.textMuted, fontFamily: T.font, lineHeight: 1.4 }}>
+                          Enter contribution rates or year-to-date amounts on the left to see a summary here.
+                        </div>
+                      )}
+
                       {/* 1. Contributed Year-to-Date (SSEP has no IRS dollar limit) — omitted entirely when nothing has been contributed yet */}
                       {result.ytdSsepTotal > 0 && (
                         <>
@@ -2262,10 +2269,15 @@ export default function App() {
                 </div>
 
                 {/* Collapsible total summary */}
-                <SummaryPanel isOpen={showTotalSummary} onToggle={() => setShowTotalSummary(v => !v)}>
-                  <Divider label="On Track to Contribute" />
-                  {result.hasQualContribs && <SummaryLine label="401(k)/ESOP" value={fc(result.onTrackQualTotal)} indent />}
-                  {result.hasSsepContribs && <SummaryLine label="SSEP" value={fc(result.onTrackSsepTotal)} indent />}
+                <div style={{ border: `1px solid ${T.border}`, borderRadius: T.radius, overflow: "hidden", background: T.surfaceAlt }}>
+                  <SummaryPanel isOpen={showTotalSummary} onToggle={() => setShowTotalSummary(v => !v)}>
+                  {(result.hasQualContribs || result.hasSsepContribs) && (
+                    <>
+                      <Divider label="On Track to Contribute" />
+                      {result.hasQualContribs && <SummaryLine label="401(k)/ESOP" value={fc(result.onTrackQualTotal)} indent />}
+                      {result.hasSsepContribs && <SummaryLine label="SSEP" value={fc(result.onTrackSsepTotal)} indent />}
+                    </>
+                  )}
                   {(result.ytdQualTotal > 0 || result.ytdSsepTotal > 0) && (
                     <>
                       <Divider label="Contributed Year-to-Date" />
@@ -2273,11 +2285,21 @@ export default function App() {
                       {result.ytdSsepTotal > 0 && <SummaryLine label="SSEP (YTD)" value={fc(result.ytdSsepTotal)} indent />}
                     </>
                   )}
-                  {result.dEmployeeTotal > 0 && <SummaryLine label="Total employee contributions" value={fc(result.onTrackQualTotal + result.onTrackSsepTotal)} bold />}
-                  <div style={{ marginTop: 8, fontSize: "0.68rem", color: T.textMuted, fontFamily: T.font, lineHeight: 1.5 }}>
-                    Annual estimates based on {fc(result.base)} base compensation. Actual contributions may vary.
-                  </div>
+                  {(result.onTrackQualTotal + result.onTrackSsepTotal > 0) && (
+                    <>
+                      <SummaryLine label="Total employee contributions" value={fc(result.onTrackQualTotal + result.onTrackSsepTotal)} bold />
+                      <div style={{ marginTop: 8, fontSize: "0.68rem", color: T.textMuted, fontFamily: T.font, lineHeight: 1.5 }}>
+                        Annual estimates based on {fc(result.base)} base compensation. Actual contributions may vary.
+                      </div>
+                    </>
+                  )}
+                  {result.onTrackQualTotal + result.onTrackSsepTotal === 0 && result.ytdQualTotal === 0 && result.ytdSsepTotal === 0 && (
+                    <div style={{ fontSize: "0.75rem", color: T.textMuted, fontFamily: T.font, lineHeight: 1.4 }}>
+                      Enter contribution rates or year-to-date amounts on the left to see a summary here.
+                    </div>
+                  )}
                 </SummaryPanel>
+                </div>
 
                 {/* Roth catch-up required NoteBox - below Total Employee Contributions */}
                 {result.catchUpInPlay && (
