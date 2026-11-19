@@ -3,6 +3,15 @@ import { useState, useRef, useEffect } from "react";
 // ── IRS limits — update this object each year when new limits are announced ──
 const PLAN_YEAR = 2026;
 const LIMITS = { standard: 24500, catchUp50: 8000, catchUp6063: 11250 };
+// Next year's IRS limits — used only by the Next Year Projection.
+// When next year's limits are not yet announced, enter the current limits here.
+// Each January, move these numbers up into LIMITS above and update PLAN_YEAR.
+const NEXT_YEAR_LIMITS = {
+  standard: 25500,
+  catchUp50: 8500,
+  catchUp6063: 11750,
+  ficaThreshold: 155000,
+};
 // FICA wage threshold above which catch-up contributions must be Roth (SECURE 2.0)
 // Verify annually — the IRS may adjust this threshold
 const FICA_CATCHUP_THRESHOLD = 150000;
@@ -12,9 +21,9 @@ const FICA_THRESHOLD_DISPLAY = FICA_CATCHUP_THRESHOLD.toLocaleString("en-US", {
   maximumFractionDigits: 0,
 });
 
-function getCatchUp(age) {
-  if (age >= 60 && age <= 63) return LIMITS.catchUp6063;
-  if (age >= 50) return LIMITS.catchUp50;
+function getCatchUp(age, limits = LIMITS) {
+  if (age >= 60 && age <= 63) return limits.catchUp6063;
+  if (age >= 50) return limits.catchUp50;
   return 0;
 }
 
@@ -859,30 +868,52 @@ function EmptyResults({ isCalculating }) {
 }
 
 // ── Next-year full-cycle projection ──────────────────────────────────────────
-function computeNextYearProjection(salary, age, ficaOverride, strategy) {
+function computeNextYearProjection(salary, age, ficaOverride, strategy, periods) {
   const nextAge = age + 1;
   const currCatchUpAmt = getCatchUp(age);
-  const currMaxAllowed = LIMITS.standard + currCatchUpAmt;
-  const nextCatchUpAmt = getCatchUp(nextAge);
-  const nextMaxAllowed = LIMITS.standard + nextCatchUpAmt;
+  const nextCatchUpAmt = getCatchUp(nextAge, NEXT_YEAR_LIMITS);
+  const nextMaxAllowed = NEXT_YEAR_LIMITS.standard + nextCatchUpAmt;
+  const carriedForward =
+    NEXT_YEAR_LIMITS.standard === LIMITS.standard &&
+    NEXT_YEAR_LIMITS.catchUp50 === LIMITS.catchUp50 &&
+    NEXT_YEAR_LIMITS.catchUp6063 === LIMITS.catchUp6063;
   const nextIs6063 = nextAge >= 60 && nextAge <= 63;
   const nextCatchUpType = nextIs6063 ? "ages 60–63" : "age 50+";
-  const limitDiff = nextMaxAllowed - currMaxAllowed;
-  const limitChanged = limitDiff !== 0;
-  const limitDirection = limitDiff > 0 ? "increases" : "decreases";
+  // Age-driven change only: the limit moves for the person when they cross a
+  // catch-up age, not merely because the IRS raised the limits.
+  const ageTier = (a) => (a >= 60 && a <= 63 ? "enhanced" : a >= 50 ? "standard" : "none");
+  const currTier = ageTier(age);
+  const nextTier = ageTier(nextAge);
+  let ageChange = null;
+  if (currTier === "none" && nextTier === "standard") {
+    ageChange = {
+      direction: "increases",
+      reason: "you become eligible for catch-up contributions at age 50",
+    };
+  } else if (currTier === "standard" && nextTier === "enhanced") {
+    ageChange = {
+      direction: "increases",
+      reason: "the enhanced catch-up for ages 60–63 begins at age 60",
+    };
+  } else if (currTier === "enhanced" && nextTier === "standard") {
+    ageChange = {
+      direction: "decreases",
+      reason: "the enhanced catch-up for ages 60–63 ends after age 63",
+    };
+  }
   const crossingCatchUpThreshold = currCatchUpAmt === 0 && nextCatchUpAmt > 0;
   const ficaUnknown = crossingCatchUpThreshold && ficaOverride === null;
   const nextRothRequired = nextCatchUpAmt > 0 && ficaOverride === true;
-  const fullPeriods = 26;
+  const fullPeriods = periods;
   const perCheck = salary / fullPeriods;
   if (perCheck <= 0) return null;
   if (nextRothRequired && strategy !== "roth-only") {
-    const prePct = ceilPct(LIMITS.standard / fullPeriods / perCheck);
+    const prePct = ceilPct(NEXT_YEAR_LIMITS.standard / fullPeriods / perCheck);
     const rPct = ceilPct(nextCatchUpAmt / fullPeriods / perCheck);
     return {
       split: true,
       nextAge, nextMaxAllowed, nextCatchUpAmt, nextCatchUpType, nextIs6063,
-      limitChanged, limitDirection, ficaUnknown,
+      ageChange, ficaUnknown, carriedForward,
       prePct, rPct, totPct: prePct + rPct,
       preDpc: (perCheck * prePct) / 100,
       rDpc: (perCheck * rPct) / 100,
@@ -892,41 +923,68 @@ function computeNextYearProjection(salary, age, ficaOverride, strategy) {
     return {
       split: false,
       nextAge, nextMaxAllowed, nextCatchUpAmt, nextCatchUpType, nextIs6063,
-      limitChanged, limitDirection, ficaUnknown,
+      ageChange, ficaUnknown, carriedForward,
       rothOnly: strategy === "roth-only",
       pct, dpc: (perCheck * pct) / 100,
     };
   }
 }
 
-function ProjectionBlock({ salary, age, fica, strategy }) {
-  const proj = computeNextYearProjection(parse(salary), parseInt(age), fica, strategy);
+// Percent and per-paycheck dollar amount in fixed-width columns so they line up
+function ProjectionValue({ pct, dollars }) {
+  return (
+    <>
+      <span style={{ display: "inline-block", minWidth: "4ch", textAlign: "right" }}>
+        {pct}%
+      </span>
+      <span
+        style={{
+          display: "inline-block",
+          minWidth: "7ch",
+          textAlign: "right",
+          marginLeft: 12,
+          fontWeight: 400,
+          color: T.textSub,
+        }}
+      >
+        {fc(ceilDollar(dollars))}
+      </span>
+    </>
+  );
+}
+
+function ProjectionBlock({ salary, age, fica, strategy, periods }) {
+  const proj = computeNextYearProjection(parse(salary), parseInt(age), fica, strategy, parseInt(periods));
   if (!proj) return null;
   return (
     <>
       <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4 }}>Next Year Projection</div>
       {proj.split ? (
         <>
-          <SummaryLine label="Pre-Tax" value={`${proj.prePct}%`} indent bold />
-          <SummaryLine label={`Roth Catch-Up (${proj.nextCatchUpType})`} value={`${proj.rPct}%`} indent bold />
+          <SummaryLine label="Pre-Tax" value={<ProjectionValue pct={proj.prePct} dollars={proj.preDpc} />} indent bold />
+          <SummaryLine label={`Roth Catch-Up (${proj.nextCatchUpType})`} value={<ProjectionValue pct={proj.rPct} dollars={proj.rDpc} />} indent bold />
         </>
       ) : (
         <SummaryLine
           label={proj.rothOnly ? "Roth" : "Pre-Tax"}
-          value={`${proj.pct}%`}
+          value={<ProjectionValue pct={proj.pct} dollars={proj.dpc} />}
           indent bold
         />
       )}
       <div style={{ fontSize: "0.72rem", color: T.textSub, fontFamily: T.font, lineHeight: 1.5, marginTop: 8, paddingLeft: 12 }}>
-        Estimated rates at age {proj.nextAge} over a full 26-period year, assuming current salary and this year's IRS limits carry forward.
-        {proj.limitChanged && (
-          <span style={{ color: proj.limitDirection === "increases" ? T.green : T.amber, fontWeight: 600 }}>
-            {" "}Your annual limit {proj.limitDirection} to {fc(proj.nextMaxAllowed)} at age {proj.nextAge}.
+        Estimated rates at age {proj.nextAge} over a full {parseInt(periods)}-period year, based on your current salary and{" "}
+        {proj.carriedForward
+          ? `your ${PLAN_YEAR} IRS limit of ${fc(proj.nextMaxAllowed)} carried forward until ${PLAN_YEAR + 1} limits are announced`
+          : `your ${PLAN_YEAR + 1} IRS limit of ${fc(proj.nextMaxAllowed)}`}
+        . Dollar amounts are estimated per paycheck.
+        {proj.ageChange && (
+          <span style={{ color: proj.ageChange.direction === "increases" ? T.green : T.amber, fontWeight: 600 }}>
+            {" "}Your annual limit {proj.ageChange.direction} next year because {proj.ageChange.reason}.
           </span>
         )}
         {proj.ficaUnknown && (
           <span style={{ color: T.amber, fontWeight: 600 }}>
-            {" "}Note: you'll be catch-up eligible at {proj.nextAge} — your Roth requirement will depend on your prior-year FICA wages.
+            {" "}Note: you'll be catch-up eligible at {proj.nextAge}. Your Roth requirement will depend on your prior-year FICA wages.
           </span>
         )}
       </div>
@@ -943,7 +1001,7 @@ function ResultNotices({ result }) {
     notes.push(
       <NoteBox key="splitflex" color="#1E40AF" bg="#F0F9FF" border="#BFDBFE">
         <strong>Base limit flexibility:</strong> Your {fc(LIMITS.standard)} base
-        can be any mix of pre-tax and Roth — only the {fc(result.catchUpAmt)}{" "}
+        can be any mix of pre-tax and Roth. Only the {fc(result.catchUpAmt)}{" "}
         catch-up portion must be Roth.
       </NoteBox>
     );
@@ -956,8 +1014,8 @@ function ResultNotices({ result }) {
         <NoteBox key="fullflex" color="#1E40AF" bg="#F0F9FF" border="#BFDBFE">
           <strong>Full flexibility:</strong> Since your FICA wages were{" "}
           {FICA_THRESHOLD_DISPLAY}{" "}
-          or less, your entire {fc(result.annualLimit)} — including the{" "}
-          {fc(result.catchUpAmt)} catch-up — may be pre-tax, Roth, or any
+          or less, your entire {fc(result.annualLimit)}, including the{" "}
+          {fc(result.catchUpAmt)} catch-up, may be pre-tax, Roth, or any
           combination.
         </NoteBox>
       );
@@ -966,7 +1024,7 @@ function ResultNotices({ result }) {
       notes.push(
         <NoteBox key="flex" color="#1E40AF" bg="#F0F9FF" border="#BFDBFE">
           <strong>Deferral flexibility:</strong> Your {fc(result.annualLimit)}{" "}
-          limit may be contributed as pre-tax (traditional), Roth, or any mix —
+          limit may be contributed as pre-tax (traditional), Roth, or any mix,
           whichever best suits your tax strategy.
         </NoteBox>
       );
@@ -980,12 +1038,12 @@ function ResultNotices({ result }) {
     notes.push(
       <NoteBox key="6063" color="#5B21B6" bg="#FAF5FF" border="#E9D5FF">
         <strong>Enhanced catch-up (ages 60–63):</strong> Because you're between
-        ages 60 and 63, your catch-up limit is {fc(LIMITS.catchUp6063)} — higher
-        than the standard {fc(LIMITS.catchUp50)} that applies at other catch-up
+        ages 60 and 63, your catch-up limit is {fc(LIMITS.catchUp6063)}, which is
+        higher than the standard {fc(LIMITS.catchUp50)} that applies at other catch-up
         eligible ages. This enhanced window closes the year you turn 64, at
         which point your catch-up reverts to {fc(LIMITS.catchUp50)}.{" "}
         <em>
-          Note: not all plans have adopted this provision — confirm with your
+          Note: not all plans have adopted this provision. Confirm with your
           plan administrator before relying on the higher limit.
         </em>
       </NoteBox>
@@ -1014,7 +1072,7 @@ function ResultNotices({ result }) {
         <strong>Standard catch-up (age 64+):</strong> Your limit includes the
         standard {fc(LIMITS.catchUp50)} catch-up. The enhanced{" "}
         {fc(LIMITS.catchUp6063)} limit available between ages 60–63 no longer
-        applies — you've returned to the standard catch-up amount that continues
+        applies. You've returned to the standard catch-up amount that continues
         from age 64 onward.
       </NoteBox>
     );
@@ -1092,11 +1150,11 @@ export default function App() {
   );
 
   const ppOpts = [
-    { label: "Weekly — 52 paychecks", value: "52" },
-    { label: "Bi-Weekly — 26 paychecks", value: "26" },
-    { label: "Bi-Weekly — 27 paychecks", value: "27" },
-    { label: "Semi-Monthly — 24 paychecks", value: "24" },
-    { label: "Monthly — 12 paychecks", value: "12" },
+    { label: "Weekly (52 paychecks)", value: "52" },
+    { label: "Bi-Weekly (26 paychecks)", value: "26" },
+    { label: "Bi-Weekly (27 paychecks)", value: "27" },
+    { label: "Semi-Monthly (24 paychecks)", value: "24" },
+    { label: "Monthly (12 paychecks)", value: "12" },
   ];
 
   function calculate() {
@@ -1115,7 +1173,7 @@ export default function App() {
       bad = true;
     }
     if (w > 0 && w < 10000) {
-      errs.salary = `This looks low for an annual salary — did you mean to enter an hourly rate? If $${w.toFixed(
+      errs.salary = `This looks low for an annual salary. Did you mean to enter an hourly rate? If $${w.toFixed(
         0
       )} is correct, continue.`;
       bad = true;
@@ -1250,7 +1308,7 @@ export default function App() {
       if (periodsLeft <= 0) {
         setErrors({
           ...EMPTY_ERR,
-          period: "No pay periods remaining — all periods have already passed.",
+          period: "No pay periods remaining. All periods have already passed.",
         });
         return;
       }
@@ -1783,11 +1841,11 @@ export default function App() {
                 <TogglePair
                   options={[
                     {
-                      label: `Yes — more than ${FICA_THRESHOLD_DISPLAY}`,
+                      label: `Yes, more than ${FICA_THRESHOLD_DISPLAY}`,
                       val: true,
                     },
                     {
-                      label: `No — ${FICA_THRESHOLD_DISPLAY} or less`,
+                      label: `No, ${FICA_THRESHOLD_DISPLAY} or less`,
                       val: false,
                     },
                   ]}
@@ -1894,7 +1952,7 @@ export default function App() {
                     fica === true
                       ? "Catch-up must be Roth since your FICA wages exceeded $150,000. Base contributions can still be any mix."
                       : fica === false
-                      ? "Your FICA wages were $150,000 or less — you have full flexibility for both base and catch-up contributions."
+                      ? "Your FICA wages were $150,000 or less. You have full flexibility for both base and catch-up contributions."
                       : "If your FICA wages exceeded $150,000, catch-up must be Roth. Base contributions can always be any mix."
                   }
                 >
@@ -2284,7 +2342,7 @@ export default function App() {
                     />
                     {result.catchUpAmt > 0 && (
                       <SummaryLine
-                        label={`Catch-Up — ${result.catchUpType}`}
+                        label={`Catch-Up (${result.catchUpType})`}
                         value={fc(result.catchUpAmt)}
                         indent
                         dimmed
@@ -2345,16 +2403,6 @@ export default function App() {
                     <strong>{fc(result.annualLimit)}</strong>.
                   </div>
                 </div>
-                {result.usingCustomLimit && (
-                  <NoteBox color="#1E40AF" bg="#F0F9FF" border="#BFDBFE">
-                    <strong>Custom goal in use:</strong> You've reached your
-                    custom contribution goal of {fc(result.annualLimit)}. The
-                    IRS maximum for your age is {fc(result.maxAllowed)}, so you
-                    could contribute{" "}
-                    {fc(result.maxAllowed - result.annualLimit)} more if
-                    desired.
-                  </NoteBox>
-                )}
                 {/* Collapsible Details */}
                 <details
                   style={{
@@ -2411,7 +2459,7 @@ export default function App() {
                       <>
                         <SummaryLine label="Base Limit" value={fc(LIMITS.standard)} indent dimmed />
                         {result.catchUpAmt > 0 && (
-                          <SummaryLine label={`Catch-Up — ${result.catchUpType}`} value={fc(result.catchUpAmt)} indent dimmed />
+                          <SummaryLine label={`Catch-Up (${result.catchUpType})`} value={fc(result.catchUpAmt)} indent dimmed />
                         )}
                       </>
                     )}
@@ -2433,9 +2481,21 @@ export default function App() {
                     <div style={{ fontSize: "0.72rem", color: T.textSub, fontFamily: T.font, lineHeight: 1.5, marginTop: 8, paddingLeft: 12 }}>
                       You have reached your {result.usingCustomLimit ? "goal" : "limit"} of {fc(result.annualLimit)} for the year. No further contributions are needed.
                     </div>
-                    <ProjectionBlock salary={salary} age={age} fica={result.fica} strategy={result.strategy} />
+                    <ProjectionBlock salary={salary} age={age} fica={result.fica} strategy={result.strategy} periods={payPeriods} />
                   </div>
                 </details>
+                {result.usingCustomLimit && (
+                  <div style={{ marginTop: 8 }}>
+                  <NoteBox color="#1E40AF" bg="#F0F9FF" border="#BFDBFE">
+                    <strong>Custom goal in use:</strong> You've reached your
+                    custom contribution goal of {fc(result.annualLimit)}. The
+                    IRS maximum for your age is {fc(result.maxAllowed)}, so you
+                    could contribute{" "}
+                    {fc(result.maxAllowed - result.annualLimit)} more if
+                    desired.
+                  </NoteBox>
+                  </div>
+                )}
               </div>
             ) : result.split ? (
               <div>
@@ -2472,44 +2532,6 @@ export default function App() {
                     wide={false}
                   />
                 </div>
-                {(result.usingCustomLimit || (result.stdRem === 0 && result.yPre > 0) || result.highRate) && (
-                  <div
-                    style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: 8,
-                      marginBottom: 8,
-                    }}
-                  >
-                    {result.usingCustomLimit && (
-                      <NoteBox color="#1E40AF" bg="#F0F9FF" border="#BFDBFE">
-                        <strong>Custom goal in use:</strong> You've set a custom
-                        contribution goal of {fc(result.annualLimit)}. The IRS
-                        maximum for your age is {fc(result.maxAllowed)}.
-                      </NoteBox>
-                    )}
-                    {result.stdRem === 0 && result.yPre > 0 && (
-                      <NoteBox color="#166534" bg="#F0FDF4" border="#BBF7D0">
-                        <strong>Pre-tax base limit reached:</strong> You've
-                        already contributed {fc(result.yPre)} in pre-tax, which
-                        meets the {fc(LIMITS.standard)} base limit. Your remaining{" "}
-                        {fc(result.cuRem)} can only go to Roth catch-up
-                        contributions.
-                      </NoteBox>
-                    )}
-                    {result.highRate && (
-                      <NoteBox color="#78350F" bg="#FFFBEB" border="#FDE68A">
-                        <strong>Important — high contribution rate:</strong> The
-                        required combined rate of {result.totPct}% is a
-                        significant portion of your pay. Confirm your plan allows
-                        this election and that your net pay will cover your
-                        expenses. Some plans cap deferral elections — check with
-                        your plan administrator.
-                      </NoteBox>
-                    )}
-                  </div>
-                )}
-                <ResultNotices result={result} />
                 {/* Collapsible Details */}
                 <details
                   style={{
@@ -2570,8 +2592,8 @@ export default function App() {
                       <SummaryLine label="IRS Maximum for Your Age" value={fc(result.maxAllowed)} indent dimmed />
                     ) : (
                       <>
-                        <SummaryLine label="Base — pre-tax and/or Roth" value={fc(LIMITS.standard)} indent dimmed />
-                        <SummaryLine label={`Catch-Up (${result.catchUpType}) — Roth required`} value={fc(result.catchUpAmt)} indent dimmed />
+                        <SummaryLine label="Base (pre-tax and/or Roth)" value={fc(LIMITS.standard)} indent dimmed />
+                        <SummaryLine label={`Catch-Up (${result.catchUpType}), Roth required`} value={fc(result.catchUpAmt)} indent dimmed />
                       </>
                     )}
                     <SummaryLine
@@ -2595,9 +2617,48 @@ export default function App() {
                         <SummaryLine label="Total Remaining" value={fc(result.totRem)} indent bold />
                       </>
                     )}
-                    <ProjectionBlock salary={salary} age={age} fica={result.fica} strategy={result.strategy} />
+                    <ProjectionBlock salary={salary} age={age} fica={result.fica} strategy={result.strategy} periods={payPeriods} />
                   </div>
                 </details>
+                {(result.usingCustomLimit || (result.stdRem === 0 && result.yPre > 0) || result.highRate) && (
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 8,
+                      marginTop: 8,
+                      marginBottom: 8,
+                    }}
+                  >
+                    {result.usingCustomLimit && (
+                      <NoteBox color="#1E40AF" bg="#F0F9FF" border="#BFDBFE">
+                        <strong>Custom goal in use:</strong> You've set a custom
+                        contribution goal of {fc(result.annualLimit)}. The IRS
+                        maximum for your age is {fc(result.maxAllowed)}.
+                      </NoteBox>
+                    )}
+                    {result.stdRem === 0 && result.yPre > 0 && (
+                      <NoteBox color="#166534" bg="#F0FDF4" border="#BBF7D0">
+                        <strong>Pre-tax base limit reached:</strong> You've
+                        already contributed {fc(result.yPre)} in pre-tax, which
+                        meets the {fc(LIMITS.standard)} base limit. Your remaining{" "}
+                        {fc(result.cuRem)} can only go to Roth catch-up
+                        contributions.
+                      </NoteBox>
+                    )}
+                    {result.highRate && (
+                      <NoteBox color="#78350F" bg="#FFFBEB" border="#FDE68A">
+                        <strong>High contribution rate:</strong> The
+                        required combined rate of {result.totPct}% is a
+                        significant portion of your pay. Confirm your plan allows
+                        this election and that your net pay will cover your
+                        expenses. Some plans cap deferral elections. Check with
+                        your plan administrator.
+                      </NoteBox>
+                    )}
+                  </div>
+                )}
+                <ResultNotices result={result} />
               </div>
             ) : (
               <div>
@@ -2625,65 +2686,6 @@ export default function App() {
                     wide={true}
                   />
                 </div>
-                {(result.usingCustomLimit || (result.rothOnlyMode && parse(ytdPre) > 0) || (result.rothOnlyMode && parse(ytdPre) === 0 && !result.fica) || (result.rothOnlyMode && result.fica === true) || result.highRate) && (
-                  <div
-                    style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: 8,
-                      marginBottom: 8,
-                    }}
-                  >
-                    {result.usingCustomLimit && (
-                      <NoteBox color="#1E40AF" bg="#F0F9FF" border="#BFDBFE">
-                        <strong>Custom goal in use:</strong> You've set a custom
-                        contribution goal of {fc(result.annualLimit)}. The IRS
-                        maximum for your age is {fc(result.maxAllowed)}.
-                      </NoteBox>
-                    )}
-                    {result.rothOnlyMode && parse(ytdPre) > 0 && (
-                      <NoteBox color="#78350F" bg="#FFFBEB" border="#FDE68A">
-                        <strong>Mid-year switch to Roth:</strong> You've
-                        contributed {fc(parse(ytdPre))} pre-tax so far this year.
-                        Your remaining contributions of {fc(result.rem)} will go
-                        entirely to Roth as selected. Combined, you'll reach{" "}
-                        {fc(result.annualLimit)} for the year.
-                      </NoteBox>
-                    )}
-                    {result.rothOnlyMode &&
-                      parse(ytdPre) === 0 &&
-                      !result.fica && (
-                        <NoteBox color="#1E40AF" bg="#F0F9FF" border="#BFDBFE">
-                          <strong>Roth-only strategy:</strong> All your
-                          contributions will go to Roth (after-tax) as selected.
-                          You have {fc(result.rem)} remaining to reach your{" "}
-                          {result.usingCustomLimit ? "goal" : "limit"} of{" "}
-                          {fc(result.annualLimit)}.
-                        </NoteBox>
-                      )}
-                    {result.rothOnlyMode && result.fica === true && (
-                      <NoteBox color="#1E40AF" bg="#F0F9FF" border="#BFDBFE">
-                        <strong>Roth-only strategy:</strong> All your remaining{" "}
-                        {fc(result.rem)} will go to Roth as selected. Note: Since
-                        your FICA wages were more than {FICA_THRESHOLD_DISPLAY},
-                        your {fc(result.catchUpAmt)} catch-up would have been
-                        required to be Roth regardless, but your{" "}
-                        {fc(LIMITS.standard)} base is Roth by your choice.
-                      </NoteBox>
-                    )}
-                    {result.highRate && (
-                      <NoteBox color="#78350F" bg="#FFFBEB" border="#FDE68A">
-                        <strong>Important — high contribution rate:</strong>{" "}
-                        Reaching the limit requires a {result.pct}% deferral rate,
-                        which is a significant portion of your pay. Confirm your
-                        plan allows this election and that your net pay will cover
-                        your expenses. Some plans cap deferral elections — check
-                        with your plan administrator.
-                      </NoteBox>
-                    )}
-                  </div>
-                )}
-                <ResultNotices result={result} />
                 {/* Collapsible Details */}
                 <details
                   style={{
@@ -2740,7 +2742,7 @@ export default function App() {
                       <>
                         <SummaryLine label="Base Limit" value={fc(LIMITS.standard)} indent dimmed />
                         {result.catchUpAmt > 0 && (
-                          <SummaryLine label={`Catch-Up — ${result.catchUpType}`} value={fc(result.catchUpAmt)} indent dimmed />
+                          <SummaryLine label={`Catch-Up (${result.catchUpType})`} value={fc(result.catchUpAmt)} indent dimmed />
                         )}
                       </>
                     )}
@@ -2763,9 +2765,69 @@ export default function App() {
                         <SummaryLine label="Total Remaining" value={fc(result.rem)} indent bold />
                       </>
                     )}
-                    <ProjectionBlock salary={salary} age={age} fica={result.fica} strategy={result.strategy} />
+                    <ProjectionBlock salary={salary} age={age} fica={result.fica} strategy={result.strategy} periods={payPeriods} />
                   </div>
                 </details>
+                {(result.usingCustomLimit || (result.rothOnlyMode && parse(ytdPre) > 0) || (result.rothOnlyMode && parse(ytdPre) === 0 && !result.fica) || (result.rothOnlyMode && result.fica === true) || result.highRate) && (
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 8,
+                      marginTop: 8,
+                      marginBottom: 8,
+                    }}
+                  >
+                    {result.usingCustomLimit && (
+                      <NoteBox color="#1E40AF" bg="#F0F9FF" border="#BFDBFE">
+                        <strong>Custom goal in use:</strong> You've set a custom
+                        contribution goal of {fc(result.annualLimit)}. The IRS
+                        maximum for your age is {fc(result.maxAllowed)}.
+                      </NoteBox>
+                    )}
+                    {result.rothOnlyMode && parse(ytdPre) > 0 && (
+                      <NoteBox color="#78350F" bg="#FFFBEB" border="#FDE68A">
+                        <strong>Mid-year switch to Roth:</strong> You've
+                        contributed {fc(parse(ytdPre))} pre-tax so far this year.
+                        Your remaining contributions of {fc(result.rem)} will go
+                        entirely to Roth as selected. Combined, you'll reach{" "}
+                        {fc(result.annualLimit)} for the year.
+                      </NoteBox>
+                    )}
+                    {result.rothOnlyMode &&
+                      parse(ytdPre) === 0 &&
+                      !result.fica && (
+                        <NoteBox color="#1E40AF" bg="#F0F9FF" border="#BFDBFE">
+                          <strong>Roth-only strategy:</strong> All your
+                          contributions will go to Roth (after-tax) as selected.
+                          You have {fc(result.rem)} remaining to reach your{" "}
+                          {result.usingCustomLimit ? "goal" : "limit"} of{" "}
+                          {fc(result.annualLimit)}.
+                        </NoteBox>
+                      )}
+                    {result.rothOnlyMode && result.fica === true && (
+                      <NoteBox color="#1E40AF" bg="#F0F9FF" border="#BFDBFE">
+                        <strong>Roth-only strategy:</strong> All your remaining{" "}
+                        {fc(result.rem)} will go to Roth as selected. Note: Since
+                        your FICA wages were more than {FICA_THRESHOLD_DISPLAY},
+                        your {fc(result.catchUpAmt)} catch-up would have been
+                        required to be Roth regardless, but your{" "}
+                        {fc(LIMITS.standard)} base is Roth by your choice.
+                      </NoteBox>
+                    )}
+                    {result.highRate && (
+                      <NoteBox color="#78350F" bg="#FFFBEB" border="#FDE68A">
+                        <strong>High contribution rate:</strong>{" "}
+                        Reaching the limit requires a {result.pct}% deferral rate,
+                        which is a significant portion of your pay. Confirm your
+                        plan allows this election and that your net pay will cover
+                        your expenses. Some plans cap deferral elections. Check
+                        with your plan administrator.
+                      </NoteBox>
+                    )}
+                  </div>
+                )}
+                <ResultNotices result={result} />
 
               </div>
             )}
@@ -2784,11 +2846,11 @@ export default function App() {
           {result?.contribMode === "dollar"
             ? "Dollar amounts rounded up to nearest whole dollar."
             : "Rates rounded up to nearest whole %."}{" "}
-          Based on {PLAN_YEAR} IRS limits. For educational use only — not
-          financial or tax advice. Consult your plan administrator or a tax
-          professional for guidance specific to your situation.
-          <br />
-          Last updated: June 2026
+          Based on {PLAN_YEAR} IRS limits. The next year projection uses your
+          current salary and the most recent IRS limits available. For
+          educational use only. Not financial or tax advice. Consult your plan
+          administrator or a tax professional for guidance specific to your
+          situation.
         </div>
         </div>
       </div>
