@@ -3,6 +3,15 @@ import { useState, useRef, useEffect } from "react";
 // ── IRS limits — update this object each year when new limits are announced ──
 const PLAN_YEAR = 2026;
 const LIMITS = { standard: 24500, catchUp50: 8000, catchUp6063: 11250 };
+// Next year's IRS limits — used only by the Next Year Projection.
+// When next year's limits are not yet announced, enter the current limits here.
+// Each January, move these numbers up into LIMITS above and update PLAN_YEAR.
+const NEXT_YEAR_LIMITS = {
+  standard: 25500,
+  catchUp50: 8500,
+  catchUp6063: 11750,
+  ficaThreshold: 155000,
+};
 // FICA wage threshold above which catch-up contributions must be Roth (SECURE 2.0)
 // Verify annually — the IRS may adjust this threshold
 const FICA_CATCHUP_THRESHOLD = 150000;
@@ -12,9 +21,9 @@ const FICA_THRESHOLD_DISPLAY = FICA_CATCHUP_THRESHOLD.toLocaleString("en-US", {
   maximumFractionDigits: 0,
 });
 
-function getCatchUp(age) {
-  if (age >= 60 && age <= 63) return LIMITS.catchUp6063;
-  if (age >= 50) return LIMITS.catchUp50;
+function getCatchUp(age, limits = LIMITS) {
+  if (age >= 60 && age <= 63) return limits.catchUp6063;
+  if (age >= 50) return limits.catchUp50;
   return 0;
 }
 
@@ -905,8 +914,12 @@ function computeNextYearProjection(salary, age, ficaOverride, strategy) {
   const nextAge = age + 1;
   const currCatchUpAmt = getCatchUp(age);
   const currMaxAllowed = LIMITS.standard + currCatchUpAmt;
-  const nextCatchUpAmt = getCatchUp(nextAge);
-  const nextMaxAllowed = LIMITS.standard + nextCatchUpAmt;
+  const nextCatchUpAmt = getCatchUp(nextAge, NEXT_YEAR_LIMITS);
+  const nextMaxAllowed = NEXT_YEAR_LIMITS.standard + nextCatchUpAmt;
+  const carriedForward =
+    NEXT_YEAR_LIMITS.standard === LIMITS.standard &&
+    NEXT_YEAR_LIMITS.catchUp50 === LIMITS.catchUp50 &&
+    NEXT_YEAR_LIMITS.catchUp6063 === LIMITS.catchUp6063;
   const nextIs6063 = nextAge >= 60 && nextAge <= 63;
   const nextCatchUpType = nextIs6063 ? "Ages 60–63" : "Age 50+";
 
@@ -928,7 +941,7 @@ function computeNextYearProjection(salary, age, ficaOverride, strategy) {
   if (perCheck <= 0) return null;
 
   if (nextRothRequired && strategy !== "roth-only") {
-    const prePct = ceilPct(LIMITS.standard / fullPeriods / perCheck);
+    const prePct = ceilPct(NEXT_YEAR_LIMITS.standard / fullPeriods / perCheck);
     const rPct = ceilPct(nextCatchUpAmt / fullPeriods / perCheck);
     return {
       split: true,
@@ -939,6 +952,7 @@ function computeNextYearProjection(salary, age, ficaOverride, strategy) {
       nextIs6063,
       limitChanged,
       limitDirection,
+      carriedForward,
       ficaUnknown,
       prePct,
       rPct,
@@ -957,6 +971,7 @@ function computeNextYearProjection(salary, age, ficaOverride, strategy) {
       nextIs6063,
       limitChanged,
       limitDirection,
+      carriedForward,
       ficaUnknown,
       rothOnly: strategy === "roth-only",
       pct,
@@ -964,6 +979,31 @@ function computeNextYearProjection(salary, age, ficaOverride, strategy) {
     };
   }
 }
+// Percent and per-paycheck dollar amount in fixed-width columns so they line up
+function ProjectionValue({ pct, dollars }) {
+  return (
+    <>
+      <span
+        style={{ display: "inline-block", minWidth: "4ch", textAlign: "right" }}
+      >
+        {pct}%
+      </span>
+      <span
+        style={{
+          display: "inline-block",
+          minWidth: "7ch",
+          textAlign: "right",
+          marginLeft: 12,
+          fontWeight: 400,
+          color: T.textSub,
+        }}
+      >
+        {fc(ceilDollar(dollars))}
+      </span>
+    </>
+  );
+}
+
 // ── Reusable next-year projection block for use inside details panels ─────────
 function ProjectionBlock({ salary, age, fica, strategy }) {
   const proj = computeNextYearProjection(
@@ -991,10 +1031,15 @@ function ProjectionBlock({ salary, age, fica, strategy }) {
       </div>
       {proj.split ? (
         <>
-          <SummaryLine label="Pre-Tax" value={`${proj.prePct}%`} indent bold />
+          <SummaryLine
+            label="Pre-Tax"
+            value={<ProjectionValue pct={proj.prePct} dollars={proj.preDpc} />}
+            indent
+            bold
+          />
           <SummaryLine
             label={`Roth Catch-Up (${proj.nextCatchUpType})`}
-            value={`${proj.rPct}%`}
+            value={<ProjectionValue pct={proj.rPct} dollars={proj.rDpc} />}
             indent
             bold
           />
@@ -1002,7 +1047,7 @@ function ProjectionBlock({ salary, age, fica, strategy }) {
       ) : (
         <SummaryLine
           label={proj.rothOnly ? "Roth" : "Pre-Tax"}
-          value={`${proj.pct}%`}
+          value={<ProjectionValue pct={proj.pct} dollars={proj.dpc} />}
           indent
           bold
         />
@@ -1017,8 +1062,14 @@ function ProjectionBlock({ salary, age, fica, strategy }) {
           paddingLeft: 12,
         }}
       >
-        Estimated rates at age {proj.nextAge} over a full 26-period year,
-        assuming current salary and next year's IRS limits carry forward.
+        Estimated rates at age {proj.nextAge} over a full 26-period year, based
+        on your current salary and{" "}
+        {proj.carriedForward
+          ? `${PLAN_YEAR} IRS limits carried forward until ${
+              PLAN_YEAR + 1
+            } limits are announced`
+          : `${PLAN_YEAR + 1} IRS limits`}
+        . Dollar amounts are estimated per paycheck.
         {proj.limitChanged && (
           <span
             style={{
@@ -3301,13 +3352,12 @@ export default function App() {
             }}
           >
             Pay schedule calculated from the HPH {PLAN_YEAR} bi-weekly payroll
-            calendar. Rates rounded up to nearest whole %. Based on {PLAN_YEAR}{" "}
-            IRS limits. {PLAN_YEAR + 1} projection assumes current limits and
-            salary carry forward — update annually when new IRS limits are
-            announced. For educational use only — not financial or tax advice.
-            Consult your plan administrator or a tax professional for guidance
-            specific to your situation. <br />
-            Last updated: June 2026
+            calendar. Rates rounded up to the nearest whole percent. Based on{" "}
+            {PLAN_YEAR} IRS limits. The next year projection uses your current
+            salary and the most recent IRS limits available. For educational
+            use only. Not financial or tax advice. Consult your plan
+            administrator or a tax professional for guidance specific to your
+            situation.
           </div>
         </div>
         {/* End right column */}
