@@ -913,7 +913,6 @@ function EmptyResults({ isCalculating }) {
 function computeNextYearProjection(salary, age, ficaOverride, strategy) {
   const nextAge = age + 1;
   const currCatchUpAmt = getCatchUp(age);
-  const currMaxAllowed = LIMITS.standard + currCatchUpAmt;
   const nextCatchUpAmt = getCatchUp(nextAge, NEXT_YEAR_LIMITS);
   const nextMaxAllowed = NEXT_YEAR_LIMITS.standard + nextCatchUpAmt;
   const carriedForward =
@@ -923,10 +922,28 @@ function computeNextYearProjection(salary, age, ficaOverride, strategy) {
   const nextIs6063 = nextAge >= 60 && nextAge <= 63;
   const nextCatchUpType = nextIs6063 ? "Ages 60–63" : "Age 50+";
 
-  // Determine limit direction change
-  const limitDiff = nextMaxAllowed - currMaxAllowed;
-  const limitChanged = limitDiff !== 0;
-  const limitDirection = limitDiff > 0 ? "increases" : "decreases";
+  // Age-driven change only: the limit moves for the person when they cross a
+  // catch-up age, not merely because the IRS raised the limits.
+  const ageTier = (a) => (a >= 60 && a <= 63 ? "enhanced" : a >= 50 ? "standard" : "none");
+  const currTier = ageTier(age);
+  const nextTier = ageTier(nextAge);
+  let ageChange = null;
+  if (currTier === "none" && nextTier === "standard") {
+    ageChange = {
+      direction: "increases",
+      reason: "you become eligible for catch-up contributions at age 50",
+    };
+  } else if (currTier === "standard" && nextTier === "enhanced") {
+    ageChange = {
+      direction: "increases",
+      reason: "the enhanced catch-up for ages 60–63 begins at age 60",
+    };
+  } else if (currTier === "enhanced" && nextTier === "standard") {
+    ageChange = {
+      direction: "decreases",
+      reason: "the enhanced catch-up for ages 60–63 ends after age 63",
+    };
+  }
 
   // FICA: if user is currently pre-catch-up age (< 50), we don't have their
   // FICA answer yet. Flag this so the projection can note the uncertainty.
@@ -950,8 +967,7 @@ function computeNextYearProjection(salary, age, ficaOverride, strategy) {
       nextCatchUpAmt,
       nextCatchUpType,
       nextIs6063,
-      limitChanged,
-      limitDirection,
+      ageChange,
       carriedForward,
       ficaUnknown,
       prePct,
@@ -969,8 +985,7 @@ function computeNextYearProjection(salary, age, ficaOverride, strategy) {
       nextCatchUpAmt,
       nextCatchUpType,
       nextIs6063,
-      limitChanged,
-      limitDirection,
+      ageChange,
       carriedForward,
       ficaUnknown,
       rothOnly: strategy === "roth-only",
@@ -1065,27 +1080,27 @@ function ProjectionBlock({ salary, age, fica, strategy }) {
         Estimated rates at age {proj.nextAge} over a full 26-period year, based
         on your current salary and{" "}
         {proj.carriedForward
-          ? `${PLAN_YEAR} IRS limits carried forward until ${
+          ? `your ${PLAN_YEAR} IRS limit of ${fc(proj.nextMaxAllowed)} carried forward until ${
               PLAN_YEAR + 1
             } limits are announced`
-          : `${PLAN_YEAR + 1} IRS limits`}
+          : `your ${PLAN_YEAR + 1} IRS limit of ${fc(proj.nextMaxAllowed)}`}
         . Dollar amounts are estimated per paycheck.
-        {proj.limitChanged && (
+        {proj.ageChange && (
           <span
             style={{
-              color: proj.limitDirection === "increases" ? T.green : T.amber,
+              color: proj.ageChange.direction === "increases" ? T.green : T.amber,
               fontWeight: 600,
             }}
           >
             {" "}
-            Your annual limit {proj.limitDirection} to {fc(proj.nextMaxAllowed)}{" "}
-            at age {proj.nextAge}.
+            Your annual limit {proj.ageChange.direction} next year because{" "}
+            {proj.ageChange.reason}.
           </span>
         )}
         {proj.ficaUnknown && (
           <span style={{ color: T.amber, fontWeight: 600 }}>
             {" "}
-            Note: you'll be catch-up eligible at {proj.nextAge} — your Roth
+            Note: you'll be catch-up eligible at {proj.nextAge}. Your Roth
             requirement will depend on your prior-year FICA wages.
           </span>
         )}
@@ -1102,7 +1117,7 @@ function ResultNotices({ result }) {
     notes.push(
       <NoteBox key="splitflex" color="#1E40AF" bg="#F0F9FF" border="#BFDBFE">
         <strong>Base limit flexibility:</strong> Your {fc(LIMITS.standard)} base
-        can be any mix of pre-tax and Roth — only the {fc(result.catchUpAmt)}{" "}
+        can be any mix of pre-tax and Roth. Only the {fc(result.catchUpAmt)}{" "}
         catch-up portion must be Roth.
       </NoteBox>
     );
@@ -1114,9 +1129,9 @@ function ResultNotices({ result }) {
       notes.push(
         <NoteBox key="fullflex" color="#1E40AF" bg="#F0F9FF" border="#BFDBFE">
           <strong>Full flexibility:</strong> Since your FICA wages were{" "}
-          {FICA_THRESHOLD_DISPLAY} or less, your entire {fc(result.annualLimit)}{" "}
-          — including the {fc(result.catchUpAmt)} catch-up — may be pre-tax,
-          Roth, or any combination.
+          {FICA_THRESHOLD_DISPLAY} or less, your entire {fc(result.annualLimit)},{" "}
+          including the {fc(result.catchUpAmt)} catch-up, may be pre-tax, Roth,
+          or any combination.
         </NoteBox>
       );
     } else if (result.catchUpAmt === 0) {
@@ -1124,7 +1139,7 @@ function ResultNotices({ result }) {
       notes.push(
         <NoteBox key="flex" color="#1E40AF" bg="#F0F9FF" border="#BFDBFE">
           <strong>Deferral flexibility:</strong> Your {fc(result.annualLimit)}{" "}
-          limit may be contributed as pre-tax (traditional), Roth, or any mix —
+          limit may be contributed as pre-tax (traditional), Roth, or any mix,
           whichever best suits your tax strategy.
         </NoteBox>
       );
@@ -1167,7 +1182,7 @@ function ResultNotices({ result }) {
         <strong>Standard catch-up (age 64+):</strong> Your limit includes the
         standard {fc(LIMITS.catchUp50)} catch-up. The enhanced{" "}
         {fc(LIMITS.catchUp6063)} limit available between ages 60–63 no longer
-        applies — you've returned to the standard catch-up amount that continues
+        applies. You've returned to the standard catch-up amount that continues
         from age 64 onward.
       </NoteBox>
     );
@@ -1252,7 +1267,7 @@ export default function App() {
       bad = true;
     }
     if (w > 0 && w < 10000) {
-      errs.salary = `This looks low for an annual salary — did you mean to enter an hourly rate? If $${w.toFixed(
+      errs.salary = `This looks low for an annual salary. Did you mean to enter an hourly rate? If $${w.toFixed(
         0
       )} is correct, continue.`;
       bad = true;
@@ -1363,7 +1378,7 @@ export default function App() {
       if (periodsLeftCalc <= 0) {
         setErrors({
           ...EMPTY_ERR,
-          period: "No pay periods remaining — all periods have already passed.",
+          period: "No pay periods remaining. All periods have already passed.",
         });
         return;
       }
@@ -1753,7 +1768,7 @@ export default function App() {
             letterSpacing: "-0.03em",
           }}
         >
-          Hawaiʻi Pacific Health 403(b) Savings Plan — Maximum Contribution
+          Hawaiʻi Pacific Health 403(b) Savings Plan: Maximum Contribution
           Calculator
         </h1>
       </div>
@@ -1858,11 +1873,11 @@ export default function App() {
                 <TogglePair
                   options={[
                     {
-                      label: `Yes — more than ${FICA_THRESHOLD_DISPLAY}`,
+                      label: `Yes, more than ${FICA_THRESHOLD_DISPLAY}`,
                       val: true,
                     },
                     {
-                      label: `No — ${FICA_THRESHOLD_DISPLAY} or less`,
+                      label: `No, ${FICA_THRESHOLD_DISPLAY} or less`,
                       val: false,
                     },
                   ]}
@@ -1886,7 +1901,7 @@ export default function App() {
                     fica === true
                       ? "Catch-up must be Roth since your FICA wages exceeded $150,000. Base contributions can still be any mix."
                       : fica === false
-                      ? "Your FICA wages were $150,000 or less — you have full flexibility for both base and catch-up contributions."
+                      ? "Your FICA wages were $150,000 or less. You have full flexibility for both base and catch-up contributions."
                       : "If your FICA wages exceeded $150,000, catch-up must be Roth. Base contributions can always be any mix."
                   }
                 >
@@ -2477,7 +2492,7 @@ export default function App() {
                       />
                       {result.catchUpAmt > 0 && (
                         <SummaryLine
-                          label={`Catch-Up — ${result.catchUpType}`}
+                          label={`Catch-Up (${result.catchUpType})`}
                           value={fc(result.catchUpAmt)}
                           indent
                           dimmed
@@ -2623,7 +2638,7 @@ export default function App() {
                           />
                           {result.catchUpAmt > 0 && (
                             <SummaryLine
-                              label={`Catch-Up — ${result.catchUpType}`}
+                              label={`Catch-Up (${result.catchUpType})`}
                               value={fc(result.catchUpAmt)}
                               indent
                               dimmed
@@ -2790,13 +2805,13 @@ export default function App() {
                       {!result.usingCustomLimit && (
                         <>
                           <SummaryLine
-                            label="Base — pre-tax and/or Roth"
+                            label="Base (pre-tax and/or Roth)"
                             value={fc(LIMITS.standard)}
                             indent
                             dimmed
                           />
                           <SummaryLine
-                            label={`Catch-Up (${result.catchUpType}) — Roth required`}
+                            label={`Catch-Up (${result.catchUpType}), Roth required`}
                             value={fc(result.catchUpAmt)}
                             indent
                             dimmed
@@ -3023,7 +3038,7 @@ export default function App() {
                           />
                           {result.catchUpAmt > 0 && (
                             <SummaryLine
-                              label={`Catch-Up — ${result.catchUpType}`}
+                              label={`Catch-Up (${result.catchUpType})`}
                               value={fc(result.catchUpAmt)}
                               indent
                               dimmed
@@ -3284,7 +3299,7 @@ export default function App() {
                       <>
                         {fmtPayday(nextPayday)}{" "}
                         <span style={{ fontWeight: 400, color: T.textMuted }}>
-                          — deadline passed
+                          (deadline passed)
                         </span>
                       </>
                     ) : (
