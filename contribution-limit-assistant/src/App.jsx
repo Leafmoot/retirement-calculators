@@ -956,6 +956,14 @@ function ProjectionValue({ pct, dollars }) {
 function ProjectionBlock({ salary, age, fica, strategy, periods }) {
   const proj = computeNextYearProjection(parse(salary), parseInt(age), fica, strategy, parseInt(periods));
   if (!proj) return null;
+  // Total limit, with the base and catch-up shown separately when catch-up applies
+  const limitText =
+    fc(proj.nextMaxAllowed) +
+    (proj.nextCatchUpAmt > 0
+      ? ` (${fc(NEXT_YEAR_LIMITS.standard)} base plus ${fc(proj.nextCatchUpAmt)} ${
+          proj.nextIs6063 ? "enhanced catch-up" : "catch-up"
+        })`
+      : "");
   return (
     <>
       <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.textSub, fontFamily: T.font, marginTop: 16, marginBottom: 4 }}>Next Year Projection</div>
@@ -974,8 +982,8 @@ function ProjectionBlock({ salary, age, fica, strategy, periods }) {
       <div style={{ fontSize: "0.72rem", color: T.textSub, fontFamily: T.font, lineHeight: 1.5, marginTop: 8, paddingLeft: 12 }}>
         Estimated rates at age {proj.nextAge} over a full {parseInt(periods)}-period year, based on your current salary and{" "}
         {proj.carriedForward
-          ? `your ${PLAN_YEAR} IRS limit of ${fc(proj.nextMaxAllowed)} carried forward until ${PLAN_YEAR + 1} limits are announced`
-          : `your ${PLAN_YEAR + 1} IRS limit of ${fc(proj.nextMaxAllowed)}`}
+          ? `your ${PLAN_YEAR} IRS limit of ${limitText} carried forward until ${PLAN_YEAR + 1} limits are announced`
+          : `your ${PLAN_YEAR + 1} IRS limit of ${limitText}`}
         . Dollar amounts are estimated per paycheck.
         {proj.ageChange && (
           <span style={{ color: proj.ageChange.direction === "increases" ? T.green : T.amber, fontWeight: 600 }}>
