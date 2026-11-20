@@ -1028,6 +1028,14 @@ function ProjectionBlock({ salary, age, fica, strategy }) {
     strategy
   );
   if (!proj) return null;
+  // Total limit, with the base and catch-up shown separately when catch-up applies
+  const limitText =
+    fc(proj.nextMaxAllowed) +
+    (proj.nextCatchUpAmt > 0
+      ? ` (${fc(NEXT_YEAR_LIMITS.standard)} base plus ${fc(proj.nextCatchUpAmt)} ${
+          proj.nextIs6063 ? "enhanced catch-up" : "catch-up"
+        })`
+      : "");
   return (
     <>
       <div
@@ -1080,10 +1088,10 @@ function ProjectionBlock({ salary, age, fica, strategy }) {
         Estimated rates at age {proj.nextAge} over a full 26-period year, based
         on your current salary and{" "}
         {proj.carriedForward
-          ? `your ${PLAN_YEAR} IRS limit of ${fc(proj.nextMaxAllowed)} carried forward until ${
+          ? `your ${PLAN_YEAR} IRS limit of ${limitText} carried forward until ${
               PLAN_YEAR + 1
             } limits are announced`
-          : `your ${PLAN_YEAR + 1} IRS limit of ${fc(proj.nextMaxAllowed)}`}
+          : `your ${PLAN_YEAR + 1} IRS limit of ${limitText}`}
         . Dollar amounts are estimated per paycheck.
         {proj.ageChange && (
           <span
